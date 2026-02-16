@@ -51,7 +51,8 @@ export default function SpotifyWidget() {
     enableBlurBg: s.enableBlurBg !== false, // Nouveau paramètre
     accentColor: s.accentColor || "#22c55e",
     borderRadius: s.borderRadius || "20",
-    bgOpacity: s.bgOpacity || "60"
+    bgOpacity: s.bgOpacity || "60",
+    blurAmount: s.blurAmount || "10"
   };
 
   return (
@@ -70,16 +71,16 @@ export default function SpotifyWidget() {
         {/* --- DYNAMIC BLUR BACKGROUND --- */}
 {settings.enableBlurBg && (
   <div 
-    className="absolute inset-0 z-0 transition-all duration-1000"
-    style={{
-      backgroundImage: `url(${track.albumImageUrl})`,
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
-      filter: 'blur(15px) brightness(0.6)', // Rendu fidèle à ton image
-      opacity: '0.8',
-      borderRadius: `${settings.borderRadius}px`,
-    }}
-  />
+  className="absolute inset-0 z-0 transition-all duration-1000"
+  style={{
+    backgroundImage: `url(${track.albumImageUrl})`,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    filter: `blur(${settings.blurAmount}px) brightness(0.5)`, // Dynamique !
+    opacity: '0.9',
+    borderRadius: `${settings.borderRadius}px`,
+  }}
+/>
 )}
 
         {/* --- COVER ART (OVERHANGING) --- */}

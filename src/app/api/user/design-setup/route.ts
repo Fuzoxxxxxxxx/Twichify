@@ -22,7 +22,8 @@ export async function POST(req: Request) {
       enableBlurBg, // <--- Nouveau paramètre
       accentColor, 
       borderRadius, 
-      bgOpacity 
+      bgOpacity,
+      blurAmount
     } = await req.json();
 
     if (mongoose.connection.readyState !== 1) {
@@ -43,10 +44,11 @@ export async function POST(req: Request) {
           "widgetSettings.showArtist": showArtist,
           "widgetSettings.isRotating": isRotating,
           "widgetSettings.enableGlow": enableGlow,
-          "widgetSettings.enableBlurBg": enableBlurBg,
+          "widgetSettings.enableBlurBg": enableBlurBg, 
           "widgetSettings.accentColor": accentColor,
           "widgetSettings.borderRadius": borderRadius,
           "widgetSettings.bgOpacity": bgOpacity,
+          "widgetSettings.blurAmount": blurAmount,
         } 
       },
       { upsert: true, new: true }

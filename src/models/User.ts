@@ -10,13 +10,14 @@ const UserSchema = new Schema({
   spotifyClientSecret: { type: String, default: null },
   spotifyRefreshToken: { type: String, default: null },
 
-  // Widget Settings (Mis à jour pour supporter toutes les options du Dashboard)
+  // Widget Settings
   widgetSettings: {
     layout: { type: String, default: "default" },
     fontFamily: { type: String, default: "font-sans" },
     accentColor: { type: String, default: "#22c55e" },
-    borderRadius: { type: String, default: "12" },
-    bgOpacity: { type: String, default: "70" },
+    borderRadius: { type: String, default: "20" },
+    bgOpacity: { type: String, default: "60" },
+    blurAmount: { type: String, default: "10" }, 
     
     // Options d'affichage (Booleans)
     showCover: { type: Boolean, default: true },

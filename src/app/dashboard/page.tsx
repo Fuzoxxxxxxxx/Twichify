@@ -6,7 +6,8 @@ import {
   Copy, CheckCircle2, ExternalLink, LayoutDashboard, Music, 
   Palette, LogOut, Link as LinkIcon, Save, AlertCircle, 
   Layout, Eye, EyeOff, RotateCw, Type, Sparkles, Clock,
-  Zap, Settings, HelpCircle, Activity, Image as ImageIcon
+  Zap, Settings, HelpCircle, Activity, Image as ImageIcon,
+  Sliders
 } from "lucide-react";
 
 export default function Dashboard() {
@@ -30,10 +31,11 @@ export default function Dashboard() {
   const [showArtist, setShowArtist] = useState(true);
   const [isRotating, setIsRotating] = useState(false);
   const [enableGlow, setEnableGlow] = useState(true);
-  const [enableBlurBg, setEnableBlurBg] = useState(true); // NOUVEAU
+  const [enableBlurBg, setEnableBlurBg] = useState(true);
   const [accentColor, setAccentColor] = useState("#22c55e");
   const [borderRadius, setBorderRadius] = useState("20");
   const [bgOpacity, setBgOpacity] = useState("60");
+  const [blurAmount, setBlurAmount] = useState("10"); // État pour l'intensité
 
   const widgetUrl = typeof window !== 'undefined' 
     ? `${window.location.origin}/widget/${session?.user?.id}` 
@@ -57,10 +59,11 @@ export default function Dashboard() {
           setShowArtist(s.showArtist !== false);
           setIsRotating(!!s.isRotating);
           setEnableGlow(s.enableGlow !== false);
-          setEnableBlurBg(s.enableBlurBg !== false); // NOUVEAU
+          setEnableBlurBg(s.enableBlurBg !== false);
           setAccentColor(s.accentColor || "#22c55e");
           setBorderRadius(s.borderRadius || "20");
           setBgOpacity(s.bgOpacity || "60");
+          setBlurAmount(s.blurAmount || "10");
         }
       }
     } catch (e) { console.error("Erreur de chargement"); }
@@ -101,7 +104,8 @@ export default function Dashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           layout, fontFamily, showCover, showProgress, showTimestamp, 
-          showArtist, isRotating, enableGlow, enableBlurBg, accentColor, borderRadius, bgOpacity 
+          showArtist, isRotating, enableGlow, enableBlurBg, accentColor, 
+          borderRadius, bgOpacity, blurAmount 
         }),
       });
       alert("Design sauvegardé !");
@@ -146,7 +150,6 @@ export default function Dashboard() {
         </div>
       </aside>
 
-      {/* --- ZONE PRINCIPALE --- */}
       <main className="flex-1 p-12 max-w-7xl overflow-y-auto">
         
         {activeTab === "overview" && (
@@ -193,19 +196,6 @@ export default function Dashboard() {
               </div>
               <ExternalLink size={24} className="text-zinc-700 mr-4 group-hover:text-white transition" />
             </div>
-
-            <div className="bg-indigo-600/5 border border-indigo-500/10 p-8 rounded-[32px] flex items-start gap-6">
-                <HelpCircle className="text-indigo-500 shrink-0" size={28} />
-                <div className="space-y-2">
-                    <h3 className="font-bold text-white uppercase text-sm">Guide d'installation</h3>
-                    <p className="text-zinc-400 text-sm leading-relaxed">
-                        1. Créez une nouvelle source <span className="text-white font-mono">Navigateur</span> dans OBS.<br/>
-                        2. Collez l'URL copiée ci-dessus.<br/>
-                        3. Définissez la taille sur <span className="text-white font-mono">600x250</span> pixels.<br/>
-                        4. Votre musique s'affichera dès que vous lancerez un titre sur Spotify.
-                    </p>
-                </div>
-            </div>
           </div>
         )}
 
@@ -236,7 +226,7 @@ export default function Dashboard() {
             <h1 className="text-4xl font-black text-white italic tracking-tighter uppercase">Widget Design</h1>
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-10 items-start">
               
-              <div className="bg-[#1c202a] p-10 rounded-[40px] border border-white/5 space-y-8 shadow-2xl">
+              <div className="bg-[#1c202a] p-10 rounded-[40px] border border-white/5 space-y-8 shadow-2xl overflow-y-auto max-h-[80vh]">
                 
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-3">
@@ -283,14 +273,23 @@ export default function Dashboard() {
                             <button key={c} onClick={() => setAccentColor(c)} className={`w-10 h-10 rounded-xl border-2 transition-all ${accentColor === c ? 'border-white scale-110' : 'border-transparent opacity-40'}`} style={{ backgroundColor: c }} />
                         ))}
                     </div>
-                    <div className="grid grid-cols-2 gap-8">
+                    
+                    <div className="grid grid-cols-1 gap-6">
                         <div className="space-y-4">
-                            <div className="flex justify-between text-[10px] font-bold uppercase text-zinc-500"><span>Arrondi</span><span>{borderRadius}px</span></div>
+                            <div className="flex justify-between text-[10px] font-bold uppercase text-zinc-500"><span>Arrondi des coins</span><span>{borderRadius}px</span></div>
                             <input type="range" min="0" max="40" value={borderRadius} onChange={(e) => setBorderRadius(e.target.value)} className="w-full accent-indigo-600" />
                         </div>
                         <div className="space-y-4">
-                            <div className="flex justify-between text-[10px] font-bold uppercase text-zinc-500"><span>Opacité</span><span>{bgOpacity}%</span></div>
+                            <div className="flex justify-between text-[10px] font-bold uppercase text-zinc-500"><span>Opacité du fond</span><span>{bgOpacity}%</span></div>
                             <input type="range" min="0" max="100" value={bgOpacity} onChange={(e) => setBgOpacity(e.target.value)} className="w-full accent-indigo-600" />
+                        </div>
+                        {/* --- NOUVEAU CURSEUR BLUR --- */}
+                        <div className={`space-y-4 transition-all ${enableBlurBg ? 'opacity-100' : 'opacity-30 pointer-events-none'}`}>
+                            <div className="flex justify-between text-[10px] font-bold uppercase text-zinc-500">
+                                <span className="flex items-center gap-2"><Sliders size={12}/> Intensité du Blur</span>
+                                <span>{blurAmount}px</span>
+                            </div>
+                            <input type="range" min="0" max="40" value={blurAmount} onChange={(e) => setBlurAmount(e.target.value)} className="w-full accent-indigo-600" />
                         </div>
                     </div>
                 </div>
@@ -300,13 +299,13 @@ export default function Dashboard() {
                 </button>
               </div>
 
-              {/* --- LIVE PREVIEW AVEC OVERHANG ET BLUR --- */}
-              <div className="flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-[50px] bg-black/40 p-12 min-h-[550px] relative overflow-hidden">
+              {/* --- LIVE PREVIEW --- */}
+              <div className="flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-[50px] bg-black/40 p-12 min-h-[550px] relative overflow-hidden sticky top-12">
                 <p className="absolute top-8 text-[10px] font-bold text-zinc-600 uppercase tracking-[0.4em] z-30">Aperçu en direct</p>
                 
                 <div 
                   className={`relative flex transition-all duration-700 ${fontFamily}
-                    ${layout === 'minimal' ? 'flex-col items-center w-[280px] pt-12' : 'flex-row items-center w-[480px] ml-10'}
+                    ${layout === 'minimal' ? 'flex-col items-center w-[280px] pt-12 p-8' : 'flex-row items-center w-[480px] ml-10 p-6'}
                   `}
                   style={{ 
                     backgroundColor: `rgba(15, 17, 23, ${parseInt(bgOpacity)/100})`,
@@ -315,23 +314,22 @@ export default function Dashboard() {
                     border: '1px solid rgba(255,255,255,0.1)'
                   }}
                 >
-
                   {/* --- DYNAMIC BLUR BACKGROUND --- */}
-{enableBlurBg && (
-  <div 
-    className="absolute inset-0 z-0 transition-all duration-1000"
-    style={{
-      backgroundImage: `url(${currentTrack?.albumImageUrl || "https://via.placeholder.com/300"})`,
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
-      filter: 'blur(15px) brightness(0.6)', // Flou plus doux + assombrissement pour le texte
-      opacity: '0.8', // Plus d'opacité comme sur ton screen
-      borderRadius: `${borderRadius}px`,
-    }}
-  />
-)}
+                  {enableBlurBg && (
+                    <div 
+                      className="absolute inset-0 z-0 transition-all duration-1000"
+                      style={{
+                        backgroundImage: `url(${currentTrack?.albumImageUrl || "https://via.placeholder.com/300"})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        filter: `blur(${blurAmount}px) brightness(0.5)`, // Dynamique
+                        opacity: '0.85',
+                        borderRadius: `${borderRadius}px`,
+                      }}
+                    />
+                  )}
 
-                  {/* --- COVER ART (OVERHANGING) --- */}
+                  {/* --- COVER ART --- */}
                   {showCover && (
                     <div className={`relative z-20 shrink-0 transition-all duration-500
                       ${layout === 'minimal' ? '-mt-20 mb-4' : '-ml-14 mr-6'}
@@ -349,8 +347,8 @@ export default function Dashboard() {
                     </div>
                   )}
 
-                  {/* --- TEXTS & PROGRESS --- */}
-                  <div className="relative z-10 flex-1 min-w-0 flex flex-col justify-center py-2 pr-4">
+                  {/* --- TEXTS --- */}
+                  <div className="relative z-10 flex-1 min-w-0 flex flex-col justify-center py-2">
                     {showArtist && (
                       <p className="text-[11px] font-bold text-white/50 uppercase tracking-[0.25em] mb-1 truncate">
                         {currentTrack?.artist || "FOX STEVENSON"}
@@ -384,8 +382,6 @@ export default function Dashboard() {
                     )}
                   </div>
                 </div>
-                
-                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent pointer-events-none" />
               </div>
 
             </div>
