@@ -1,25 +1,22 @@
 import mongoose, { Schema, model, models } from "mongoose";
 
-// On définit la structure de l'utilisateur
 const UserSchema = new Schema({
   name: { type: String },
   email: { type: String, unique: true },
   image: { type: String },
-  // Champs spécifiques pour Spotify
+  
+  // Spotify API
   spotifyClientId: { type: String, default: null },
   spotifyClientSecret: { type: String, default: null },
   spotifyRefreshToken: { type: String, default: null },
+
+  // Widget Settings (Doit correspondre aux noms dans Dashboard/page.tsx)
   widgetSettings: {
-    backgroundColor: { type: String, default: "#000000cc" },
-    textColor: { type: String, default: "#ffffff" },
-    accentColor: { type: String, default: "#1DB954" }, // Vert Spotify
-    borderRadius: { type: String, default: "1rem" },
-    showProgressBar: { type: Boolean, default: true },
+    accentColor: { type: String, default: "#22c55e" },
+    borderRadius: { type: String, default: "16" }, // On stocke le chiffre en string pour plus de souplesse
+    bgOpacity: { type: String, default: "80" },   // On stocke l'opacité (0 à 100)
   }
 });
 
-// Cette ligne est cruciale : elle vérifie si le modèle existe déjà 
-// pour éviter l'erreur "OverwriteModelError"
 const User = models.User || model("User", UserSchema);
-
 export default User;
