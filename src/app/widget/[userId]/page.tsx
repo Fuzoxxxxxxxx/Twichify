@@ -1,10 +1,8 @@
 "use client";
-import { useEffect, useState, use } from "react"; // On importe 'use'
+import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 
 export default function SpotifyWidget() {
-  // En Next.js 15, on peut utiliser 'use' pour déballer les params si nécessaire,
-  // ou simplement s'assurer que l'on traite userId correctement.
   const params = useParams();
   const userId = params?.userId; 
   
@@ -24,28 +22,54 @@ export default function SpotifyWidget() {
   useEffect(() => {
     if (userId) {
       fetchTrack();
-      const interval = setInterval(fetchTrack, 10000);
+      // On passe à 1 seconde pour un feedback temps réel du design et de la musique
+      const interval = setInterval(fetchTrack, 1000); 
       return () => clearInterval(interval);
     }
-  }, [userId]); // On ajoute userId en dépendance
+  }, [userId]);
 
   if (!track || !track.isPlaying) return null;
 
+  // Extraction des settings avec valeurs de repli (fallback)
+  const settings = track.settings || {
+    accentColor: "#22c55e",
+    borderRadius: "16",
+    bgOpacity: "80"
+  };
+
   return (
-    <div className="flex items-center gap-4 p-4 bg-black/80 backdrop-blur-md text-white rounded-2xl w-[350px] border border-white/10 overflow-hidden animate-in fade-in slide-in-from-bottom-4">
+    <div 
+      className="flex items-center gap-4 p-4 text-white w-[350px] border border-white/10 overflow-hidden animate-in fade-in slide-in-from-bottom-4 transition-all duration-500"
+      style={{ 
+        backgroundColor: `rgba(0, 0, 0, ${parseInt(settings.bgOpacity) / 100})`,
+        borderRadius: `${settings.borderRadius}px`,
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)"
+      }}
+    >
       <img 
         src={track.albumImageUrl} 
         alt="Album Art" 
-        className="w-16 h-16 rounded-lg shadow-lg"
+        className="w-16 h-16 shadow-lg object-cover"
+        style={{ borderRadius: `${parseInt(settings.borderRadius) / 2}px` }}
       />
+      
       <div className="flex-1 min-w-0">
-        <p className="font-bold truncate text-lg leading-tight">{track.title}</p>
-        <p className="text-zinc-400 truncate text-sm">{track.artist}</p>
+        <p className="font-bold truncate text-lg leading-tight uppercase tracking-tighter italic">
+          {track.title}
+        </p>
+        <p className="text-zinc-400 truncate text-sm font-medium">
+          {track.artist}
+        </p>
         
-        <div className="w-full bg-white/20 h-1 mt-2 rounded-full overflow-hidden">
+        {/* Barre de progression dynamique */}
+        <div className="w-full bg-white/10 h-1.5 mt-3 rounded-full overflow-hidden">
           <div 
-            className="bg-green-500 h-full transition-all duration-1000" 
-            style={{ width: `${(track.progressMs / track.durationMs) * 100}%` }}
+            className="h-full transition-all duration-1000 ease-linear" 
+            style={{ 
+              width: `${(track.progressMs / track.durationMs) * 100}%`,
+              backgroundColor: settings.accentColor 
+            }}
           />
         </div>
       </div>
