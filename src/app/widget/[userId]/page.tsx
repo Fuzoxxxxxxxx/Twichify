@@ -53,44 +53,47 @@ export default function SpotifyWidget() {
   };
 
   return (
-    // On utilise min-h-screen et flex pour bien centrer le widget dans la zone OBS
     <div className={`flex items-center justify-center min-h-screen bg-transparent ${settings.fontFamily}`}>
       
       <div 
-        className={`relative flex items-center transition-all duration-700 overflow-hidden
-          ${settings.layout === 'minimal' ? 'flex-col w-[200px] p-4' : 'flex-row w-[380px] h-[100px] p-3'}
+        className={`relative flex items-center transition-all duration-700
+          ${settings.layout === 'minimal' ? 'flex-col w-[220px] p-6 text-center mt-10' : 'flex-row w-[380px] h-[100px] p-4'}
         `}
         style={{ 
-          backgroundColor: `rgba(10, 10, 15, ${parseInt(settings.bgOpacity)/100})`,
+          backgroundColor: `rgba(15, 17, 23, ${parseInt(settings.bgOpacity)/100})`,
           borderRadius: `${settings.borderRadius}px`,
-          boxShadow: settings.enableGlow ? `0 10px 30px -10px ${settings.accentColor}44` : 'none',
-          border: '1px solid rgba(255,255,255,0.1)'
+          boxShadow: settings.enableGlow ? `0 20px 50px -10px ${settings.accentColor}55` : 'none',
+          border: '1px solid rgba(255,255,255,0.08)',
+          // PAS d'overflow-hidden ici pour laisser la cover dépasser
         }}
       >
         {/* --- DYNAMIC BLUR BACKGROUND --- */}
         {settings.enableBlurBg && (
-          <div 
-            className="absolute inset-0 z-0 opacity-60 transition-all duration-1000"
-            style={{
-              backgroundImage: `url(${track.albumImageUrl})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              filter: `blur(${settings.blurAmount}px) brightness(0.4)`,
-              borderRadius: `${settings.borderRadius}px`,
-            }}
-          />
+          <div className="absolute inset-0 z-0 overflow-hidden" style={{ borderRadius: `${settings.borderRadius}px` }}>
+            <div 
+              className="absolute inset-0 opacity-60 transition-all duration-1000"
+              style={{
+                backgroundImage: `url(${track.albumImageUrl})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                filter: `blur(${settings.blurAmount}px) brightness(0.4)`,
+                transform: 'scale(1.2)'
+              }}
+            />
+          </div>
         )}
 
-        {/* --- COVER ART --- */}
+        {/* --- COVER ART (Version Floating qui dépasse) --- */}
         {settings.showCover && (
-          <div className="relative z-20 shrink-0 mr-4">
+          <div className={`relative z-30 shrink-0 transition-transform duration-500
+            ${settings.layout === 'minimal' ? '-mt-14 mb-4' : 'mr-5 -ml-8'}
+          `}>
             <img 
               src={track.albumImageUrl} 
-              className="w-16 h-16 object-cover shadow-2xl"
+              className="w-28 h-28 object-cover shadow-[0_15px_35px_rgba(0,0,0,0.6)] border-2 border-white/10"
               style={{ 
-                borderRadius: settings.isRotating ? '999px' : `${Math.max(4, parseInt(settings.borderRadius) - 6)}px`,
+                borderRadius: settings.isRotating ? '999px' : `${Math.max(8, parseInt(settings.borderRadius))}px`,
                 animation: settings.isRotating ? 'spin-slow 12s linear infinite' : 'none',
-                border: '1px solid rgba(255,255,255,0.1)'
               }}
               alt="Album Art"
             />
@@ -100,7 +103,7 @@ export default function SpotifyWidget() {
         {/* --- INFOS --- */}
         <div className="relative z-10 flex-1 min-w-0 flex flex-col justify-center">
           {settings.showArtist && (
-            <p className="text-[9px] font-bold text-white/50 uppercase tracking-[0.2em] mb-0.5 truncate">
+            <p className="text-[10px] font-black text-white/50 uppercase tracking-[0.25em] mb-0.5 truncate italic">
               {track.artist}
             </p>
           )}
@@ -110,21 +113,22 @@ export default function SpotifyWidget() {
           </h2>
 
           {settings.showProgress && (
-            <div className="mt-2 space-y-1">
-              <div className="w-full bg-white/10 h-1 rounded-full overflow-hidden">
+            <div className="mt-2.5 space-y-1.5">
+              <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden backdrop-blur-sm">
                 <div 
                   className="h-full transition-all duration-1000 ease-linear" 
                   style={{ 
                     backgroundColor: settings.accentColor, 
                     width: `${(track.progressMs / track.durationMs) * 100}%`,
+                    boxShadow: `0 0 12px ${settings.accentColor}`
                   }} 
                 />
               </div>
               
               {settings.showTimestamp && (
-                <div className="flex justify-between text-[8px] font-bold text-white/30 font-mono">
-                  <span>{formatTime(track.progressMs)}</span>
-                  <span>{formatTime(track.durationMs)}</span>
+                <div className="flex justify-between text-[8px] font-black text-white/40 font-mono italic tracking-tight">
+                  <span className="bg-black/40 px-1.5 py-0.5 rounded">{formatTime(track.progressMs)}</span>
+                  <span className="bg-black/40 px-1.5 py-0.5 rounded">{formatTime(track.durationMs)}</span>
                 </div>
               )}
             </div>
@@ -137,6 +141,7 @@ export default function SpotifyWidget() {
           from { transform: rotate(0deg); } 
           to { transform: rotate(360deg); } 
         }
+        body { background: transparent !important; overflow: hidden; }
       `}</style>
     </div>
   );

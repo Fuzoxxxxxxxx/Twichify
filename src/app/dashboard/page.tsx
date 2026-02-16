@@ -342,80 +342,82 @@ export default function Dashboard() {
                 <div className="absolute inset-0 bg-indigo-600/5 opacity-0 group-hover:opacity-100 transition-all pointer-events-none duration-1000"></div>
                 <p className="absolute top-10 text-[10px] font-black text-zinc-700 uppercase tracking-[0.6em] z-30 pointer-events-none">Zone OBS 400x125 pixels</p>
                 
-                {/* WIDGET SLIM ACTUALISÉ */}
-                <div 
-                  className={`relative flex items-center transition-all duration-1000 overflow-hidden ${fontFamily}
-                    ${layout === 'minimal' ? 'flex-col w-[200px] p-5 text-center' : 'flex-row w-[380px] h-[105px] p-4'}
-                  `}
-                  style={{ 
-                    backgroundColor: `rgba(15, 17, 23, ${parseInt(bgOpacity)/100})`,
-                    borderRadius: `${borderRadius}px`,
-                    boxShadow: enableGlow ? `0 20px 50px -10px ${accentColor}55` : 'none',
-                    border: '1px solid rgba(255,255,255,0.08)'
-                  }}
-                >
-                  {/* FOND BLUR DYNAMIQUE */}
-                  {enableBlurBg && (
-                    <div className="absolute inset-0 z-0 transition-all duration-[2000ms]"
-                      style={{
-                        backgroundImage: `url(${currentTrack?.albumImageUrl || "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=300&auto=format&fit=crop"})`,
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center',
-                        filter: `blur(${blurAmount}px) brightness(0.35)`,
-                        borderRadius: `${borderRadius}px`,
-                        transform: 'scale(1.1)'
-                      }}
-                    />
-                  )}
+{/* WIDGET SLIM AVEC COVER DÉBORDANTE */}
+<div 
+  className={`relative flex items-center transition-all duration-1000 ${fontFamily}
+    ${layout === 'minimal' ? 'flex-col w-[200px] p-5 text-center mt-10' : 'flex-row w-[380px] h-[100px] p-4'}
+  `}
+  style={{ 
+    backgroundColor: `rgba(15, 17, 23, ${parseInt(bgOpacity)/100})`,
+    borderRadius: `${borderRadius}px`,
+    boxShadow: enableGlow ? `0 20px 50px -10px ${accentColor}55` : 'none',
+    border: '1px solid rgba(255,255,255,0.08)',
+    // Note : On ne met PAS overflow-hidden ici pour laisser la cover dépasser
+  }}
+>
+  {/* FOND BLUR DYNAMIQUE (Lui doit rester masqué par les bords arrondis) */}
+  {enableBlurBg && (
+    <div className="absolute inset-0 z-0 overflow-hidden" style={{ borderRadius: `${borderRadius}px` }}>
+      <div className="absolute inset-0 transition-all duration-[2000ms]"
+        style={{
+          backgroundImage: `url(${currentTrack?.albumImageUrl || "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=300&auto=format&fit=crop"})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          filter: `blur(${blurAmount}px) brightness(0.35)`,
+          transform: 'scale(1.2)'
+        }}
+      />
+    </div>
+  )}
 
-                  {/* POCHETTE SLIM */}
-                  {showCover && (
-                    <div className="relative z-20 shrink-0 mr-5">
-                      <img src={currentTrack?.albumImageUrl || "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=300&auto=format&fit=crop"} 
-                        className="w-16 h-16 object-cover shadow-2xl"
-                        style={{ 
-                          borderRadius: isRotating ? '999px' : `${Math.max(4, parseInt(borderRadius) - 6)}px`,
-                          animation: isRotating ? 'spin-slow 12s linear infinite' : 'none',
-                          border: '1.5px solid rgba(255,255,255,0.1)'
-                        }}
-                        alt="Album Cover"
-                      />
-                    </div>
-                  )}
+  {/* POCHETTE QUI DÉPASSE */}
+  {showCover && (
+    <div className="relative z-30 shrink-0 mr-5 -ml-8 transition-transform duration-500">
+      <img src={currentTrack?.albumImageUrl || "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=300&auto=format&fit=crop"} 
+        // w-28 h-28 fait 112px, soit plus que les 100px de la carte
+        className="w-28 h-28 object-cover shadow-[0_15px_35px_rgba(0,0,0,0.6)] border-2 border-white/10"
+        style={{ 
+          borderRadius: isRotating ? '999px' : `${Math.max(8, parseInt(borderRadius))}px`,
+          animation: isRotating ? 'spin-slow 12s linear infinite' : 'none',
+        }}
+        alt="Album Cover"
+      />
+    </div>
+  )}
 
-                  {/* TEXTES ET BARRE SLIM */}
-                  <div className="relative z-10 flex-1 min-w-0 flex flex-col justify-center">
-                    {showArtist && (
-                      <p className="text-[10px] font-black text-white/50 uppercase tracking-[0.25em] mb-0.5 truncate italic">
-                        {currentTrack?.artist || "FOX STEVENSON"}
-                      </p>
-                    )}
-                    <h2 className="text-base font-black text-white truncate leading-tight uppercase italic tracking-tighter">
-                      {currentTrack?.title || "Don't Care Crown"}
-                    </h2>
+  {/* TEXTES ET BARRE SLIM */}
+  <div className="relative z-10 flex-1 min-w-0 flex flex-col justify-center">
+    {showArtist && (
+      <p className="text-[10px] font-black text-white/50 uppercase tracking-[0.25em] mb-0.5 truncate italic">
+        {currentTrack?.artist || "FOX STEVENSON"}
+      </p>
+    )}
+    <h2 className="text-base font-black text-white truncate leading-tight uppercase italic tracking-tighter">
+      {currentTrack?.title || "Don't Care Crown"}
+    </h2>
 
-                    {showProgress && (
-                      <div className="mt-2.5 space-y-1.5">
-                        <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden backdrop-blur-sm">
-                          <div 
-                            className="h-full transition-all duration-1000 ease-out" 
-                            style={{ 
-                                backgroundColor: accentColor, 
-                                width: '60%', 
-                                boxShadow: `0 0 12px ${accentColor}` 
-                            }} 
-                          />
-                        </div>
-                        {showTimestamp && (
-                          <div className="flex justify-between text-[8px] font-black text-white/40 font-mono italic tracking-tight">
-                            <span className="bg-black/40 px-1.5 py-0.5 rounded">01:42</span>
-                            <span className="bg-black/40 px-1.5 py-0.5 rounded">03:15</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
+    {showProgress && (
+      <div className="mt-2.5 space-y-1.5">
+        <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden backdrop-blur-sm">
+          <div 
+            className="h-full transition-all duration-1000 ease-out" 
+            style={{ 
+                backgroundColor: accentColor, 
+                width: '60%', 
+                boxShadow: `0 0 12px ${accentColor}` 
+            }} 
+          />
+        </div>
+        {showTimestamp && (
+          <div className="flex justify-between text-[8px] font-black text-white/40 font-mono italic tracking-tight">
+            <span className="bg-black/40 px-1.5 py-0.5 rounded">01:42</span>
+            <span className="bg-black/40 px-1.5 py-0.5 rounded">03:15</span>
+          </div>
+        )}
+      </div>
+    )}
+  </div>
+</div>
               </div>
 
             </div>
