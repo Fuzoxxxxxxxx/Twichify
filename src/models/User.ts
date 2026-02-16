@@ -10,11 +10,21 @@ const UserSchema = new Schema({
   spotifyClientSecret: { type: String, default: null },
   spotifyRefreshToken: { type: String, default: null },
 
-  // Widget Settings (Doit correspondre aux noms dans Dashboard/page.tsx)
+  // Widget Settings (Mis à jour pour supporter toutes les options du Dashboard)
   widgetSettings: {
+    layout: { type: String, default: "default" },
+    fontFamily: { type: String, default: "font-sans" },
     accentColor: { type: String, default: "#22c55e" },
-    borderRadius: { type: String, default: "16" }, // On stocke le chiffre en string pour plus de souplesse
-    bgOpacity: { type: String, default: "80" },   // On stocke l'opacité (0 à 100)
+    borderRadius: { type: String, default: "12" },
+    bgOpacity: { type: String, default: "70" },
+    
+    // Options d'affichage (Booleans)
+    showCover: { type: Boolean, default: true },
+    showArtist: { type: Boolean, default: true },
+    showProgress: { type: Boolean, default: true },
+    showTimestamp: { type: Boolean, default: true },
+    enableGlow: { type: Boolean, default: true },
+    isRotating: { type: Boolean, default: false },
   }
 });
 
