@@ -1,12 +1,22 @@
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import mongoose from "mongoose";
 import User from "@/models/User";
 import axios from "axios";
 
-export async function GET(req: Request, { params }: { params: { userId: string } }) {
-  if (mongoose.connection.readyState !== 1) await mongoose.connect(process.env.DATABASE_URL!);
+// On utilise NextRequest et on définit params comme une Promise
+export async function GET(
+  req: NextRequest, 
+  { params }: { params: Promise<{ userId: string }> }
+) {
+  // 1. ON RÉCUPÈRE L'ID (L'étape manquante qui bloquait Vercel)
+  const { userId } = await params;
 
-  const user = await User.findById(params.userId);
+  if (mongoose.connection.readyState !== 1) {
+    await mongoose.connect(process.env.DATABASE_URL!);
+  }
+
+  // 2. ON CHERCHE L'UTILISATEUR AVEC L'ID EXTRAIT
+  const user = await User.findById(userId);
   if (!user || !user.spotifyRefreshToken) return NextResponse.json({ isPlaying: false });
 
   try {
@@ -25,7 +35,7 @@ export async function GET(req: Request, { params }: { params: { userId: string }
     const accessToken = tokenResponse.data.access_token;
 
     // 2. Récupérer la musique actuelle
-    const trackResponse = await axios.get("http://googleusercontent.com/spotify.com/3", {
+    const trackResponse = await axios.get("https://api.spotify.com/v1/me/player/currently-playing", {
       headers: { Authorization: `Bearer ${accessToken}` }
     });
 
