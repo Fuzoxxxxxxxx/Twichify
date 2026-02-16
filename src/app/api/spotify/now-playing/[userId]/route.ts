@@ -16,19 +16,19 @@ export async function GET(
     await mongoose.connect(process.env.DATABASE_URL!);
   }
 
-  // ON RÉCUPÈRE L'USER ET SES SETTINGS
   const user = await User.findById(userId);
   if (!user || !user.spotifyRefreshToken) return NextResponse.json({ isPlaying: false });
 
-  // Valeurs par défaut si le design n'est pas encore configuré
+  // Ajout de blurAmount dans les valeurs par défaut
   const defaultSettings = {
     accentColor: "#22c55e",
     borderRadius: "16",
-    bgOpacity: "80"
+    bgOpacity: "80",
+    blurAmount: "10", // <--- IMPORTANT POUR LE FLOU
+    enableBlurBg: true
   };
 
   try {
-    // 1. Refresh Access Token
     const tokenResponse = await axios.post("https://accounts.spotify.com/api/token", 
       new URLSearchParams({
         grant_type: "refresh_token",
@@ -42,12 +42,17 @@ export async function GET(
 
     const accessToken = tokenResponse.data.access_token;
 
-    // 2. Musique actuelle
     const trackResponse = await axios.get("https://api.spotify.com/v1/me/player/currently-playing", {
       headers: { Authorization: `Bearer ${accessToken}` }
     });
 
-    if (trackResponse.status === 204 || !trackResponse.data.item) {
+    // CORRECTION PAUSE : On vérifie si Spotify dit explicitement que ça ne joue pas
+    if (
+      trackResponse.status === 204 || 
+      !trackResponse.data || 
+      !trackResponse.data.item || 
+      trackResponse.data.is_playing === false // <--- DETECTION DE LA PAUSE
+    ) {
       return NextResponse.json({ 
         isPlaying: false,
         settings: user.widgetSettings || defaultSettings 
@@ -56,15 +61,13 @@ export async function GET(
 
     const item = trackResponse.data.item;
     
-    // ON RETOURNE LA MUSIQUE + LE DESIGN
     return NextResponse.json({
-      isPlaying: true,
+      isPlaying: trackResponse.data.is_playing,
       title: item.name,
       artist: item.artists.map((a: any) => a.name).join(", "),
       albumImageUrl: item.album.images[0].url,
       progressMs: trackResponse.data.progress_ms,
       durationMs: item.duration_ms,
-      // On injecte les réglages de l'utilisateur ici
       settings: user.widgetSettings || defaultSettings
     }, {
       headers: {
