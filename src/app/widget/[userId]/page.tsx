@@ -140,6 +140,13 @@ export default function SpotifyWidget() {
                         }} 
                       />
                     </div>
+                    {/* LE TIMESTAMP EST ICI */}
+                    {settings.showTimestamp && (
+                      <div className="flex justify-between text-[8px] font-bold text-white/40 font-mono italic">
+                        <span>{formatTime(track.progressMs)}</span>
+                        <span>{formatTime(track.durationMs)}</span>
+                      </div>
+                    )}
                   </div>
                 )}
               </motion.div>
