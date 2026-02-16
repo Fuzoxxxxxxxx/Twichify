@@ -104,7 +104,7 @@ export default function SpotifyWidget() {
                     style={{
                       backgroundImage: `url(${track.albumImageUrl})`,
                       backgroundSize: 'cover',
-                      filter: `blur(${settings.blurAmount}px) brightness(0.4)`,
+                      filter: `blur(${settings.blurAmount}px) brightness(0.35)`,
                       transform: 'scale(1.2)'
                     }}
                   />
