@@ -25,6 +25,7 @@ const UserSchema = new Schema({
     showTimestamp: { type: Boolean, default: true },
     enableGlow: { type: Boolean, default: true },
     isRotating: { type: Boolean, default: false },
+    enableBlurBg: { type: Boolean, default: true },
   }
 });
 

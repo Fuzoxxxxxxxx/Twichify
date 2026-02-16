@@ -6,7 +6,7 @@ import {
   Copy, CheckCircle2, ExternalLink, LayoutDashboard, Music, 
   Palette, LogOut, Link as LinkIcon, Save, AlertCircle, 
   Layout, Eye, EyeOff, RotateCw, Type, Sparkles, Clock,
-  Zap, Settings, HelpCircle, Activity
+  Zap, Settings, HelpCircle, Activity, Image as ImageIcon
 } from "lucide-react";
 
 export default function Dashboard() {
@@ -30,9 +30,10 @@ export default function Dashboard() {
   const [showArtist, setShowArtist] = useState(true);
   const [isRotating, setIsRotating] = useState(false);
   const [enableGlow, setEnableGlow] = useState(true);
+  const [enableBlurBg, setEnableBlurBg] = useState(true); // NOUVEAU
   const [accentColor, setAccentColor] = useState("#22c55e");
-  const [borderRadius, setBorderRadius] = useState("12");
-  const [bgOpacity, setBgOpacity] = useState("70");
+  const [borderRadius, setBorderRadius] = useState("20");
+  const [bgOpacity, setBgOpacity] = useState("60");
 
   const widgetUrl = typeof window !== 'undefined' 
     ? `${window.location.origin}/widget/${session?.user?.id}` 
@@ -56,9 +57,10 @@ export default function Dashboard() {
           setShowArtist(s.showArtist !== false);
           setIsRotating(!!s.isRotating);
           setEnableGlow(s.enableGlow !== false);
+          setEnableBlurBg(s.enableBlurBg !== false); // NOUVEAU
           setAccentColor(s.accentColor || "#22c55e");
-          setBorderRadius(s.borderRadius || "12");
-          setBgOpacity(s.bgOpacity || "70");
+          setBorderRadius(s.borderRadius || "20");
+          setBgOpacity(s.bgOpacity || "60");
         }
       }
     } catch (e) { console.error("Erreur de chargement"); }
@@ -99,7 +101,7 @@ export default function Dashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           layout, fontFamily, showCover, showProgress, showTimestamp, 
-          showArtist, isRotating, enableGlow, accentColor, borderRadius, bgOpacity 
+          showArtist, isRotating, enableGlow, enableBlurBg, accentColor, borderRadius, bgOpacity 
         }),
       });
       alert("Design sauvegardé !");
@@ -116,9 +118,9 @@ export default function Dashboard() {
     <div className="flex min-h-screen bg-[#0f1117] text-zinc-200">
       
       {/* --- SIDEBAR --- */}
-      <aside className="w-72 bg-[#161922] border-r border-white/5 flex flex-col sticky top-0 h-screen">
+      <aside className="w-72 bg-[#161922] border-r border-white/5 flex flex-col sticky top-0 h-screen z-50">
         <div className="p-8 flex items-center gap-3 italic font-black text-xl tracking-tighter text-white">
-          <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center not-italic shadow-lg shadow-indigo-600/20">NP</div>
+          <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center not-italic shadow-lg shadow-indigo-600/20 text-white">NP</div>
           NOWPLAYING
         </div>
 
@@ -147,7 +149,6 @@ export default function Dashboard() {
       {/* --- ZONE PRINCIPALE --- */}
       <main className="flex-1 p-12 max-w-7xl overflow-y-auto">
         
-        {/* ONGLET : DASHBOARD (AVEC STATS) */}
         {activeTab === "overview" && (
           <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <header>
@@ -208,7 +209,6 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ONGLET : SPOTIFY API */}
         {activeTab === "spotify" && (
           <div className="space-y-8 animate-in fade-in duration-500">
             <h1 className="text-4xl font-black text-white italic tracking-tighter uppercase">Spotify API</h1>
@@ -231,11 +231,10 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ONGLET : DESIGN */}
         {activeTab === "design" && (
           <div className="space-y-8 animate-in fade-in duration-500">
             <h1 className="text-4xl font-black text-white italic tracking-tighter uppercase">Widget Design</h1>
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-10">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-10 items-start">
               
               <div className="bg-[#1c202a] p-10 rounded-[40px] border border-white/5 space-y-8 shadow-2xl">
                 
@@ -244,7 +243,6 @@ export default function Dashboard() {
                         <label className="text-[10px] font-bold uppercase text-zinc-500 flex items-center gap-2"><Layout size={12}/> Layout</label>
                         <select value={layout} onChange={(e) => setLayout(e.target.value)} className="w-full p-4 bg-black/40 rounded-2xl border border-white/10 text-xs font-bold uppercase outline-none focus:border-indigo-500 transition">
                             <option value="default">Style Par Défaut</option>
-                            <option value="modern">Modern Classic</option>
                             <option value="minimal">Minimalist</option>
                         </select>
                     </div>
@@ -260,15 +258,19 @@ export default function Dashboard() {
 
                 <div className="grid grid-cols-2 gap-3">
                     {[
-                        { id: 'cover', label: "Cover Art", state: showCover, set: setShowCover },
-                        { id: 'artist', label: "Nom Artiste", state: showArtist, set: setShowArtist },
-                        { id: 'progress', label: "Barre Progrès", state: showProgress, set: setShowProgress },
-                        { id: 'timestamp', label: "Time Stamps", state: showTimestamp, set: setShowTimestamp },
-                        { id: 'glow', label: "Effet Glow", state: enableGlow, set: setEnableGlow },
-                        { id: 'rotate', label: "Rotation", state: isRotating, set: setIsRotating },
+                        { id: 'cover', label: "Cover Art", state: showCover, set: setShowCover, icon: <ImageIcon size={14}/> },
+                        { id: 'artist', label: "Nom Artiste", state: showArtist, set: setShowArtist, icon: <Music size={14}/> },
+                        { id: 'progress', label: "Barre Progrès", state: showProgress, set: setShowProgress, icon: <Zap size={14}/> },
+                        { id: 'timestamp', label: "Time Stamps", state: showTimestamp, set: setShowTimestamp, icon: <Clock size={14}/> },
+                        { id: 'glow', label: "Effet Glow", state: enableGlow, set: setEnableGlow, icon: <Sparkles size={14}/> },
+                        { id: 'blur', label: "Fond Blur", state: enableBlurBg, set: setEnableBlurBg, icon: <Palette size={14}/> },
+                        { id: 'rotate', label: "Rotation", state: isRotating, set: setIsRotating, icon: <RotateCw size={14}/> },
                     ].map((m) => (
                         <button key={m.id} onClick={() => m.set(!m.state)} className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${m.state ? "border-indigo-500/50 bg-indigo-500/10 text-white" : "border-white/5 bg-white/5 text-zinc-600"}`}>
-                            <span className="text-[10px] font-bold uppercase">{m.label}</span>
+                            <div className="flex items-center gap-2">
+                                {m.icon}
+                                <span className="text-[10px] font-bold uppercase">{m.label}</span>
+                            </div>
                             {m.state ? <Eye size={14}/> : <EyeOff size={14}/>}
                         </button>
                     ))}
@@ -298,50 +300,83 @@ export default function Dashboard() {
                 </button>
               </div>
 
-              {/* LIVE PREVIEW */}
+              {/* --- LIVE PREVIEW AVEC OVERHANG ET BLUR --- */}
               <div className="flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-[50px] bg-black/40 p-12 min-h-[550px] relative overflow-hidden">
-                <p className="absolute top-8 text-[10px] font-bold text-zinc-600 uppercase tracking-[0.4em]">Preview Temps Réel</p>
+                <p className="absolute top-8 text-[10px] font-bold text-zinc-600 uppercase tracking-[0.4em] z-30">Aperçu en direct</p>
                 
                 <div 
-                  className={`relative flex items-center transition-all duration-700 ${fontFamily}
-                    ${layout === 'minimal' ? 'flex-col p-8 text-center w-[300px]' : 'flex-row w-[460px]'}
-                    ${layout === 'default' ? 'bg-black/60 border border-white/10 p-1.5 pr-8' : 'p-6'}
+                  className={`relative flex transition-all duration-700 ${fontFamily}
+                    ${layout === 'minimal' ? 'flex-col items-center w-[280px] pt-12' : 'flex-row items-center w-[480px] ml-10'}
                   `}
                   style={{ 
-                    backgroundColor: layout === 'default' ? `rgba(15, 17, 23, ${parseInt(bgOpacity)/100})` : `rgba(28, 32, 42, ${parseInt(bgOpacity)/100})`,
+                    backgroundColor: `rgba(15, 17, 23, ${parseInt(bgOpacity)/100})`,
                     borderRadius: `${borderRadius}px`,
-                    backdropFilter: 'blur(24px)',
-                    boxShadow: enableGlow ? `0 0 60px -15px ${accentColor}55` : 'none'
+                    boxShadow: enableGlow ? `0 25px 50px -12px ${accentColor}44` : 'none',
+                    border: '1px solid rgba(255,255,255,0.1)'
                   }}
                 >
+                  {/* --- FOND BLUR DYNAMIQUE --- */}
+                  {enableBlurBg && (
+                    <div 
+                      className="absolute inset-0 z-0 opacity-40 transition-all duration-1000"
+                      style={{
+                        backgroundImage: `url(${currentTrack?.albumImageUrl || "https://via.placeholder.com/300"})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        filter: 'blur(40px)',
+                        borderRadius: `${borderRadius}px`,
+                      }}
+                    />
+                  )}
+
+                  {/* --- COVER ART (OVERHANGING) --- */}
                   {showCover && (
-                    <div className={`shrink-0 relative z-20 ${layout === 'default' ? '-ml-5' : ''} ${layout === 'minimal' ? 'mb-5' : 'mr-5'}`}>
+                    <div className={`relative z-20 shrink-0 transition-all duration-500
+                      ${layout === 'minimal' ? '-mt-20 mb-4' : '-ml-14 mr-6'}
+                    `}>
                       <img 
-                        src={currentTrack?.albumImageUrl || "https://i.scdn.co/image/ab67616d0000b2738a7c29801844783321522814"} 
-                        className={`w-24 h-24 object-cover shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-all duration-1000 ${isRotating ? 'rounded-full' : ''}`}
+                        src={currentTrack?.albumImageUrl || "https://via.placeholder.com/300"} 
+                        className="w-28 h-28 object-cover shadow-[0_15px_40px_rgba(0,0,0,0.6)]"
                         style={{ 
-                          borderRadius: isRotating ? '999px' : `${parseInt(borderRadius)}px`,
-                          animation: isRotating ? 'spin-slow 12s linear infinite' : 'none'
+                          borderRadius: isRotating ? '999px' : `${borderRadius}px`,
+                          animation: isRotating ? 'spin-slow 12s linear infinite' : 'none',
+                          border: '2px solid rgba(255,255,255,0.1)'
                         }}
                         alt="Cover"
                       />
                     </div>
                   )}
 
-                  <div className="flex-1 min-w-0 py-2">
-                    {showArtist && <p className="text-[11px] font-bold text-zinc-400 uppercase tracking-[0.25em] mb-1 truncate">{currentTrack?.artist || "FOX STEVENSON"}</p>}
-                    <h2 className="text-2xl font-black text-white truncate drop-shadow-2xl leading-tight italic uppercase tracking-tighter">{currentTrack?.title || "Don't Care Crown"}</h2>
+                  {/* --- TEXTS & PROGRESS --- */}
+                  <div className="relative z-10 flex-1 min-w-0 flex flex-col justify-center py-2 pr-4">
+                    {showArtist && (
+                      <p className="text-[11px] font-bold text-white/50 uppercase tracking-[0.25em] mb-1 truncate">
+                        {currentTrack?.artist || "FOX STEVENSON"}
+                      </p>
+                    )}
                     
+                    <h2 className="text-2xl font-black text-white truncate leading-tight uppercase italic tracking-tighter">
+                      {currentTrack?.title || "Don't Care Crown"}
+                    </h2>
+
                     {showProgress && (
-                      <div className="mt-5 space-y-1.5">
-                        <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden border border-white/5">
-                            <div className="h-full transition-all duration-1000 ease-linear shadow-[0_0_10px_white]" style={{ backgroundColor: accentColor, width: '45%' }} />
+                      <div className="mt-4 space-y-2">
+                        <div className="w-full bg-white/10 h-2 rounded-full overflow-hidden backdrop-blur-md">
+                          <div 
+                            className="h-full transition-all duration-1000 ease-linear" 
+                            style={{ 
+                              backgroundColor: accentColor, 
+                              width: '65%',
+                              boxShadow: `0 0 15px ${accentColor}88`
+                            }} 
+                          />
                         </div>
+                        
                         {showTimestamp && (
-                            <div className="flex justify-between text-[10px] font-bold text-zinc-500 font-mono tracking-tighter">
-                                <span>01:24</span>
-                                <span>03:42</span>
-                            </div>
+                          <div className="flex justify-between text-[10px] font-black text-white/40 font-mono italic">
+                            <span className="bg-black/30 px-1.5 py-0.5 rounded">01:42</span>
+                            <span className="bg-black/30 px-1.5 py-0.5 rounded">03:15</span>
+                          </div>
                         )}
                       </div>
                     )}
@@ -350,6 +385,7 @@ export default function Dashboard() {
                 
                 <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent pointer-events-none" />
               </div>
+
             </div>
           </div>
         )}
@@ -357,7 +393,6 @@ export default function Dashboard() {
 
       <style jsx global>{`
         @keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        .animate-spin-slow { animation: spin-slow 12s linear infinite; }
         select { appearance: none; cursor: pointer; }
       `}</style>
     </div>

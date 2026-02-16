@@ -9,7 +9,7 @@ export async function POST(req: Request) {
   if (!session) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
   try {
-    // On récupère TOUTES les clés envoyées par le Dashboard
+    // On récupère TOUTES les clés envoyées par le Dashboard (ajout de enableBlurBg)
     const { 
       layout, 
       fontFamily, 
@@ -18,7 +18,8 @@ export async function POST(req: Request) {
       showTimestamp, 
       showArtist, 
       isRotating, 
-      enableGlow, 
+      enableGlow,
+      enableBlurBg, // <--- Nouveau paramètre
       accentColor, 
       borderRadius, 
       bgOpacity 
@@ -28,7 +29,8 @@ export async function POST(req: Request) {
       await mongoose.connect(process.env.DATABASE_URL!);
     }
 
-    // On met à jour l'objet widgetSettings en une seule fois
+    // On met à jour l'objet widgetSettings
+    // Utiliser $set sur l'objet parent ou champ par champ assure la persistance
     await User.findOneAndUpdate(
       { email: session.user?.email },
       { 
@@ -41,9 +43,10 @@ export async function POST(req: Request) {
           "widgetSettings.showArtist": showArtist,
           "widgetSettings.isRotating": isRotating,
           "widgetSettings.enableGlow": enableGlow,
+          "widgetSettings.enableBlurBg": enableBlurBg,
           "widgetSettings.accentColor": accentColor,
           "widgetSettings.borderRadius": borderRadius,
-          "widgetSettings.bgOpacity": bgOpacity 
+          "widgetSettings.bgOpacity": bgOpacity,
         } 
       },
       { upsert: true, new: true }

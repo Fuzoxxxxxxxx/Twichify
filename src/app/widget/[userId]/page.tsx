@@ -29,7 +29,6 @@ export default function SpotifyWidget() {
     }
   }, [userId]);
 
-  // Formattage du temps (ms -> mm:ss)
   const formatTime = (ms: number) => {
     const totalSeconds = Math.floor(ms / 1000);
     const minutes = Math.floor(totalSeconds / 60);
@@ -39,7 +38,6 @@ export default function SpotifyWidget() {
 
   if (!track || !track.isPlaying) return null;
 
-  // Extraction des settings avec fallbacks complets
   const s = track.settings || {};
   const settings = {
     layout: s.layout || "default",
@@ -50,61 +48,74 @@ export default function SpotifyWidget() {
     showArtist: s.showArtist !== false,
     isRotating: !!s.isRotating,
     enableGlow: s.enableGlow !== false,
+    enableBlurBg: s.enableBlurBg !== false, // Nouveau paramètre
     accentColor: s.accentColor || "#22c55e",
-    borderRadius: s.borderRadius || "12",
-    bgOpacity: s.bgOpacity || "70"
+    borderRadius: s.borderRadius || "20",
+    bgOpacity: s.bgOpacity || "60"
   };
 
   return (
     <div className={`flex items-center justify-center min-h-screen bg-transparent ${settings.fontFamily}`}>
       <div 
-        className={`relative flex items-center transition-all duration-700 overflow-hidden
-          ${settings.layout === 'minimal' ? 'flex-col p-8 text-center w-[300px]' : 'flex-row w-[460px]'}
-          ${settings.layout === 'default' ? 'bg-black/60 border border-white/10 p-2 pr-8' : 'p-6'}
+        className={`relative flex transition-all duration-700 
+          ${settings.layout === 'minimal' ? 'flex-col items-center p-8 pt-12 text-center w-[300px]' : 'flex-row items-center w-[500px] p-6 ml-12'}
         `}
         style={{ 
-          backgroundColor: `rgba(15, 17, 23, ${parseInt(settings.bgOpacity)/100})`,
+          backgroundColor: `rgba(10, 10, 15, ${parseInt(settings.bgOpacity)/100})`,
           borderRadius: `${settings.borderRadius}px`,
-          backdropFilter: 'blur(20px)',
-          boxShadow: settings.enableGlow ? `0 0 50px -10px ${settings.accentColor}66` : 'none'
+          boxShadow: settings.enableGlow ? `0 25px 50px -12px ${settings.accentColor}33` : 'none',
+          border: '1px solid rgba(255,255,255,0.1)'
         }}
       >
-        {/* --- COVER ART --- */}
+        {/* --- DYNAMIC BLUR BACKGROUND --- */}
+        {settings.enableBlurBg && (
+          <div 
+            className="absolute inset-0 z-0 opacity-40 transition-all duration-1000"
+            style={{
+              backgroundImage: `url(${track.albumImageUrl})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              filter: 'blur(40px)',
+              borderRadius: `${settings.borderRadius}px`,
+            }}
+          />
+        )}
+
+        {/* --- COVER ART (OVERHANGING) --- */}
         {settings.showCover && (
-          <div className={`shrink-0 relative z-20 
-            ${settings.layout === 'default' ? '-ml-6' : ''} 
-            ${settings.layout === 'minimal' ? 'mb-5' : 'mr-5'}`}
-          >
+          <div className={`relative z-20 shrink-0 transition-all duration-500
+            ${settings.layout === 'minimal' ? '-mt-24 mb-4' : '-ml-14 mr-6'}
+          `}>
             <img 
               src={track.albumImageUrl} 
-              className={`w-24 h-24 object-cover shadow-2xl transition-all duration-1000`}
+              className="w-28 h-28 object-cover shadow-[0_15px_40px_rgba(0,0,0,0.6)]"
               style={{ 
-                borderRadius: settings.isRotating ? '999px' : `${parseInt(settings.borderRadius)}px`,
-                animation: settings.isRotating ? 'spin-slow 12s linear infinite' : 'none'
+                borderRadius: settings.isRotating ? '999px' : `${settings.borderRadius}px`,
+                animation: settings.isRotating ? 'spin-slow 12s linear infinite' : 'none',
+                border: '2px solid rgba(255,255,255,0.1)'
               }}
               alt="Album Art"
             />
           </div>
         )}
 
-        {/* --- INFOS MUSIQUE --- */}
-        <div className="flex-1 min-w-0 py-2">
+        {/* --- INFOS --- */}
+        <div className="relative z-10 flex-1 min-w-0 flex flex-col justify-center py-2 pr-2">
           {settings.showArtist && (
-            <p className="text-[11px] font-bold text-zinc-400 uppercase tracking-[0.2em] mb-1 truncate opacity-80">
+            <p className="text-[11px] font-bold text-white/50 uppercase tracking-[0.25em] mb-1 truncate">
               {track.artist}
             </p>
           )}
           
-          <h2 className="text-2xl font-black text-white truncate leading-tight tracking-tighter uppercase italic drop-shadow-md">
+          <h2 className="text-2xl font-black text-white truncate leading-tight tracking-tighter uppercase italic drop-shadow-lg">
             {track.title}
           </h2>
 
-          {/* --- PROGRESS BAR & TIMESTAMPS --- */}
           {settings.showProgress && (
-            <div className="mt-5 space-y-1.5">
-              <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden border border-white/5">
+            <div className="mt-5 space-y-2">
+              <div className="w-full bg-white/10 h-2 rounded-full overflow-hidden backdrop-blur-md">
                 <div 
-                  className="h-full transition-all duration-1000 ease-linear" 
+                  className="h-full transition-all duration-1000 ease-linear relative" 
                   style={{ 
                     backgroundColor: settings.accentColor, 
                     width: `${(track.progressMs / track.durationMs) * 100}%`,
@@ -114,9 +125,9 @@ export default function SpotifyWidget() {
               </div>
               
               {settings.showTimestamp && (
-                <div className="flex justify-between text-[10px] font-bold text-zinc-500 font-mono tracking-tighter">
-                  <span>{formatTime(track.progressMs)}</span>
-                  <span>{formatTime(track.durationMs)}</span>
+                <div className="flex justify-between text-[10px] font-black text-white/40 font-mono italic">
+                  <span className="bg-black/20 px-1.5 py-0.5 rounded">{formatTime(track.progressMs)}</span>
+                  <span className="bg-black/20 px-1.5 py-0.5 rounded">{formatTime(track.durationMs)}</span>
                 </div>
               )}
             </div>
