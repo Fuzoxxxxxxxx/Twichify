@@ -68,18 +68,19 @@ export default function SpotifyWidget() {
         }}
       >
         {/* --- DYNAMIC BLUR BACKGROUND --- */}
-        {settings.enableBlurBg && (
-          <div 
-            className="absolute inset-0 z-0 opacity-40 transition-all duration-1000"
-            style={{
-              backgroundImage: `url(${track.albumImageUrl})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              filter: 'blur(40px)',
-              borderRadius: `${settings.borderRadius}px`,
-            }}
-          />
-        )}
+{settings.enableBlurBg && (
+  <div 
+    className="absolute inset-0 z-0 transition-all duration-1000"
+    style={{
+      backgroundImage: `url(${track.albumImageUrl})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      filter: 'blur(15px) brightness(0.6)', // Rendu fidèle à ton image
+      opacity: '0.8',
+      borderRadius: `${settings.borderRadius}px`,
+    }}
+  />
+)}
 
         {/* --- COVER ART (OVERHANGING) --- */}
         {settings.showCover && (

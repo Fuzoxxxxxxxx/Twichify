@@ -315,19 +315,21 @@ export default function Dashboard() {
                     border: '1px solid rgba(255,255,255,0.1)'
                   }}
                 >
-                  {/* --- FOND BLUR DYNAMIQUE --- */}
-                  {enableBlurBg && (
-                    <div 
-                      className="absolute inset-0 z-0 opacity-40 transition-all duration-1000"
-                      style={{
-                        backgroundImage: `url(${currentTrack?.albumImageUrl || "https://via.placeholder.com/300"})`,
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center',
-                        filter: 'blur(40px)',
-                        borderRadius: `${borderRadius}px`,
-                      }}
-                    />
-                  )}
+
+                  {/* --- DYNAMIC BLUR BACKGROUND --- */}
+{enableBlurBg && (
+  <div 
+    className="absolute inset-0 z-0 transition-all duration-1000"
+    style={{
+      backgroundImage: `url(${currentTrack?.albumImageUrl || "https://via.placeholder.com/300"})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      filter: 'blur(15px) brightness(0.6)', // Flou plus doux + assombrissement pour le texte
+      opacity: '0.8', // Plus d'opacité comme sur ton screen
+      borderRadius: `${borderRadius}px`,
+    }}
+  />
+)}
 
                   {/* --- COVER ART (OVERHANGING) --- */}
                   {showCover && (
