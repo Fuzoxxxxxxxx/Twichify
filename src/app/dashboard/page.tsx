@@ -176,7 +176,7 @@ export default function Dashboard() {
                 <div className="bg-[#1c202a] p-6 rounded-[28px] border border-white/5 group hover:border-indigo-500/30 transition-all">
                     <div className="w-10 h-10 bg-yellow-500/10 text-yellow-500 rounded-lg flex items-center justify-center mb-4"><Settings size={20}/></div>
                     <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">Dernière Maj</p>
-                    <p className="text-xl font-black text-white uppercase italic mt-1">Février 2024</p>
+                    <p className="text-xl font-black text-white uppercase italic mt-1">Avril 2026</p>
                 </div>
             </div>
 
@@ -340,7 +340,7 @@ export default function Dashboard() {
               {/* --- COLONNE DE DROITE : LIVE PREVIEW (SLIM) --- */}
               <div className="flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-[60px] bg-black/40 p-12 min-h-[450px] sticky top-12 overflow-hidden shadow-inner group transition-all">
                 <div className="absolute inset-0 bg-indigo-600/5 opacity-0 group-hover:opacity-100 transition-all pointer-events-none duration-1000"></div>
-                <p className="absolute top-10 text-[10px] font-black text-zinc-700 uppercase tracking-[0.6em] z-30 pointer-events-none">Zone OBS 400x125 pixels</p>
+                <p className="absolute top-10 text-[10px] font-black text-zinc-700 uppercase tracking-[0.6em] z-30 pointer-events-none">Zone OBS 475x125 pixels</p>
                 
 {/* WIDGET SLIM AVEC COVER DÉBORDANTE */}
 <div 
