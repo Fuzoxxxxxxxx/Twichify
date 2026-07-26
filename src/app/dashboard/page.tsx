@@ -209,14 +209,6 @@ export default function Dashboard() {
           >
             <Palette size={18} /> Design Widget
           </button>
-
-          <button 
-            onClick={() => setActiveTab("stats")} 
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-semibold text-xs ${activeTab === "stats" ? "bg-indigo-600 text-white shadow-xl shadow-indigo-600/20" : "hover:bg-white/5 text-zinc-400"}`}
-          >
-            <BarChart3 size={18} /> Statistiques
-          </button>
-
         </nav>
 
         <div className="p-6 border-t border-white/5 space-y-4">
@@ -709,88 +701,6 @@ export default function Dashboard() {
               </div>
 
             </div>
-          </div>
-        )}
-        {/* ========================================================================= */}
-        {/* --- SECTION 4: STATISTIQUES (DYNAMIQUES) --- */}
-        {/* ========================================================================= */}
-        {activeTab === "stats" && (
-          <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <header>
-              <h1 className="text-4xl font-black text-white italic tracking-tighter uppercase leading-none">Spotify Analytics</h1>
-              <p className="text-zinc-500 text-xs font-medium mt-2">Tes données d'écoute en direct basées sur tes 4 dernières semaines.</p>
-            </header>
-
-            {loadingStats ? (
-              <div className="flex flex-col items-center justify-center py-20 gap-4">
-                <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-                <p className="text-zinc-500 font-bold text-[10px] uppercase tracking-[0.2em]">Récupération de tes tops Spotify...</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                
-                {/* TOP ARTISTES */}
-                <div className="bg-[#1c202a] p-8 rounded-[35px] border border-white/5 shadow-2xl">
-                  <h3 className="text-lg font-black text-white uppercase tracking-tighter mb-6 flex items-center gap-3">
-                    <TrendingUp size={20} className="text-indigo-400"/> Top Artistes
-                  </h3>
-                  <div className="space-y-4">
-                    {topArtists.length > 0 ? (
-                      topArtists.slice(0, 5).map((artist: any, i: number) => (
-                        <div key={artist.id || i} className="flex items-center gap-4 p-3 bg-white/[0.02] rounded-2xl border border-white/5">
-                          <span className="text-xs font-black text-zinc-500 w-4">{i + 1}</span>
-                          {artist.images?.[0]?.url && (
-                            <img src={artist.images[0].url} alt={artist.name} className="w-10 h-10 rounded-full object-cover border border-white/10" />
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-bold text-white truncate">{artist.name}</p>
-                            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest truncate">
-                              {artist.genres?.[0] || "Artiste Pop / Rap"}
-                            </p>
-                          </div>
-                          <span className="text-[10px] font-mono text-indigo-400 bg-indigo-500/10 px-2.5 py-1 rounded-md">
-                            Top {i + 1}
-                          </span>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-xs text-zinc-500 italic">Aucune donnée artiste disponible pour le moment.</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* TOP TITRES */}
-                <div className="bg-[#1c202a] p-8 rounded-[35px] border border-white/5 shadow-2xl">
-                  <h3 className="text-lg font-black text-white uppercase tracking-tighter mb-6 flex items-center gap-3">
-                    <Disc size={20} className="text-amber-400"/> Morceaux en boucle
-                  </h3>
-                  <div className="space-y-4">
-                    {topTracks.length > 0 ? (
-                      topTracks.slice(0, 5).map((track: any, i: number) => (
-                        <div key={track.id || i} className="flex items-center gap-4 p-3 bg-white/[0.02] rounded-2xl border border-white/5">
-                          <span className="text-xs font-black text-zinc-500 w-4">{i + 1}</span>
-                          {track.album?.images?.[0]?.url && (
-                            <img src={track.album.images[0].url} alt={track.name} className="w-10 h-10 rounded-lg object-cover border border-white/10" />
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-bold text-white truncate">{track.name}</p>
-                            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest truncate">
-                              {track.artists?.map((a: any) => a.name).join(", ")}
-                            </p>
-                          </div>
-                          <span className="text-[10px] font-mono text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-md">
-                            Rang #{i + 1}
-                          </span>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-xs text-zinc-500 italic">Aucune donnée titre disponible pour le moment.</p>
-                    )}
-                  </div>
-                </div>
-
-              </div>
-            )}
           </div>
         )}
       </main>
