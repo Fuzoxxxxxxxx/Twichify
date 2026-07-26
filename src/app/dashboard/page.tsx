@@ -218,6 +218,30 @@ export default function Dashboard() {
                     <p className="mt-2 text-white font-mono bg-black/40 px-3 py-1.5 rounded-lg inline-block border border-white/5 select-all">{typeof window !== 'undefined' ? window.location.origin : ''}/api/callback/spotify</p>
                 </div>
               </div>
+
+              <div className="flex items-start gap-4 p-5 bg-green-500/5 border border-green-500/10 rounded-2xl text-green-300 text-xs leading-relaxed italic">
+  <Info size={18} className="shrink-0 mt-0.5" />
+  <div>
+      <p className="font-bold uppercase mb-1">Prérequis Spotify</p>
+      <p>
+        Un abonnement <span className="text-white font-bold">Spotify Premium</span> est requis pour utiliser certaines fonctionnalités Spotify via l'API.
+        Vous devez également créer une application dans le 
+        <span className="text-white font-bold"> Spotify Developer Dashboard </span>
+        afin d'obtenir votre Client ID et votre Client Secret.
+      </p>
+      <p className="mt-2">
+        Pour en savoir plus sur la création d'une application Spotify Developer et l'utilisation de l'API :
+        <a 
+          href="https://developer.spotify.com/documentation/web-api"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="ml-1 text-green-400 font-bold hover:underline"
+        >
+          cliquez ici
+        </a>.
+      </p>
+  </div>
+</div>
               
               <div className="grid grid-cols-1 gap-5">
                 <div className="space-y-2">
