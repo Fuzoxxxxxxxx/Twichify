@@ -7,7 +7,8 @@ import {
   Palette, LogOut, Link as LinkIcon, Save, AlertCircle, 
   Layout, Eye, EyeOff, RotateCw, Type, Sparkles, Clock,
   Zap, Settings, HelpCircle, Activity, Image as ImageIcon,
-  Sliders, Search, Info
+  Sliders, Search, Info, Check, BarChart3, Unlink, TrendingUp,
+  Headphones, Disc, Flame
 } from "lucide-react";
 
 export default function Dashboard() {
@@ -15,6 +16,8 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("overview");
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [copiedUri, setCopiedUri] = useState(false);
+  const [showClientSecret, setShowClientSecret] = useState(false);
 
   // --- ÉTATS SPOTIFY ---
   const [clientId, setClientId] = useState("");
@@ -40,6 +43,10 @@ export default function Dashboard() {
   const widgetUrl = typeof window !== 'undefined' 
     ? `${window.location.origin}/widget/${session?.user?.id}` 
     : "";
+
+  const redirectUri = typeof window !== 'undefined' 
+    ? `${window.location.origin}/api/callback/spotify` 
+    : '';
 
   const loadUserData = useCallback(async () => {
     try {
@@ -97,6 +104,22 @@ export default function Dashboard() {
     finally { setLoading(false); }
   };
 
+  const handleDisconnectSpotify = async () => {
+    if (!confirm("Voulez-vous vraiment vous déconnecter de Spotify ?")) return;
+    setLoading(true);
+    try {
+      const res = await fetch("/api/spotify/disconnect", { method: "POST" });
+      if (res.ok) {
+        setIsConnected(false);
+        alert("Compte Spotify déconnecté avec succès.");
+      }
+    } catch (e) {
+      alert("Erreur lors de la déconnexion.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const saveDesign = async () => {
     setLoading(true);
     try {
@@ -111,6 +134,16 @@ export default function Dashboard() {
       });
       alert("Design du widget mis à jour !");
     } finally { setLoading(false); }
+  };
+
+  const handleCopyRedirectUri = async () => {
+    try {
+      await navigator.clipboard.writeText(redirectUri);
+      setCopiedUri(true);
+      setTimeout(() => setCopiedUri(false), 2000);
+    } catch (e) {
+      console.error("Erreur de copie URL", e);
+    }
   };
 
   if (!session) return (
@@ -132,56 +165,97 @@ export default function Dashboard() {
 
         <nav className="flex-1 px-4 space-y-2">
           <p className="px-4 text-[10px] font-bold text-zinc-600 uppercase tracking-widest mb-4">Navigation</p>
-          <button onClick={() => setActiveTab("overview")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === "overview" ? "bg-indigo-600 text-white shadow-xl shadow-indigo-600/10" : "hover:bg-white/5 text-zinc-400"}`}>
-            <LayoutDashboard size={20} /> Dashboard
+          
+          <button 
+            onClick={() => setActiveTab("overview")} 
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-semibold text-xs ${activeTab === "overview" ? "bg-indigo-600 text-white shadow-xl shadow-indigo-600/20" : "hover:bg-white/5 text-zinc-400"}`}
+          >
+            <LayoutDashboard size={18} /> Dashboard
           </button>
-          <button onClick={() => setActiveTab("spotify")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === "spotify" ? "bg-indigo-600 text-white shadow-xl" : "hover:bg-white/5 text-zinc-400"}`}>
-            <Music size={20} /> Spotify API
+
+          <button 
+            onClick={() => setActiveTab("spotify")} 
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-semibold text-xs ${activeTab === "spotify" ? "bg-indigo-600 text-white shadow-xl shadow-indigo-600/20" : "hover:bg-white/5 text-zinc-400"}`}
+          >
+            <Music size={18} /> Spotify API
           </button>
-          <button onClick={() => setActiveTab("design")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === "design" ? "bg-indigo-600 text-white shadow-xl" : "hover:bg-white/5 text-zinc-400"}`}>
-            <Palette size={20} /> Design Widget
+
+          <button 
+            onClick={() => setActiveTab("design")} 
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-semibold text-xs ${activeTab === "design" ? "bg-indigo-600 text-white shadow-xl shadow-indigo-600/20" : "hover:bg-white/5 text-zinc-400"}`}
+          >
+            <Palette size={18} /> Design Widget
           </button>
+
         </nav>
 
         <div className="p-6 border-t border-white/5 space-y-4">
           <div className="flex items-center gap-3 p-3 bg-white/5 rounded-2xl border border-white/5">
             <img src={session.user.image || ""} className="w-8 h-8 rounded-full border border-white/10" alt="User" />
-            <div className="flex-1 min-w-0"><p className="text-[11px] font-bold truncate text-white uppercase tracking-tight">{session.user.name}</p></div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[11px] font-bold truncate text-white uppercase tracking-tight">{session.user.name}</p>
+            </div>
           </div>
-          <button onClick={() => signOut()} className="w-full flex items-center justify-center gap-2 px-4 py-2 text-[10px] font-black text-zinc-500 hover:text-red-400 transition-colors uppercase tracking-widest"><LogOut size={14}/> Quitter</button>
+          <button onClick={() => signOut()} className="w-full flex items-center justify-center gap-2 px-4 py-2 text-[10px] font-black text-zinc-500 hover:text-red-400 transition-colors uppercase tracking-widest">
+            <LogOut size={14}/> Quitter
+          </button>
         </div>
       </aside>
 
       <main className="flex-1 p-12 max-w-7xl">
         
-        {/* --- SECTION 1: OVERVIEW --- */}
+        {/* ========================================================================= */}
+        {/* --- SECTION 1: OVERVIEW (DASHBOARD) --- */}
+        {/* ========================================================================= */}
         {activeTab === "overview" && (
           <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <header>
+            <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
                 <h1 className="text-4xl font-black text-white italic tracking-tighter uppercase leading-none">Centre de contrôle</h1>
-                <p className="text-zinc-500 text-sm mt-3 font-medium">Content de vous revoir, <span className="text-indigo-400 font-bold">{session.user.name}</span>. Tout fonctionne normalement.</p>
+                <p className="text-zinc-500 text-xs font-medium mt-2">Content de vous revoir, <span className="text-indigo-400 font-bold">{session.user.name}</span>. Votre widget est prêt à streamer.</p>
+              </div>
+              <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-full w-fit">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span className="text-[10px] font-black text-emerald-400 uppercase tracking-wider">Système en ligne</span>
+              </div>
             </header>
 
+            {/* CARTES METRIQUES */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-[#1c202a] p-6 rounded-[28px] border border-white/5 group hover:border-indigo-500/30 transition-all">
-                    <div className="w-10 h-10 bg-green-500/10 text-green-500 rounded-lg flex items-center justify-center mb-4"><Activity size={20}/></div>
-                    <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">Connexion Spotify</p>
-                    <p className="text-xl font-black text-white uppercase italic mt-1">{isConnected ? "Opérationnel" : "Non configuré"}</p>
+              <div className="bg-[#1c202a] p-6 rounded-[28px] border border-white/5 hover:border-indigo-500/30 transition-all relative overflow-hidden group">
+                <div className="w-10 h-10 bg-emerald-500/10 text-emerald-400 rounded-xl flex items-center justify-center mb-4 border border-emerald-500/20">
+                  <Activity size={20}/>
                 </div>
-                <div className="bg-[#1c202a] p-6 rounded-[28px] border border-white/5 group hover:border-indigo-500/30 transition-all">
-                    <div className="w-10 h-10 bg-indigo-500/10 text-indigo-500 rounded-lg flex items-center justify-center mb-4"><Zap size={20}/></div>
-                    <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">Source Stream</p>
-                    <p className="text-xl font-black text-white uppercase italic mt-1">Widget V2 (Slim)</p>
+                <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">Connexion Spotify</p>
+                <p className="text-xl font-black text-white uppercase italic mt-1 flex items-center gap-2">
+                  {isConnected ? (
+                    <span className="text-emerald-400">Opérationnel</span>
+                  ) : (
+                    <span className="text-amber-400">Non configuré</span>
+                  )}
+                </p>
+              </div>
+
+              <div className="bg-[#1c202a] p-6 rounded-[28px] border border-white/5 hover:border-indigo-500/30 transition-all relative overflow-hidden group">
+                <div className="w-10 h-10 bg-indigo-500/10 text-indigo-400 rounded-xl flex items-center justify-center mb-4 border border-indigo-500/20">
+                  <Zap size={20}/>
                 </div>
-                <div className="bg-[#1c202a] p-6 rounded-[28px] border border-white/5 group hover:border-indigo-500/30 transition-all">
-                    <div className="w-10 h-10 bg-yellow-500/10 text-yellow-500 rounded-lg flex items-center justify-center mb-4"><Settings size={20}/></div>
-                    <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">Dernière Maj</p>
-                    <p className="text-xl font-black text-white uppercase italic mt-1">Avril 2026</p>
+                <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">Source Stream</p>
+                <p className="text-xl font-black text-white uppercase italic mt-1">Widget V2 (Slim)</p>
+              </div>
+
+              <div className="bg-[#1c202a] p-6 rounded-[28px] border border-white/5 hover:border-indigo-500/30 transition-all relative overflow-hidden group">
+                <div className="w-10 h-10 bg-amber-500/10 text-amber-400 rounded-xl flex items-center justify-center mb-4 border border-amber-500/20">
+                  <Settings size={20}/>
                 </div>
+                <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">Dernière Maj</p>
+                <p className="text-xl font-black text-white uppercase italic mt-1">Juillet 2026</p>
+              </div>
             </div>
 
+            {/* BANNIÈRE OBS */}
             <div 
-              className="bg-[#1c202a] p-8 rounded-[35px] border border-white/5 flex items-center justify-between cursor-pointer hover:bg-[#232835] transition-all group shadow-2xl relative overflow-hidden" 
+              className="bg-[#1c202a] p-8 rounded-[35px] border border-white/5 flex items-center justify-between cursor-pointer hover:bg-[#232835] hover:border-indigo-500/40 transition-all group shadow-2xl relative overflow-hidden" 
               onClick={() => {
                 navigator.clipboard.writeText(widgetUrl);
                 setCopied(true);
@@ -192,59 +266,245 @@ export default function Dashboard() {
                 <LinkIcon size={120} />
               </div>
               <div className="flex items-center gap-6 relative z-10">
-                <div className="w-16 h-16 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-600/30 group-hover:scale-110 transition duration-500">
+                <div className="w-16 h-16 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-600/30 group-hover:scale-105 transition duration-300">
                   {copied ? <CheckCircle2 size={32} /> : <LinkIcon size={32} />}
                 </div>
                 <div>
                   <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.3em] mb-1">Lien de la source Navigateur OBS</p>
-                  <p className="text-lg font-bold text-white tracking-tight">{copied ? "Lien copié dans le presse-papier !" : "Cliquez pour copier l'URL du widget"}</p>
+                  <p className="text-lg font-bold text-white tracking-tight">
+                    {copied ? "Lien copié dans le presse-papier !" : "Cliquez pour copier l'URL du widget"}
+                  </p>
                 </div>
               </div>
-              <ExternalLink size={24} className="text-zinc-700 mr-4 group-hover:text-white group-hover:translate-x-1 transition relative z-10" />
+              <ExternalLink size={24} className="text-zinc-600 mr-4 group-hover:text-white group-hover:translate-x-1 transition relative z-10" />
             </div>
+
+            {/* ACCÈS RAPIDE */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div 
+                onClick={() => setActiveTab("design")}
+                className="p-6 bg-white/[0.02] border border-white/5 rounded-3xl hover:border-indigo-500/30 cursor-pointer transition-all flex items-center justify-between"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-indigo-500/10 text-indigo-400 rounded-2xl">
+                    <Palette size={22} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-white">Personnaliser le Design</h3>
+                    <p className="text-xs text-zinc-500">Changer la typographie, couleurs, flou et animations</p>
+                  </div>
+                </div>
+                <span className="text-xs text-indigo-400 font-bold uppercase tracking-wider">Ouvrir →</span>
+              </div>
+
+              <div 
+                onClick={() => setActiveTab("spotify")}
+                className="p-6 bg-white/[0.02] border border-white/5 rounded-3xl hover:border-indigo-500/30 cursor-pointer transition-all flex items-center justify-between"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-emerald-500/10 text-emerald-400 rounded-2xl">
+                    <Music size={22} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-white">Gérer la connexion Spotify</h3>
+                    <p className="text-xs text-zinc-500">Mettre à jour les identifiants Client ID & Secret</p>
+                  </div>
+                </div>
+                <span className="text-xs text-emerald-400 font-bold uppercase tracking-wider">Ouvrir →</span>
+              </div>
+            </div>
+
           </div>
         )}
 
+        {/* ========================================================================= */}
         {/* --- SECTION 2: SPOTIFY API --- */}
+        {/* ========================================================================= */}
         {activeTab === "spotify" && (
           <div className="space-y-8 animate-in fade-in duration-500">
-            <h1 className="text-4xl font-black text-white italic tracking-tighter uppercase leading-none">Paramètres API</h1>
-            <div className="bg-[#1c202a] p-10 rounded-[40px] border border-white/5 space-y-8 shadow-2xl">
-              <div className="flex items-start gap-4 p-5 bg-indigo-500/5 border border-indigo-500/10 rounded-2xl text-indigo-300 text-xs leading-relaxed italic">
-                <Info size={18} className="shrink-0 mt-0.5" />
-                <div>
-                    <p className="font-bold uppercase mb-1">Information importante</p>
-                    <p>Assurez-vous d'avoir ajouté l'URL de redirection dans votre dashboard Spotify Developer. Sans cela, la liaison échouera.</p>
-                    <p className="mt-2 text-white font-mono bg-black/40 px-3 py-1.5 rounded-lg inline-block border border-white/5 select-all">{typeof window !== 'undefined' ? window.location.origin : ''}/api/callback/spotify</p>
-                </div>
-              </div>
+            <div>
+              <h1 className="text-4xl font-black text-white italic tracking-tighter uppercase leading-none">
+                Paramètres API
+              </h1>
+              <p className="text-zinc-500 text-xs font-medium mt-2">
+                Connectez votre application Spotify Developer pour alimenter le widget en temps réel.
+              </p>
+            </div>
+
+            <div className="bg-[#1c202a] p-8 md:p-10 rounded-[40px] border border-white/5 space-y-8 shadow-2xl">
               
-              <div className="grid grid-cols-1 gap-5">
-                <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">Client ID</label>
-                    <input type="text" value={clientId} onChange={(e) => setClientId(e.target.value)} placeholder="Votre Spotify Client ID" className="w-full p-5 bg-black/30 rounded-2xl border border-white/10 focus:border-indigo-500 outline-none text-white font-mono text-sm transition-all" />
+              {/* 1. GUIDE ÉTAPE PAR ÉTAPE ET PRÉREQUIS */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                
+                {/* Étape 1 */}
+                <div className="p-5 bg-white/[0.02] border border-white/5 rounded-3xl relative overflow-hidden group hover:border-indigo-500/30 transition-all flex flex-col justify-between">
+                  <div>
+                    <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest bg-indigo-500/10 px-2.5 py-1 rounded-full border border-indigo-500/20">
+                      Étape 1
+                    </span>
+                    <h3 className="text-sm font-bold text-white mt-3 mb-1">Créer l'App Spotify</h3>
+                    <p className="text-zinc-400 text-xs leading-relaxed">
+                      Rendez-vous sur le Dashboard Développeur et créez une nouvelle application.
+                    </p>
+                  </div>
+                  <a
+                    href="https://developer.spotify.com/dashboard"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs text-indigo-400 font-bold hover:text-indigo-300 mt-4 transition-colors group-hover:translate-x-1 duration-200"
+                  >
+                    Ouvrir le dashboard <ExternalLink size={12} />
+                  </a>
                 </div>
-                <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">Client Secret</label>
-                    <input type="password" value={clientSecret} onChange={(e) => setClientSecret(e.target.value)} placeholder="Votre Spotify Client Secret" className="w-full p-5 bg-black/30 rounded-2xl border border-white/10 focus:border-indigo-500 outline-none text-white font-mono text-sm transition-all" />
+
+                {/* Étape 2 : Redirect URI */}
+                <div className="p-5 bg-white/[0.02] border border-white/5 rounded-3xl relative overflow-hidden group hover:border-indigo-500/30 transition-all">
+                  <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest bg-indigo-500/10 px-2.5 py-1 rounded-full border border-indigo-500/20">
+                    Étape 2
+                  </span>
+                  <h3 className="text-sm font-bold text-white mt-3 mb-1">Redirect URI</h3>
+                  <p className="text-zinc-400 text-xs leading-relaxed mb-3">
+                    Ajoutez exactement cette URL dans les paramètres de votre app Spotify :
+                  </p>
+                  
+                  <div className="flex items-center gap-2 bg-black/60 p-1.5 pl-3 rounded-xl border border-white/10 w-full">
+                    <code className="text-white font-mono text-[11px] truncate flex-1">
+                      {redirectUri}
+                    </code>
+                    <button
+                      type="button"
+                      onClick={handleCopyRedirectUri}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all duration-200 shrink-0 ${
+                        copiedUri
+                          ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                          : "bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/20"
+                      }`}
+                    >
+                      {copiedUri ? (
+                        <>
+                          <Check size={12} /> Copié
+                        </>
+                      ) : (
+                        <>
+                          <Copy size={12} /> Copier
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
+
+                {/* Étape 3 : Compte Premium & Documentation */}
+                <div className="p-5 bg-amber-500/[0.03] border border-amber-500/10 rounded-3xl relative overflow-hidden group hover:border-amber-500/30 transition-all flex flex-col justify-between">
+                  <div>
+                    <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">
+                      Prérequis
+                    </span>
+                    <h3 className="text-sm font-bold text-white mt-3 mb-1 flex items-center gap-2">
+                      Spotify Premium <Sparkles size={14} className="text-amber-400" />
+                    </h3>
+                    <p className="text-zinc-400 text-xs leading-relaxed">
+                      Un compte Spotify Premium actif est indispensable pour lire la musique en direct via l'API Web.
+                    </p>
+                  </div>
+                  <a
+                    href="https://developer.spotify.com/documentation/web-api"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs text-amber-400 font-bold hover:text-amber-300 mt-4 transition-colors group-hover:translate-x-1 duration-200"
+                  >
+                    Consulter la doc API <ExternalLink size={12} />
+                  </a>
+                </div>
+
               </div>
 
-              <div className="flex gap-4 pt-4">
-                <button onClick={saveSpotifyKeys} disabled={loading} className="px-10 py-5 bg-white text-black rounded-2xl font-black uppercase text-xs hover:bg-zinc-200 transition-all active:scale-95 shadow-lg">Sauvegarder les clés</button>
-                <button 
-                    onClick={async () => { const res = await fetch("/api/spotify/auth-url"); const data = await res.json(); if (data.url) window.location.href = data.url; }} 
-                    className={`px-10 py-5 rounded-2xl font-black uppercase text-xs transition-all flex items-center gap-3 active:scale-95 shadow-lg ${isConnected ? "bg-zinc-800 text-green-500 border border-green-500/20" : "bg-[#1DB954] text-black hover:bg-[#1ed760]"}`}
-                >
-                  {isConnected ? <CheckCircle2 size={18}/> : <Music size={18}/>} 
-                  {isConnected ? "Spotify est déjà lié" : "Lier mon compte Spotify"}
-                </button>
+              {/* 2. FORMULAIRE CLÉS API */}
+              <div className="bg-black/20 p-6 md:p-8 rounded-3xl border border-white/5 space-y-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <Sliders size={16} className="text-indigo-400" />
+                  <h2 className="text-xs font-bold text-white uppercase tracking-widest">
+                    Identifiants d'accès
+                  </h2>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">
+                      Client ID
+                    </label>
+                    <input 
+                      type="text" 
+                      value={clientId} 
+                      onChange={(e) => setClientId(e.target.value)} 
+                      placeholder="Ex: 8a4c..." 
+                      className="w-full p-4 bg-black/40 rounded-2xl border border-white/10 focus:border-indigo-500 outline-none text-white font-mono text-xs transition-all" 
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">
+                      Client Secret
+                    </label>
+                    <div className="relative flex items-center">
+                      <input 
+                        type={showClientSecret ? "text" : "password"} 
+                        value={clientSecret} 
+                        onChange={(e) => setClientSecret(e.target.value)} 
+                        placeholder="Ex: ••••••••••••••••" 
+                        className="w-full p-4 pr-12 bg-black/40 rounded-2xl border border-white/10 focus:border-indigo-500 outline-none text-white font-mono text-xs transition-all" 
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowClientSecret(!showClientSecret)}
+                        className="absolute right-4 text-zinc-500 hover:text-white transition-colors"
+                      >
+                        {showClientSecret ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* BOUTONS D'ACTION AVEC SE DÉCONNECTER / SE CONNECTER DYNAMIQUE */}
+                <div className="flex flex-col sm:flex-row gap-4 pt-4 border-t border-white/5">
+                  <button 
+                    onClick={saveSpotifyKeys} 
+                    disabled={loading} 
+                    className="px-8 py-4 bg-white text-black rounded-2xl font-black uppercase text-xs hover:bg-zinc-200 transition-all active:scale-95 shadow-lg flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    <Save size={16} /> Sauvegarder les clés
+                  </button>
+                  
+                  {isConnected ? (
+                    <button 
+                      onClick={handleDisconnectSpotify} 
+                      disabled={loading}
+                      className="px-8 py-4 bg-red-500/10 text-red-400 border border-red-500/20 rounded-2xl font-black uppercase text-xs hover:bg-red-500/20 transition-all active:scale-95 shadow-lg flex items-center justify-center gap-2"
+                    >
+                      <Unlink size={16}/> Se déconnecter de Spotify
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={async () => { 
+                        const res = await fetch("/api/spotify/auth-url"); 
+                        const data = await res.json(); 
+                        if (data.url) window.location.href = data.url; 
+                      }} 
+                      className="px-8 py-4 bg-[#1DB954] text-black hover:bg-[#1ed760] rounded-2xl font-black uppercase text-xs transition-all active:scale-95 shadow-lg flex items-center justify-center gap-2"
+                    >
+                      <Music size={16}/> Associer mon compte Spotify
+                    </button>
+                  )}
+                </div>
+
               </div>
+
             </div>
           </div>
         )}
 
+        {/* ========================================================================= */}
         {/* --- SECTION 3: DESIGN SYSTEM --- */}
+        {/* ========================================================================= */}
         {activeTab === "design" && (
           <div className="space-y-8 animate-in fade-in duration-500">
             <h1 className="text-4xl font-black text-white italic tracking-tighter uppercase leading-none">Personnalisation</h1>
@@ -342,107 +602,86 @@ export default function Dashboard() {
                 <div className="absolute inset-0 bg-indigo-600/5 opacity-0 group-hover:opacity-100 transition-all pointer-events-none duration-1000"></div>
                 <p className="absolute top-10 text-[10px] font-black text-zinc-700 uppercase tracking-[0.6em] z-30 pointer-events-none">Zone OBS 475x125 pixels</p>
                 
-{/* WIDGET SLIM AVEC COVER DÉBORDANTE */}
-<div 
-  className={`relative flex items-center transition-all duration-1000 ${fontFamily}
-    ${layout === 'minimal' ? 'flex-col w-[200px] p-5 text-center mt-10' : 'flex-row w-[380px] h-[100px] p-4'}
-  `}
-  style={{ 
-    backgroundColor: `rgba(15, 17, 23, ${parseInt(bgOpacity)/100})`,
-    borderRadius: `${borderRadius}px`,
-    boxShadow: enableGlow ? `0 20px 50px -10px ${accentColor}55` : 'none',
-    border: '1px solid rgba(255,255,255,0.08)',
-    // Note : On ne met PAS overflow-hidden ici pour laisser la cover dépasser
-  }}
->
-  {/* FOND BLUR DYNAMIQUE (Lui doit rester masqué par les bords arrondis) */}
-  {enableBlurBg && (
-    <div className="absolute inset-0 z-0 overflow-hidden" style={{ borderRadius: `${borderRadius}px` }}>
-      <div className="absolute inset-0 transition-all duration-[2000ms]"
-        style={{
-          backgroundImage: `url(${currentTrack?.albumImageUrl || "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=300&auto=format&fit=crop"})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          filter: `blur(${blurAmount}px) brightness(0.35)`,
-          transform: 'scale(1.2)'
-        }}
-      />
-    </div>
-  )}
+                {/* WIDGET SLIM */}
+                <div 
+                  className={`relative flex items-center transition-all duration-1000 ${fontFamily}
+                    ${layout === 'minimal' ? 'flex-col w-[200px] p-5 text-center mt-10' : 'flex-row w-[380px] h-[100px] p-4'}
+                  `}
+                  style={{ 
+                    backgroundColor: `rgba(15, 17, 23, ${parseInt(bgOpacity)/100})`,
+                    borderRadius: `${borderRadius}px`,
+                    boxShadow: enableGlow ? `0 20px 50px -10px ${accentColor}55` : 'none',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                  }}
+                >
+                  {/* FOND BLUR DYNAMIQUE */}
+                  {enableBlurBg && (
+                    <div className="absolute inset-0 z-0 overflow-hidden" style={{ borderRadius: `${borderRadius}px` }}>
+                      <div className="absolute inset-0 transition-all duration-[2000ms]"
+                        style={{
+                          backgroundImage: `url(${currentTrack?.albumImageUrl || "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=300&auto=format&fit=crop"})`,
+                          backgroundSize: 'cover',
+                          backgroundPosition: 'center',
+                          filter: `blur(${blurAmount}px) brightness(0.35)`,
+                          transform: 'scale(1.2)'
+                        }}
+                      />
+                    </div>
+                  )}
 
-  {/* POCHETTE QUI DÉPASSE */}
-  {showCover && (
-    <div className="relative z-30 shrink-0 mr-5 -ml-8 transition-transform duration-500">
-      <img src={currentTrack?.albumImageUrl || "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=300&auto=format&fit=crop"} 
-        // w-28 h-28 fait 112px, soit plus que les 100px de la carte
-        className="w-28 h-28 object-cover shadow-[0_15px_35px_rgba(0,0,0,0.6)] border-2 border-white/10"
-        style={{ 
-          borderRadius: isRotating ? '999px' : `${Math.max(8, parseInt(borderRadius))}px`,
-          animation: isRotating ? 'spin-slow 12s linear infinite' : 'none',
-        }}
-        alt="Album Cover"
-      />
-    </div>
-  )}
+                  {/* POCHETTE */}
+                  {showCover && (
+                    <div className="relative z-30 shrink-0 mr-5 -ml-8 transition-transform duration-500">
+                      <img src={currentTrack?.albumImageUrl || "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=300&auto=format&fit=crop"} 
+                        className="w-28 h-28 object-cover shadow-[0_15px_35px_rgba(0,0,0,0.6)] border-2 border-white/10"
+                        style={{ 
+                          borderRadius: isRotating ? '999px' : `${Math.max(8, parseInt(borderRadius))}px`,
+                          animation: isRotating ? 'spin-slow 12s linear infinite' : 'none',
+                        }}
+                        alt="Album Cover"
+                      />
+                    </div>
+                  )}
 
-  {/* TEXTES ET BARRE SLIM */}
-  <div className="relative z-10 flex-1 min-w-0 flex flex-col justify-center">
-    {showArtist && (
-      <p className="text-[10px] font-black text-white/50 uppercase tracking-[0.25em] mb-0.5 truncate italic">
-        {currentTrack?.artist || "FOX STEVENSON"}
-      </p>
-    )}
-    <h2 className="text-base font-black text-white truncate leading-tight uppercase italic tracking-tighter">
-      {currentTrack?.title || "Don't Care Crown"}
-    </h2>
+                  {/* TEXTES ET BARRE SLIM */}
+                  <div className="relative z-10 flex-1 min-w-0 flex flex-col justify-center">
+                    {showArtist && (
+                      <p className="text-[10px] font-black text-white/50 uppercase tracking-[0.25em] mb-0.5 truncate italic">
+                        {currentTrack?.artist || "FOX STEVENSON"}
+                      </p>
+                    )}
+                    <h2 className="text-base font-black text-white truncate leading-tight uppercase italic tracking-tighter">
+                      {currentTrack?.title || "Don't Care Crown"}
+                    </h2>
 
-    {showProgress && (
-      <div className="mt-2.5 space-y-1.5">
-        <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden backdrop-blur-sm">
-          <div 
-            className="h-full transition-all duration-1000 ease-out" 
-            style={{ 
-                backgroundColor: accentColor, 
-                width: '60%', 
-                boxShadow: `0 0 12px ${accentColor}` 
-            }} 
-          />
-        </div>
-        {showTimestamp && (
-          <div className="flex justify-between text-[8px] font-black text-white/40 font-mono italic tracking-tight">
-            <span className="bg-black/40 px-1.5 py-0.5 rounded">01:42</span>
-            <span className="bg-black/40 px-1.5 py-0.5 rounded">03:15</span>
-          </div>
-        )}
-      </div>
-    )}
-  </div>
-</div>
+                    {showProgress && (
+                      <div className="mt-2.5 space-y-1.5">
+                        <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden backdrop-blur-sm">
+                          <div 
+                            className="h-full transition-all duration-1000 ease-out" 
+                            style={{ 
+                                backgroundColor: accentColor, 
+                                width: '60%', 
+                                boxShadow: `0 0 12px ${accentColor}` 
+                            }} 
+                          />
+                        </div>
+                        {showTimestamp && (
+                          <div className="flex justify-between text-[8px] font-black text-white/40 font-mono italic tracking-tight">
+                            <span className="bg-black/40 px-1.5 py-0.5 rounded">01:42</span>
+                            <span className="bg-black/40 px-1.5 py-0.5 rounded">03:15</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
 
             </div>
           </div>
         )}
       </main>
-
-      <style jsx global>{`
-        @keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        
-        /* Personnalisation de la Scrollbar pour les réglages */
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-        
-        input[type='range']::-webkit-slider-thumb {
-            appearance: none;
-            width: 14px;
-            height: 14px;
-            background: white;
-            border-radius: 50%;
-            cursor: pointer;
-            box-shadow: 0 0 10px rgba(0,0,0,0.5);
-            border: 2px solid #6366f1;
-        }
-      `}</style>
     </div>
   );
 }
