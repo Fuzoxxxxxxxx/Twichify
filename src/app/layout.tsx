@@ -14,8 +14,16 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Spotify Now Playing - Twitch Dashboard",
+  title: "Twichify",
   description: "Générez votre widget Spotify pour votre stream Twitch",
+  keywords: ["Twitch", "Spotify", "Widget", "Overlay", "OBS", "Music", "Stream"],
+  openGraph: {
+    title: "Twichify",
+    description: "Partagez votre musique Spotify en live sur Twitch avec un overlay ultra-rapide.",
+    url: "https://twichify.vercel.app/",
+    siteName: "Twichify",
+    type: "website",
+  },
 };
 
 export default function RootLayout({
