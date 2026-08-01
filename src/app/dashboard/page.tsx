@@ -306,10 +306,10 @@ export default function Dashboard() {
     }
 
     if (provider.id === "nightbot") {
-      return `$(urlfetch json ${baseUrl})`;
+      return `$(urlfetch ${baseUrl})`;
     }
 
-    return "${customapi " + baseUrl + "}";
+    return "${customapi." + baseUrl + "}"; 
   };
 
   if (!session) {
