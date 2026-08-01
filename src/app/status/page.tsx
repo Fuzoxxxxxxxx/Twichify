@@ -2,24 +2,13 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ArrowLeft, Check } from "lucide-react";
-
-const getBarColor = (state: string) => {
-  switch (state) {
-    case "green":
-      return "bg-[#7ccf6b]";
-    case "yellow":
-      return "bg-[#f3d85a]";
-    case "red":
-      return "bg-[#ef6a4d]";
-    default:
-      return "bg-[#b7d9af]";
-  }
-};
+import { ArrowLeft, Check, AlertTriangle, XCircle } from "lucide-react";
 
 export default function StatusPage() {
   const [services, setServices] = useState<any[]>([]);
-  const [overall, setOverall] = useState("All Systems Operational");
+  const [overall, setOverall] = useState("Checking systems...");
+  const [isAllOperational, setIsAllOperational] = useState(true);
+  const [latency, setLatency] = useState("--");
   const [lastUpdated, setLastUpdated] = useState("--");
 
   useEffect(() => {
@@ -32,16 +21,35 @@ export default function StatusPage() {
           setServices(data.services);
         }
 
-        if (data.spotify === "Online" && data.mongodb === "Healthy") {
+        if (data.latency) {
+          setLatency(data.latency);
+        }
+
+        // Vraie condition basée sur la nouvelle API
+        if (data.allSystemsOperational) {
           setOverall("All Systems Operational");
+          setIsAllOperational(true);
         } else {
-          setOverall("Some services are degraded");
+          setOverall("Some services are experiencing issues");
+          setIsAllOperational(false);
         }
 
         const now = new Date();
-        setLastUpdated(`${now.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} ${now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" })} (UTC)`);
+        setLastUpdated(
+          `${now.toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          })} ${now.toLocaleTimeString("en-US", {
+            hour: "2-digit",
+            minute: "2-digit",
+            timeZone: "UTC",
+          })} (UTC)`
+        );
       } catch (error) {
         console.error("Erreur chargement status", error);
+        setOverall("Unable to load system status");
+        setIsAllOperational(false);
       }
     };
 
@@ -53,10 +61,15 @@ export default function StatusPage() {
   return (
     <main className="min-h-screen bg-[#05070b] text-white">
       <div className="mx-auto max-w-6xl px-6 py-8">
+        {/* Header */}
         <div className="mb-8 flex items-center justify-between gap-4">
           <div>
-            <h1 className="text-4xl font-black tracking-[-0.06em] text-white">Twitchify Status Page</h1>
-            <p className="mt-2 text-xl text-zinc-400">Check the status of our services</p>
+            <h1 className="text-4xl font-black tracking-[-0.06em] text-white">
+              Twitchify Status Page
+            </h1>
+            <p className="mt-2 text-xl text-zinc-400">
+              Real-time monitoring of our core services
+            </p>
           </div>
           <Link
             href="/dashboard"
@@ -67,46 +80,69 @@ export default function StatusPage() {
           </Link>
         </div>
 
-        <div className="mb-8 flex items-center justify-between rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-5 py-4 shadow-sm shadow-emerald-900/10">
+        {/* Global Status Box */}
+        <div
+          className={`mb-8 flex items-center justify-between rounded-2xl border px-5 py-4 shadow-sm ${
+            isAllOperational
+              ? "border-emerald-500/20 bg-emerald-500/10 shadow-emerald-900/10"
+              : "border-amber-500/20 bg-amber-500/10 shadow-amber-900/10"
+          }`}
+        >
           <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-300">
-              <Check size={18} />
+            <div
+              className={`flex h-8 w-8 items-center justify-center rounded-full ${
+                isAllOperational
+                  ? "bg-emerald-500/20 text-emerald-300"
+                  : "bg-amber-500/20 text-amber-300"
+              }`}
+            >
+              {isAllOperational ? <Check size={18} /> : <AlertTriangle size={18} />}
             </div>
-            <span className="text-[18px] font-black tracking-[-0.04em] text-white">{overall}</span>
+            <span className="text-[18px] font-black tracking-[-0.04em] text-white">
+              {overall}
+            </span>
           </div>
-          <span className="text-[12px] font-medium text-zinc-400">{lastUpdated}</span>
+          <div className="flex items-center gap-4 text-[12px] font-medium text-zinc-400">
+            <span>Latency: {latency}</span>
+            <span>•</span>
+            <span>{lastUpdated}</span>
+          </div>
         </div>
 
-        <div className="space-y-7 pb-8">
+        {/* Services List */}
+        <div className="space-y-4 pb-8">
           {services.length === 0 ? (
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-6 text-zinc-400">Chargement des services...</div>
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-6 text-zinc-400">
+              Chargement des services...
+            </div>
           ) : (
             services.map((service) => (
-              <div key={service.name} className="space-y-2">
-                <div className="flex items-center justify-between gap-4 px-1">
-                  <div className="flex items-center gap-2 text-[18px] font-bold tracking-[-0.04em] text-white">
-                    <span>{service.name}</span>
-                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-zinc-700 bg-zinc-900 text-[10px] font-bold text-zinc-400">
-                      i
-                    </span>
-                  </div>
-                  <span className="text-[15px] font-semibold text-white">{service.percent}</span>
+              <div
+                key={service.name}
+                className="flex items-center justify-between rounded-2xl border border-zinc-800 bg-zinc-950/60 p-5 shadow-sm transition hover:border-zinc-700"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-[18px] font-bold tracking-[-0.04em] text-white">
+                    {service.name}
+                  </span>
                 </div>
 
+                {/* Status Badge */}
                 <div className="flex items-center gap-2">
-                  <div className="flex flex-1 gap-[4px] overflow-hidden rounded-full">
-                    {service.history?.map((state: string, index: number) => (
-                      <div
-                        key={`${service.name}-${index}`}
-                        className={`h-6 w-[10px] rounded-full ${getBarColor(state)}`}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                <div className="mt-1 flex items-center justify-between text-[11px] text-zinc-500">
-                  <span>30 days ago</span>
-                  <span>Today</span>
+                  <span
+                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
+                      service.state === "green"
+                        ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                        : "bg-rose-500/10 text-rose-400 border border-rose-500/20"
+                    }`}
+                  >
+                    <span
+                      className={`h-2 w-2 rounded-full ${
+                        service.state === "green" ? "bg-emerald-400" : "bg-rose-400"
+                      }`}
+                    />
+                    {service.status}
+                  </span>
                 </div>
               </div>
             ))
