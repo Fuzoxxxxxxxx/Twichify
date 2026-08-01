@@ -299,8 +299,7 @@ export default function Dashboard() {
     if (typeof window === "undefined") return "";
 
     const provider = chatbotProviders.find((item) => item.id === providerId) ?? chatbotProviders[0];
-    const template = encodeURIComponent(customBotMessage || "{artist} - {title}");
-    const baseUrl = `${window.location.origin}/api/chatbot/${provider.id}?userId=${session?.user?.id ?? ""}&message=${template}`;
+    const baseUrl = `${window.location.origin}/api/chatbot/${provider.id}?userId=${session?.user?.id ?? ""}`;
 
     if (provider.id === "wizebot") {
       return `$urlcall(${baseUrl})`;
