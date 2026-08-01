@@ -97,19 +97,9 @@ export async function GET(
     .replace(/{artist}/g, track.artist)
     .replace(/{title}/g, track.title);
 
-  if (provider === "nightbot" || provider === "wizebot") {
+  if (provider === "nightbot" || provider === "wizebot" || provider === "streamelements") {
     return new Response(songText, {
       headers: { "Content-Type": "text/plain; charset=utf-8" },
-    });
-  }
-
-  if (provider === "streamelements") {
-    return NextResponse.json({
-      ok: true,
-      artist: track.artist,
-      title: track.title,
-      song: songText,
-      text: songText
     });
   }
 
