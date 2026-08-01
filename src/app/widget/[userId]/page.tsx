@@ -55,6 +55,10 @@ export default function SpotifyWidget() {
 
   const isMinimal = settings.layout === 'minimal';
   const cardWidth = isMinimal ? 220 : 380;
+  const titleText = track?.title || "";
+  const artistText = track?.artist || "";
+  const isLongTitle = titleText.length > 22;
+  const isLongArtist = artistText.length > 18;
 
   // Transition "Spring" pour l'effet élastique centre -> côté
   const sharedTransition: any = { type: "spring", stiffness: 120, damping: 20 };
@@ -119,14 +123,48 @@ export default function SpotifyWidget() {
                 className="relative z-10 flex-1 p-4 min-w-0 flex flex-col justify-center"
               >
                 {settings.showArtist && (
-                  <p className="text-[10px] font-black text-white/50 uppercase tracking-[0.25em] mb-0.5 truncate italic">
-                    {track.artist}
-                  </p>
+                  <div className="overflow-hidden whitespace-nowrap">
+                    <p
+                      className="text-[10px] font-black text-white/50 uppercase tracking-[0.25em] mb-0.5 italic"
+                      style={
+                        isLongArtist
+                          ? {
+                              display: 'inline-block',
+                              minWidth: 'max-content',
+                              animation: 'marquee 8s linear infinite alternate',
+                            }
+                          : {
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                            }
+                      }
+                    >
+                      {track.artist}
+                    </p>
+                  </div>
                 )}
                 
-                <h2 className="text-base font-black text-white truncate leading-tight uppercase italic tracking-tighter">
-                  {track.title}
-                </h2>
+                <div className="overflow-hidden whitespace-nowrap">
+                  <h2
+                    className="text-base font-black text-white leading-tight uppercase italic tracking-tighter"
+                    style={
+                      isLongTitle
+                        ? {
+                            display: 'inline-block',
+                            minWidth: 'max-content',
+                            animation: 'marquee 9s linear infinite alternate',
+                          }
+                        : {
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                          }
+                    }
+                  >
+                    {track.title}
+                  </h2>
+                </div>
 
                 {settings.showProgress && (
                   <div className="mt-2.5 space-y-1.5">
@@ -140,7 +178,6 @@ export default function SpotifyWidget() {
                         }} 
                       />
                     </div>
-                    {/* LE TIMESTAMP EST ICI */}
                     {settings.showTimestamp && (
                       <div className="flex justify-between text-[8px] font-bold text-white/40 font-mono italic">
                         <span>{formatTime(track.progressMs)}</span>
@@ -177,6 +214,7 @@ export default function SpotifyWidget() {
                   style={{ 
                     borderRadius: settings.isRotating ? '999px' : `${Math.max(8, parseInt(settings.borderRadius))}px`,
                     animation: settings.isRotating ? 'spin-slow 12s linear infinite' : 'none',
+                    boxShadow: '0 18px 35px rgba(0,0,0,0.7)'
                   }}
                   alt="Cover"
                 />
@@ -188,6 +226,12 @@ export default function SpotifyWidget() {
 
       <style jsx global>{`
         @keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes marquee {
+          0% { transform: translateX(0); }
+          20% { transform: translateX(0); }
+          80% { transform: translateX(-18%); }
+          100% { transform: translateX(-18%); }
+        }
         body { background: transparent !important; overflow: hidden; margin: 0; }
       `}</style>
     </div>

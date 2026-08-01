@@ -20,7 +20,8 @@ export async function GET() {
   return NextResponse.json({
     spotifyClientId: user.spotifyClientId,
     // On vérifie si un token existe pour dire au bouton "Tu es lié"
-    hasSpotifyToken: !!user.spotifyRefreshToken, 
+    hasSpotifyToken: !!user.spotifyRefreshToken,
     widgetSettings: user.widgetSettings,
+    botSettings: user.botSettings,
   });
 }

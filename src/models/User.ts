@@ -27,7 +27,12 @@ const UserSchema = new Schema({
     enableGlow: { type: Boolean, default: true },
     isRotating: { type: Boolean, default: false },
     enableBlurBg: { type: Boolean, default: true },
-  }
+  },
+
+  // Bot message settings
+  botSettings: {
+    customMessage: { type: String, default: "Now playing: {artist} - {title}" },
+  },
 });
 
 const User = models.User || model("User", UserSchema);
