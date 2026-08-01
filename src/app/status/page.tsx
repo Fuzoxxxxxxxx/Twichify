@@ -2,7 +2,20 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ArrowLeft, Check, AlertTriangle, XCircle } from "lucide-react";
+import { ArrowLeft, Check, AlertTriangle } from "lucide-react";
+
+const getBarColor = (state: string) => {
+  switch (state) {
+    case "green":
+      return "bg-[#7ccf6b]";
+    case "yellow":
+      return "bg-[#f3d85a]";
+    case "red":
+      return "bg-[#ef6a4d]";
+    default:
+      return "bg-[#b7d9af]";
+  }
+};
 
 export default function StatusPage() {
   const [services, setServices] = useState<any[]>([]);
@@ -25,7 +38,6 @@ export default function StatusPage() {
           setLatency(data.latency);
         }
 
-        // Vraie condition basée sur la nouvelle API
         if (data.allSystemsOperational) {
           setOverall("All Systems Operational");
           setIsAllOperational(true);
@@ -109,40 +121,39 @@ export default function StatusPage() {
           </div>
         </div>
 
-        {/* Services List */}
-        <div className="space-y-4 pb-8">
+        {/* Services List avec Barres 24h */}
+        <div className="space-y-7 pb-8">
           {services.length === 0 ? (
             <div className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-6 text-zinc-400">
               Chargement des services...
             </div>
           ) : (
             services.map((service) => (
-              <div
-                key={service.name}
-                className="flex items-center justify-between rounded-2xl border border-zinc-800 bg-zinc-950/60 p-5 shadow-sm transition hover:border-zinc-700"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="text-[18px] font-bold tracking-[-0.04em] text-white">
-                    {service.name}
+              <div key={service.name} className="space-y-2">
+                <div className="flex items-center justify-between gap-4 px-1">
+                  <div className="flex items-center gap-2 text-[18px] font-bold tracking-[-0.04em] text-white">
+                    <span>{service.name}</span>
+                  </div>
+                  <span className="text-[15px] font-semibold text-white">
+                    {service.status} ({service.percent})
                   </span>
                 </div>
 
-                {/* Status Badge */}
+                {/* Barres d'historique 24h */}
                 <div className="flex items-center gap-2">
-                  <span
-                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
-                      service.state === "green"
-                        ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                        : "bg-rose-500/10 text-rose-400 border border-rose-500/20"
-                    }`}
-                  >
-                    <span
-                      className={`h-2 w-2 rounded-full ${
-                        service.state === "green" ? "bg-emerald-400" : "bg-rose-400"
-                      }`}
-                    />
-                    {service.status}
-                  </span>
+                  <div className="flex flex-1 gap-[4px] overflow-hidden rounded-full">
+                    {service.history?.map((state: string, index: number) => (
+                      <div
+                        key={`${service.name}-${index}`}
+                        className={`h-6 flex-1 rounded-full ${getBarColor(state)}`}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-1 flex items-center justify-between text-[11px] text-zinc-500">
+                  <span>24h ago</span>
+                  <span>Now</span>
                 </div>
               </div>
             ))
