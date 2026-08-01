@@ -77,7 +77,7 @@ export async function GET(
   if (!track) {
     const emptyMessage = "Aucune musique en cours actuellement.";
 
-    if (provider === "nightbot" || provider === "wizebot") {
+    if (provider === "nightbot" || provider === "wizebot" || provider === "streamelements") {
       return new Response(emptyMessage, {
         headers: { "Content-Type": "text/plain; charset=utf-8" },
       });
