@@ -21,20 +21,22 @@ export async function GET() {
     isMongoDbOk = false;
   }
 
-  // 2. Vrai Ping API Spotify
+  // 2. Vrai Ping API Spotify (Endpoint public d'analyse de statut)
   try {
-    const spotifyPing = await fetch("https://api.spotify.com/v1/", {
-      method: "GET",
+    const spotifyPing = await fetch("https://open.spotify.com", {
+      method: "HEAD", // HEAD est très rapide car il ne charge pas le HTML
       cache: "no-store",
     });
-    isSpotifyOk = spotifyPing.status === 401 || spotifyPing.ok;
+
+    // Si les serveurs Spotify répondent (statut 200 à 399)
+    isSpotifyOk = spotifyPing.ok || spotifyPing.status < 400;
   } catch (error) {
     isSpotifyOk = false;
   }
 
   const latency = `${Date.now() - startedAt}ms`;
 
-  // Fonction pour générer 24 barres (23 passées vertes + 1 actuelle réelle)
+  // Fonction pour générer 24 barres
   const generate24hHistory = (isCurrentOk: boolean) => {
     const history = Array.from({ length: 23 }, () => "green");
     history.push(isCurrentOk ? "green" : "red");
