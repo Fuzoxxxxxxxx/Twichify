@@ -3,6 +3,10 @@ import mongoose from "mongoose";
 import User from "@/models/User";
 import axios from "axios";
 
+// 💡 DÉSACTIVATION DU CACHE NEXT.JS / VERCEL
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 async function getCurrentTrack(userId: string) {
   if (mongoose.connection.readyState !== 1) {
     await mongoose.connect(process.env.DATABASE_URL!);
@@ -49,6 +53,7 @@ async function getCurrentTrack(userId: string) {
       progressMs: trackResponse.data.progress_ms,
       durationMs: item.duration_ms,
       isPlaying: trackResponse.data.is_playing,
+      customTemplate: user.botSettings?.customMessage || "Now playing: {artist} - {title}"
     };
   } catch (error) {
     return null;
@@ -72,7 +77,7 @@ export async function GET(
   if (!track) {
     const emptyMessage = "Aucune musique en cours actuellement.";
 
-    if (provider === "nightbot") {
+    if (provider === "nightbot" || provider === "wizebot") {
       return new Response(emptyMessage, {
         headers: { "Content-Type": "text/plain; charset=utf-8" },
       });
@@ -87,9 +92,12 @@ export async function GET(
     });
   }
 
-  const songText = `${track.artist} - ${track.title}`;
+  // 💡 APPLICATION DU MESSAGE PERSONNALISÉ
+  const songText = track.customTemplate
+    .replace(/{artist}/g, track.artist)
+    .replace(/{title}/g, track.title);
 
-  if (provider === "nightbot") {
+  if (provider === "nightbot" || provider === "wizebot") {
     return new Response(songText, {
       headers: { "Content-Type": "text/plain; charset=utf-8" },
     });
@@ -102,12 +110,6 @@ export async function GET(
       title: track.title,
       song: songText,
       text: songText
-    });
-  }
-
-  if (provider === "wizebot") {
-    return new Response(songText, {
-      headers: { "Content-Type": "text/plain; charset=utf-8" },
     });
   }
 
