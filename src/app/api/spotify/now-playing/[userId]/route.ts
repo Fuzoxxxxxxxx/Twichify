@@ -17,6 +17,7 @@ export async function GET(
   }
 
   const user = await User.findById(userId);
+
   if (!user || !user.spotifyRefreshToken) return NextResponse.json({ isPlaying: false });
 
   // Ajout de blurAmount dans les valeurs par défaut
@@ -75,10 +76,17 @@ export async function GET(
       }
     });
 
-  } catch (error) {
+  } catch (error: any) {
+    
+      const retryAfter = error.response?.headers["retry-after"];
+    if (retryAfter) {
+      console.log(`⏳ Spotify demande d'attendre ${retryAfter} secondes avant la prochaine requête.`);
+    } else {
+      console.log("⏳ Pas d'en-tête Retry-After précis (patienter généralement 1 à 5 minutes).");
+    }
+  }
     return NextResponse.json({ 
       isPlaying: false, 
       settings: user.widgetSettings || defaultSettings 
     });
   }
-}
