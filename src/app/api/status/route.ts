@@ -7,6 +7,8 @@ export const dynamic = "force-dynamic";
 const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
 const POINTS = 24;
+const MINUTE = 60_000;
+const MINUTE_POINTS = 90; // frise "par minute" : 90 dernières minutes
 const LAZY_AFTER_MS = 60_000; // sonde paresseuse si le dernier check a plus d'1 min
 const STALE_AFTER_MS = 5 * 60_000; // au-delà : « aucune donnée récente » (jamais de faux vert)
 
@@ -63,12 +65,12 @@ export async function GET() {
     const [lastStartedAt, recent, hourly, daily, incidents] = await Promise.all([
       getLastCheckStartedAt(db),
 
-      // Derniers checks (10 min) pour le statut actuel
+      // Derniers checks (90 min) : statut actuel + frise par minute
       db
         .collection("statuslogs")
-        .find({ timestamp: { $gte: new Date(now - 10 * 60_000) } })
+        .find({ timestamp: { $gte: new Date(now - MINUTE_POINTS * MINUTE) } })
         .sort({ timestamp: -1 })
-        .limit(60)
+        .limit(1000)
         .toArray(),
 
       // Frise 24 h : agrégation côté Mongo, un document par (service, heure)
@@ -105,7 +107,11 @@ export async function GET() {
         ])
         .toArray(),
 
-      db.collection("incidents").find({ createdAt: { $gte: sevenDaysAgo } }).sort({ createdAt: -1 }).toArray(),
+      db
+        .collection("incidents")
+        .find({ createdAt: { $gte: sevenDaysAgo } }, { projection: { createdBy: 0 } })
+        .sort({ createdAt: -1 })
+        .toArray(),
     ]);
 
     // Sonde paresseuse : si le pinger externe a raté un tour, une visite rattrape le retard.
@@ -143,12 +149,28 @@ export async function GET() {
 
       const logs = recent.filter((l) => l.service === name) as unknown as RecentLog[];
 
+      // Frise par minute : le pire statut observé dans la minute (pas de lissage, un check = une barre)
+      const minuteStart = now - MINUTE_POINTS * MINUTE;
+      const minuteRank: Record<string, number> = { operational: 1, degraded: 2, down: 3 };
+      const minuteWorst: number[] = Array(MINUTE_POINTS).fill(0);
+      for (const l of logs) {
+        const idx = Math.min(
+          Math.max(Math.floor((new Date(l.timestamp).getTime() - minuteStart) / MINUTE), 0),
+          MINUTE_POINTS - 1
+        );
+        minuteWorst[idx] = Math.max(minuteWorst[idx], minuteRank[l.status] ?? 1);
+      }
+      const historyMinutes: HistoryState[] = minuteWorst.map((r) =>
+        r === 3 ? "red" : r === 2 ? "yellow" : r === 1 ? "green" : "gray"
+      );
+
       return {
         name,
         status: computeCurrentStatus(logs, now),
         percent,
         uptime30d: uptime30dByService.get(name) ?? null,
         history,
+        historyMinutes,
       };
     });
 

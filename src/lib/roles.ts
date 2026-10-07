@@ -65,6 +65,7 @@ export const PERMISSIONS = {
   MANAGE_ROLES: "manageRoles",
   DELETE_USERS: "deleteUsers",
   MANAGE_IDEAS: "manageIdeas",
+  MANAGE_STATUS: "manageStatus",
   OWNER_ZONE: "ownerZone",
 } as const;
 
@@ -78,6 +79,7 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   manageRoles: "Modifier les rôles",
   deleteUsers: "Supprimer des comptes",
   manageIdeas: "Gérer la boîte à idées",
+  manageStatus: "Gérer les incidents de la page de statut",
   ownerZone: "Espace propriétaire",
 };
 
@@ -102,6 +104,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     PERMISSIONS.VIEW_USERS,
     PERMISSIONS.MANAGE_ROLES,
     PERMISSIONS.MANAGE_IDEAS,
+    PERMISSIONS.MANAGE_STATUS,
   ],
   co_creator: [
     PERMISSIONS.VIEW_ADMIN_PANEL,
@@ -111,6 +114,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     PERMISSIONS.MANAGE_ROLES,
     PERMISSIONS.DELETE_USERS,
     PERMISSIONS.MANAGE_IDEAS,
+    PERMISSIONS.MANAGE_STATUS,
     PERMISSIONS.OWNER_ZONE,
   ],
   creator: [
@@ -121,6 +125,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     PERMISSIONS.MANAGE_ROLES,
     PERMISSIONS.DELETE_USERS,
     PERMISSIONS.MANAGE_IDEAS,
+    PERMISSIONS.MANAGE_STATUS,
     PERMISSIONS.OWNER_ZONE,
   ],
 };

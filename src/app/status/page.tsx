@@ -19,13 +19,18 @@ import {
 } from "lucide-react";
 import SiteHeader from "@/components/SiteHeader";
 
+type BarState = "green" | "yellow" | "red" | "gray";
+
 interface Service {
   name: string;
   status: string;
   percent: string;
   uptime30d: number | null;
-  history: ("green" | "yellow" | "red")[];
+  history: BarState[];
+  historyMinutes?: BarState[];
 }
+
+type View = "minutes" | "hours";
 
 interface Incident {
   _id: string;
@@ -179,10 +184,12 @@ function StatCard({ label, value, valueClass = "text-white" }: { label: string; 
   );
 }
 
-function ServiceCard({ service, index }: { service: Service; index: number }) {
+function ServiceCard({ service, index, view }: { service: Service; index: number; view: View }) {
   const Icon = serviceIcon(service.name);
   const state = SERVICE_STATE[service.status] ?? SERVICE_STATE.Unknown;
-  const points = service.history?.length ?? 0;
+  const byMinute = view === "minutes" && !!service.historyMinutes?.length;
+  const bars = (byMinute ? service.historyMinutes : service.history) ?? [];
+  const points = bars.length;
 
   return (
     <div
@@ -217,23 +224,33 @@ function ServiceCard({ service, index }: { service: Service; index: number }) {
       </div>
 
       {/* Frise d'historique */}
-      <div className="flex h-7 items-center gap-1.5" role="img" aria-label={`Historique de ${service.name} sur 24 heures`}>
-        {service.history?.map((state, i) => {
-          const hoursAgo = points - 1 - i;
-          const when = hoursAgo === 0 ? "Actuel" : `Il y a ${hoursAgo} h`;
+      <div
+        className={`flex h-7 items-center ${byMinute ? "gap-[2px]" : "gap-1.5"}`}
+        role="img"
+        aria-label={`Historique de ${service.name} sur ${byMinute ? `${points} minutes` : "24 heures"}`}
+      >
+        {bars.map((bar, i) => {
+          const ago = points - 1 - i;
+          const when = byMinute
+            ? ago === 0
+              ? "Maintenant"
+              : `${new Date(Date.now() - ago * 60000).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })} (il y a ${ago} min)`
+            : ago === 0
+            ? "Actuel"
+            : `Il y a ${ago} h`;
           return (
             <div
               key={`${service.name}-${i}`}
-              className={`h-full flex-1 origin-bottom rounded-sm transition-all duration-150 hover:scale-y-110 ${BAR_COLOR[state] ?? "bg-zinc-800"}`}
-              title={`${when} · ${STATE_LABEL[state] ?? state}`}
+              className={`h-full flex-1 origin-bottom ${byMinute ? "rounded-[2px]" : "rounded-sm"} transition-all duration-150 hover:scale-y-110 ${BAR_COLOR[bar] ?? "bg-zinc-800"}`}
+              title={`${when} · ${STATE_LABEL[bar] ?? bar}`}
             />
           );
         })}
       </div>
 
       <div className="mt-2.5 flex items-center justify-between text-[11px] font-medium text-zinc-500">
-        <span>Il y a 24h</span>
-        <span>Aujourd'hui</span>
+        <span>{byMinute ? `Il y a ${points} min` : "Il y a 24h"}</span>
+        <span>{byMinute ? "Maintenant" : "Aujourd'hui"}</span>
       </div>
     </div>
   );
@@ -313,6 +330,7 @@ export default function StatusPage() {
   const [latency, setLatency] = useState("--");
   const [lastUpdated, setLastUpdated] = useState("--");
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [view, setView] = useState<View>("minutes");
 
   const loadStatus = async () => {
     setIsRefreshing(true);
@@ -527,10 +545,25 @@ export default function StatusPage() {
               <Server size={14} />
               <span>Infrastructure</span>
             </h3>
-            <div className="flex items-center gap-4 text-[11px] text-zinc-500">
+            <div className="flex flex-wrap items-center gap-4 text-[11px] text-zinc-500">
+              <div className="flex items-center rounded-lg border border-zinc-800 bg-zinc-900/60 p-0.5" role="group" aria-label="Granularité de la frise">
+                {(["minutes", "hours"] as const).map((v) => (
+                  <button
+                    key={v}
+                    onClick={() => setView(v)}
+                    aria-pressed={view === v}
+                    className={`rounded-md px-2.5 py-1 text-[11px] font-bold transition ${
+                      view === v ? "bg-purple-600/30 text-purple-200" : "text-zinc-500 hover:text-zinc-300"
+                    }`}
+                  >
+                    {v === "minutes" ? "90 min" : "24 h"}
+                  </button>
+                ))}
+              </div>
               <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-emerald-500" />Opérationnel</span>
               <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-amber-400" />Dégradé</span>
               <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-rose-500" />Panne</span>
+              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-zinc-700" />Aucune donnée</span>
             </div>
           </div>
 
@@ -554,7 +587,7 @@ export default function StatusPage() {
                       Aucune métrique disponible pour le moment.
                     </div>
                   )
-              : services.map((service, i) => <ServiceCard key={service.name} service={service} index={i} />)}
+              : services.map((service, i) => <ServiceCard key={service.name} service={service} index={i} view={view} />)}
           </div>
         </section>
 

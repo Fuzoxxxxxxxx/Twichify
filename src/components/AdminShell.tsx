@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import {
-  Music, LayoutGrid, LifeBuoy, HelpCircle, Users, ArrowLeft, Shield, Database, Lightbulb, Crown, type LucideIcon,
+  Music, LayoutGrid, LifeBuoy, HelpCircle, Users, ArrowLeft, Shield, Database, Lightbulb, Crown, Activity, type LucideIcon,
 } from "lucide-react";
 import { hasPermission, PERMISSIONS, Permission } from "@/lib/roles";
 
@@ -40,6 +40,7 @@ const navGroups: NavGroup[] = [
     label: "Administration",
     items: [
       { href: "/admin/users", label: "Utilisateurs", short: "Comptes", icon: Users, exact: false, permission: PERMISSIONS.VIEW_USERS },
+      { href: "/admin/status", label: "Statut", icon: Activity, exact: false, permission: PERMISSIONS.MANAGE_STATUS },
       { href: "/admin/owner", label: "Propriétaire", short: "Proprio", icon: Crown, exact: false, permission: PERMISSIONS.OWNER_ZONE },
     ],
   },

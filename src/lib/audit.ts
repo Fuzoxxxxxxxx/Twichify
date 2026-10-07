@@ -1,7 +1,13 @@
 import mongoose from "mongoose";
 import AuditLog from "@/models/AuditLog";
 
-export type AuditAction = "banner.update" | "role.change" | "user.delete";
+export type AuditAction =
+  | "banner.update"
+  | "role.change"
+  | "user.delete"
+  | "incident.create"
+  | "incident.update"
+  | "incident.delete";
 
 type AuditEntry = {
   actor: { _id: unknown; name?: string | null; role?: string | null };
