@@ -1,6 +1,6 @@
 # Twichify/Spotify-Now-Playing - Project Analysis
 
-_Dernière mise à jour : 05/10/2026 — alignée sur la version **3.11.0** du changelog (`src/lib/changelog.ts`)._
+_Dernière mise à jour : 07/10/2026 — alignée sur la version **3.12.0** du changelog (`src/lib/changelog.ts`)._
 
 ## Executive Summary
 
@@ -144,6 +144,8 @@ Features:
 - Accumulated listening time per session
 - Detailed history (`TrackHistory`, v2.0.18): top tracks/artists, activity by hour, recent plays, filter 7 / 30 / 90 days / all time; TTL 180 days
 - Stats written to the DB in batches (v3.2.1), no duplicate entries for the same track
+- **Stats page v3.12.0** (`/dashboard/stats`, shared UI in `components/dashboard/StatsUI.tsx`): 4 tabs (overview, rankings, habits, history) + a global period selector (7 / 30 / 90 days / all). Overview: 8 KPIs (listening time with sparkline and delta vs the previous period of equal length, plays, distinct tracks/artists, daily average, current/longest streak, sessions, longest session, skip rate), per-day chart (minutes or tracks), artist discoveries. Rankings with covers (artist "avatar" = latest album cover, no artist image is stored). Habits: day × hour heatmap, day parts, peak hour, favourite weekday. History: skipped plays marked (< 15 s) and hideable, up to 100 rows
+- `GET /api/user/listening-history?period=&limit=&tz=`: hours, days and streaks are computed in the browser's IANA timezone (validated, default Europe/Paris). Sessions = plays separated by < 30 min of silence (computed on the last 30 000 plays); discoveries compare the period's artists with the history before it (hidden for "all" or when there is no earlier history); skips (< 15 s) are excluded from rankings and totals
 
 ### K. **Ideas Box** ✅ (v2.0.6)
 - `/ideas`: submit a feature idea, upvote/downvote (one vote state per user), paginated list

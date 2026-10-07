@@ -54,12 +54,21 @@ const BAR_COLOR: Record<string, string> = {
   green: "bg-emerald-500 hover:bg-emerald-400",
   yellow: "bg-amber-400 hover:bg-amber-300",
   red: "bg-rose-500 hover:bg-rose-400",
+  gray: "bg-zinc-700 hover:bg-zinc-600",
 };
 
 const STATE_LABEL: Record<string, string> = {
   green: "Opérationnel",
   yellow: "Dégradé",
   red: "Panne",
+  gray: "Aucune donnée",
+};
+
+const SERVICE_STATE: Record<string, { label: string; text: string; dot: string }> = {
+  Operational: { label: "Opérationnel", text: "text-emerald-400", dot: "bg-emerald-400" },
+  Degraded: { label: "Dégradé", text: "text-amber-400", dot: "bg-amber-400" },
+  Down: { label: "Panne", text: "text-rose-400", dot: "bg-rose-400" },
+  Unknown: { label: "Aucune donnée récente", text: "text-zinc-400", dot: "bg-zinc-500" },
 };
 
 const INCIDENT_STATUS: Record<string, { label: string; tone: string }> = {
@@ -172,7 +181,7 @@ function StatCard({ label, value, valueClass = "text-white" }: { label: string; 
 
 function ServiceCard({ service, index }: { service: Service; index: number }) {
   const Icon = serviceIcon(service.name);
-  const operational = service.status === "Operational";
+  const state = SERVICE_STATE[service.status] ?? SERVICE_STATE.Unknown;
   const points = service.history?.length ?? 0;
 
   return (
@@ -187,9 +196,9 @@ function ServiceCard({ service, index }: { service: Service; index: number }) {
           </div>
           <div className="min-w-0">
             <p className="truncate text-sm font-extrabold text-white">{service.name}</p>
-            <p className={`mt-0.5 flex items-center gap-1.5 text-[11px] font-semibold ${operational ? "text-emerald-400" : "text-amber-400"}`}>
-              <span className={`h-1.5 w-1.5 rounded-full ${operational ? "bg-emerald-400" : "bg-amber-400"}`} />
-              {operational ? "Opérationnel" : "Dégradé"}
+            <p className={`mt-0.5 flex items-center gap-1.5 text-[11px] font-semibold ${state.text}`}>
+              <span className={`h-1.5 w-1.5 rounded-full ${state.dot}`} />
+              {state.label}
             </p>
           </div>
         </div>
@@ -359,7 +368,8 @@ export default function StatusPage() {
   const okCount = services.filter((s) => s.status === "Operational").length;
   const activeIncidents = incidents.filter((i) => !isResolved(i));
   const resolvedIncidents = incidents.filter(isResolved);
-  const avgUptime = total ? services.reduce((sum, s) => sum + (parseFloat(s.percent) || 0), 0) / total : null;
+  const uptimes = services.map((s) => parseFloat(s.percent)).filter((v) => !isNaN(v));
+  const avgUptime = uptimes.length ? uptimes.reduce((a, b) => a + b, 0) / uptimes.length : null;
 
   const bannerKey: keyof typeof BANNER = hasError
     ? "error"

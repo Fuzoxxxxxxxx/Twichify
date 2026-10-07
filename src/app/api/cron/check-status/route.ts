@@ -1,78 +1,45 @@
 import { NextResponse } from "next/server";
-import clientPromise from "@/lib/mongodb";
+import { timingSafeEqual } from "node:crypto";
+import { runStatusChecks } from "@/lib/status-checker";
+
+// Les checks durent au pire ~10 s (2 tentatives × 4 s + pause). Marge pour la base.
+export const maxDuration = 30;
+export const dynamic = "force-dynamic";
+
+function isAuthorized(request: Request, secret: string): boolean {
+  const header = request.headers.get("authorization") ?? "";
+  const expected = `Bearer ${secret}`;
+  const a = Buffer.from(header);
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
 
 export async function GET(request: Request) {
-  // 1. Sécuriser la route (Optionnel mais recommandé pour Vercel Cron)
-  const authHeader = request.headers.get("authorization");
-  if (
-    process.env.CRON_SECRET &&
-    authHeader !== `Bearer ${process.env.CRON_SECRET}`
-  ) {
+  const secret = process.env.CRON_SECRET;
+
+  // Fail-closed : sans secret configuré, la route reste fermée.
+  if (!secret) {
+    return NextResponse.json({ error: "CRON_SECRET non configuré" }, { status: 503 });
+  }
+  if (!isAuthorized(request, secret)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const client = await clientPromise;
-  const db = client.db();
-
-  const servicesToCheck = [
-    { name: "Spotify API", url: "https://api.spotify.com/v1" },
-    { name: "Twitch API", url: "https://api.twitch.tv/helix" },
-  ];
-
-  const now = new Date();
-
-  const logs = await Promise.all(
-    servicesToCheck.map(async (service) => {
-      const start = Date.now();
-      let status = "operational";
-
-      try {
-        const res = await fetch(service.url, {
-          method: "GET",
-          signal: AbortSignal.timeout(5000),
-        });
-
-        // 401/403/404 indiquent que l'API est en ligne mais refuse la requête anonyme
-        if (res.ok || [401, 403, 404].includes(res.status)) {
-          status = "operational";
-        } else if (res.status >= 500) {
-          status = "degraded";
-        } else {
-          status = "degraded";
-        }
-      } catch {
-        // En cas de timeout ou problème DNS / réseau
-        status = "down";
-      }
-
-      return {
-        service: service.name,
-        status,
-        latencyMs: Date.now() - start,
-        timestamp: now,
-      };
-    })
-  );
-
-  // Auto-diagnostic : jusqu'ici, « Overlays Server » était affiché sur /status sans jamais être
-  // vérifié (aucune donnée était silencieusement traitée comme « opérationnel » par l'API /status).
-  // On teste ici la disponibilité de notre propre base, qui fait tourner les widgets et l'API.
-  const dbStart = Date.now();
-  let dbStatus = "operational";
   try {
-    await db.command({ ping: 1 });
-  } catch {
-    dbStatus = "down";
+    const result = await runStatusChecks("cron");
+
+    if (!result.ran) {
+      // Un check récent existe déjà (sonde paresseuse) : rien à faire, ce n'est pas une erreur.
+      return NextResponse.json({ success: true, skipped: true });
+    }
+
+    return NextResponse.json({
+      success: true,
+      timestamp: result.timestamp,
+      results: result.results,
+    });
+  } catch (error) {
+    console.error("[status] échec du cron :", error);
+    return NextResponse.json({ success: false, error: "Check failed" }, { status: 500 });
   }
-  logs.push({
-    service: "Overlays Server",
-    status: dbStatus,
-    latencyMs: Date.now() - dbStart,
-    timestamp: now,
-  });
-
-  // 2. Sauvegarde en BDD
-  await db.collection("statuslogs").insertMany(logs);
-
-  return NextResponse.json({ success: true, timestamp: now, results: logs });
 }
