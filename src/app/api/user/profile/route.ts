@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import mongoose from "mongoose";
 import User from "@/models/User";
+import { decrypt } from "@/lib/crypto";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -18,10 +19,14 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: "Utilisateur non trouvé" }, { status: 404 });
 
   return NextResponse.json({
-    spotifyClientId: user.spotifyClientId,
+    // Le Client ID n'est pas secret (contrairement au Client Secret, jamais renvoyé ici) :
+    // on le déchiffre pour l'afficher dans le champ du dashboard.
+    spotifyClientId: decrypt(user.spotifyClientId),
     // On vérifie si un token existe pour dire au bouton "Tu es lié"
     hasSpotifyToken: !!user.spotifyRefreshToken,
     widgetSettings: user.widgetSettings,
     botSettings: user.botSettings,
+    chatWidgetSettings: user.chatWidgetSettings,
+    role: user.role,
   });
 }

@@ -24,3 +24,143 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@keyframes modalFloatIn {
+  from { opacity: 0; transform: translateY(24px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes modalGlowPulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 0.9; }
+}
+.modal-float-in { animation: modalFloatIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.modal-glow-pulse { animation: modalGlowPulse 3s ease-in-out infinite; }
+
+/* Barres de défilement : fines et sombres, avec un accent violet au survol.
+   Firefox utilise les propriétés standard ; Chrome/Edge/Safari les pseudo-éléments -webkit.
+   On ne déclare `scrollbar-color` que pour Firefox : Chrome (121+) l'appliquerait à la place des
+   pseudo-éléments et perdrait le survol violet. */
+@supports (-moz-appearance: none) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #3f3f46 transparent;
+  }
+  .twichify-scroll {
+    scrollbar-color: #7e22ce transparent;
+  }
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: #3f3f46;
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: #7e22ce;
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+/* Listes défilantes dans les cartes : encore plus discrètes. */
+.twichify-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.twichify-scroll::-webkit-scrollbar-thumb {
+  background-color: #52525b;
+  border: 0;
+  background-clip: border-box;
+}
+.twichify-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: #9333ea;
+}
+
+/* Dashboard Twitch : apparition douce des cartes et squelettes de chargement. */
+@keyframes twichifyRise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes twichifyShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+/* `backwards` (et non `both`) : une fois l'animation finie, le transform animé ne doit pas masquer l'effet de survol des cartes. */
+.twichify-rise { animation: twichifyRise 0.45s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
+.twichify-skeleton {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.03) 25%, rgba(255, 255, 255, 0.08) 50%, rgba(255, 255, 255, 0.03) 75%);
+  background-size: 200% 100%;
+  animation: twichifyShimmer 1.6s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .twichify-rise,
+  .twichify-skeleton {
+    animation: none;
+  }
+}
+
+/* Sliders (type="range") du dashboard : le remplissage violet est peint via un dégradé
+   inline calculé depuis la valeur (voir SliderRow et les curseurs du dashboard chat),
+   au lieu de dépendre de `accent-color`, dont le rendu du remplissage de piste diffère
+   entre navigateurs (Chrome/Edge le peignent, Opera pas). !important est nécessaire ici
+   car Tailwind v4 place ses utilitaires après le CSS custom dans la cascade finale,
+   quelle que soit la position de cette règle dans le fichier source. */
+.twichify-slider {
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  appearance: none !important;
+  height: 6px !important;
+  border-radius: 9999px !important;
+  outline: none !important;
+  accent-color: #9333ea;
+  forced-color-adjust: none;
+}
+.twichify-slider:focus,
+.twichify-slider:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+.twichify-slider::-webkit-slider-runnable-track {
+  height: 6px !important;
+  border-radius: 9999px !important;
+  background: transparent !important;
+}
+.twichify-slider::-webkit-slider-thumb {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  width: 16px !important;
+  height: 16px !important;
+  border-radius: 9999px !important;
+  background: #9333ea !important;
+  border: 2px solid #f3e8ff !important;
+  margin-top: -5px !important;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
+}
+.twichify-slider::-moz-range-track {
+  height: 6px !important;
+  border-radius: 9999px !important;
+  background: transparent !important;
+  border: none !important;
+}
+.twichify-slider::-moz-range-progress {
+  background: transparent !important;
+}
+.twichify-slider::-moz-focus-outer {
+  border: 0;
+}
+.twichify-slider::-moz-range-thumb {
+  width: 16px !important;
+  height: 16px !important;
+  border-radius: 9999px !important;
+  background: #9333ea !important;
+  border: 2px solid #f3e8ff !important;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
+}

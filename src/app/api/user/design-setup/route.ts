@@ -23,7 +23,10 @@ export async function POST(req: Request) {
       accentColor, 
       borderRadius, 
       bgOpacity,
-      blurAmount
+      blurAmount,
+      showEqualizer,
+      autoHide,
+      autoHideSeconds,
     } = await req.json();
 
     if (mongoose.connection.readyState !== 1) {
@@ -49,6 +52,9 @@ export async function POST(req: Request) {
           "widgetSettings.borderRadius": borderRadius,
           "widgetSettings.bgOpacity": bgOpacity,
           "widgetSettings.blurAmount": blurAmount,
+          "widgetSettings.showEqualizer": showEqualizer,
+          "widgetSettings.autoHide": autoHide,
+          "widgetSettings.autoHideSeconds": autoHideSeconds,
         } 
       },
       { upsert: true, new: true }

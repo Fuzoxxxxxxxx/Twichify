@@ -1,82 +1,121 @@
 import { NextResponse } from "next/server";
-import mongoose from "mongoose";
-
-export const dynamic = "force-dynamic";
+import clientPromise from "@/lib/mongodb";
 
 export async function GET() {
-  const startedAt = Date.now();
+  const startTime = Date.now();
 
-  let isMongoDbOk = false;
-  let isSpotifyOk = false;
-
-  // 1. Vrai Ping MongoDB
   try {
-    if (process.env.DATABASE_URL) {
-      if (mongoose.connection.readyState !== 1) {
-        await mongoose.connect(process.env.DATABASE_URL);
+    const client = await clientPromise;
+    const db = client.db();
+
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    // 1. Récupération des logs des 24h
+    const logs = await db
+      .collection("statuslogs")
+      .find({ timestamp: { $gte: twentyFourHoursAgo } })
+      .sort({ timestamp: 1 })
+      .toArray();
+
+    // 2. Récupération optionnelle des incidents des 7 derniers jours
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const incidents = await db
+      .collection("incidents")
+      .find({ createdAt: { $gte: sevenDaysAgo } })
+      .sort({ createdAt: -1 })
+      .toArray();
+
+    // 2bis. Disponibilité sur 30 jours (agrégée en base, plus fiable qu'une moyenne des barres 24h)
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const uptime30dAgg = await db
+      .collection("statuslogs")
+      .aggregate([
+        { $match: { timestamp: { $gte: thirtyDaysAgo } } },
+        {
+          $group: {
+            _id: "$service",
+            total: { $sum: 1 },
+            operational: { $sum: { $cond: [{ $eq: ["$status", "operational"] }, 1, 0] } },
+          },
+        },
+      ])
+      .toArray();
+    const uptime30dByService = new Map(
+      uptime30dAgg.map((r) => [r._id as string, r.total > 0 ? (r.operational / r.total) * 100 : null])
+    );
+
+    const serviceNames = ["Spotify API", "Twitch API", "Overlays Server"];
+    const totalPoints = 24; // 24 points pour représenter les 24 dernières heures
+
+    // 3. Formater les données par service
+    const servicesData = serviceNames.map((name) => {
+      const serviceLogs = logs.filter((l) => l.service === name);
+      const historyStates: string[] = [];
+
+      // Une barre par heure : on regroupe les logs par tranche horaire (de la plus ancienne à la plus récente).
+      const HOUR = 60 * 60 * 1000;
+      const now = Date.now();
+
+      for (let i = 0; i < totalPoints; i++) {
+        const from = now - (totalPoints - i) * HOUR;
+        const to = from + HOUR;
+        const bucket = serviceLogs.filter((l) => {
+          const t = new Date(l.timestamp).getTime();
+          return t >= from && t < to;
+        });
+
+        // Pire statut de l'heure ; aucune donnée = considéré opérationnel (comportement inchangé).
+        if (bucket.some((l) => l.status === "down")) {
+          historyStates.push("red");
+        } else if (bucket.some((l) => l.status === "degraded")) {
+          historyStates.push("yellow");
+        } else {
+          historyStates.push("green");
+        }
       }
-      isMongoDbOk = mongoose.connection.readyState === 1;
-    }
-  } catch (error) {
-    isMongoDbOk = false;
-  }
 
-  // 2. Vrai Ping API Spotify (Endpoint public d'analyse de statut)
-  try {
-    const spotifyPing = await fetch("https://open.spotify.com", {
-      method: "HEAD", // HEAD est très rapide car il ne charge pas le HTML
-      cache: "no-store",
+      const operationalCount = historyStates.filter((s) => s === "green").length;
+      const percent = `${((operationalCount / totalPoints) * 100).toFixed(1)}%`;
+      const currentStatus =
+        historyStates[historyStates.length - 1] === "green"
+          ? "Operational"
+          : "Degraded";
+
+      return {
+        name,
+        status: currentStatus,
+        percent,
+        // null tant qu'il n'y a pas encore 30 jours de données (ex. juste après la mise en place du suivi)
+        uptime30d: uptime30dByService.get(name) ?? null,
+        history: historyStates,
+      };
     });
 
-    // Si les serveurs Spotify répondent (statut 200 à 399)
-    isSpotifyOk = spotifyPing.ok || spotifyPing.status < 400;
-  } catch (error) {
-    isSpotifyOk = false;
-  }
+    const allSystemsOperational = servicesData.every(
+      (s) => s.status === "Operational"
+    );
 
-  const latency = `${Date.now() - startedAt}ms`;
+    // Mesure réelle du temps de réponse backend + BDD
+    const latency = `${Date.now() - startTime}ms`;
 
-  // Fonction pour générer 24 barres
-  const generate24hHistory = (isCurrentOk: boolean) => {
-    const history = Array.from({ length: 23 }, () => "green");
-    history.push(isCurrentOk ? "green" : "red");
-    return history;
-  };
-
-  const services = [
-    {
-      name: "Twitchify API",
-      status: "Operational",
-      percent: "100%",
-      state: "green",
-      history: generate24hHistory(true),
-    },
-    {
-      name: "Spotify API",
-      status: isSpotifyOk ? "Operational" : "Degraded",
-      percent: isSpotifyOk ? "100%" : "95.8%",
-      state: isSpotifyOk ? "green" : "red",
-      history: generate24hHistory(isSpotifyOk),
-    },
-    {
-      name: "MongoDB Database",
-      status: isMongoDbOk ? "Operational" : "Down",
-      percent: isMongoDbOk ? "100%" : "95.8%",
-      state: isMongoDbOk ? "green" : "red",
-      history: generate24hHistory(isMongoDbOk),
-    },
-  ];
-
-  return NextResponse.json(
-    {
-      latency,
-      allSystemsOperational: isMongoDbOk && isSpotifyOk,
-      services,
-    },
-    {
-      headers: {
-        "Cache-Control": "no-store, no-cache, must-revalidate",
+    return NextResponse.json(
+      {
+        services: servicesData,
+        latency,
+        allSystemsOperational,
+        incidents,
       },
-    }
-  );
+      {
+        headers: {
+          "Cache-Control": "no-store, max-age=0",
+        },
+      }
+    );
+  } catch (error) {
+    console.error("Erreur API status:", error);
+    return NextResponse.json(
+      { error: "Impossible de charger le statut" },
+      { status: 500 }
+    );
+  }
 }

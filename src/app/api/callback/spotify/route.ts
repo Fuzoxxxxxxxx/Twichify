@@ -4,6 +4,7 @@ import { authOptions as nextAuthOptions } from "../../auth/[...nextauth]/route";
 import mongoose from "mongoose";
 import User from "@/models/User";
 import axios from "axios";
+import { encrypt, decrypt } from "@/lib/crypto";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -23,6 +24,9 @@ export async function GET(req: Request) {
   const user = await User.findOne({ email: session.user.email });
 
   try {
+    const decryptedClientId = decrypt(user.spotifyClientId);
+    const decryptedClientSecret = decrypt(user.spotifyClientSecret);
+
     const spotifyAuthOptions = {
       url: "https://accounts.spotify.com/api/token", // Correction de l'URL Spotify
       method: "post",
@@ -32,7 +36,7 @@ export async function GET(req: Request) {
         grant_type: "authorization_code",
       }),
       headers: {
-        Authorization: "Basic " + Buffer.from(user.spotifyClientId + ":" + user.spotifyClientSecret).toString("base64"),
+        Authorization: "Basic " + Buffer.from(decryptedClientId + ":" + decryptedClientSecret).toString("base64"),
         "Content-Type": "application/x-www-form-urlencoded",
       },
     };
@@ -40,10 +44,10 @@ export async function GET(req: Request) {
     const response = await axios(spotifyAuthOptions);
     const { refresh_token } = response.data;
 
-    // Sauvegarde du refresh_token final
+    // Sauvegarde du refresh_token final (chiffré au repos)
     await User.findOneAndUpdate(
       { email: session.user.email },
-      { spotifyRefreshToken: refresh_token }
+      { spotifyRefreshToken: encrypt(refresh_token) }
     );
 
     // Redirection vers le dashboard avec le flag de succès

@@ -3,6 +3,7 @@ import { authOptions } from "../../auth/[...nextauth]/route";
 import { getServerSession } from "next-auth/next";
 import mongoose from "mongoose";
 import User from "@/models/User";
+import { encrypt } from "@/lib/crypto";
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
@@ -19,12 +20,12 @@ export async function POST(req: Request) {
       await mongoose.connect(process.env.DATABASE_URL!);
     }
 
-    // Mise à jour de l'utilisateur avec ses clés Spotify
+    // Mise à jour de l'utilisateur avec ses clés Spotify (chiffrées au repos)
     await User.findOneAndUpdate(
       { email: session.user.email },
       { 
-        spotifyClientId: clientId, 
-        spotifyClientSecret: clientSecret 
+        spotifyClientId: encrypt(clientId), 
+        spotifyClientSecret: encrypt(clientSecret) 
       },
       { upsert: true }
     );
