@@ -8,8 +8,10 @@ import clientPromise from "@/lib/mongodb";
  *  - un pinger externe (cron-job.org, Cloudflare…) qui appelle /api/cron/check-status chaque minute ;
  *  - une « sonde paresseuse » lancée par /api/status quand le dernier check est trop vieux.
  *
- * Un verrou atomique en base (collection `statusmeta`) garantit qu'un seul check part
- * par fenêtre de MIN_INTERVAL_MS, quelle que soit l'instance serverless qui reçoit la requête.
+ * Un verrou atomique PAR MINUTE (collection `statusmeta`, champ `slot`) garantit :
+ *  - au plus un check par minute calendaire, quelle que soit l'instance serverless qui reçoit la requête ;
+ *  - un horodatage aligné sur le début de la minute : chaque check tombe toujours dans la même barre de la frise,
+ *    quelle que soit la gigue du pinger ou la durée du démarrage à froid.
  */
 
 export type CheckStatus = "operational" | "degraded" | "down";
@@ -21,7 +23,7 @@ const HTTP_TARGETS = [
   { name: "Twitch API", url: "https://api.twitch.tv/helix" },
 ] as const;
 
-const MIN_INTERVAL_MS = 45_000; // anti-doublon entre pinger externe et sonde paresseuse
+const MINUTE_MS = 60_000;
 const REQUEST_TIMEOUT_MS = 4_000;
 const RETRY_DELAY_MS = 500;
 const LOG_TTL_SECONDS = 24 * 60 * 60; // logs bruts : 24 h (frise horaire)
@@ -36,8 +38,11 @@ interface StatusLogDoc {
 
 interface StatusMetaDoc {
   _id: string;
-  nextRunAt?: Date;
+  /** Numéro de la dernière minute calendaire vérifiée (floor(epoch / 60 s)). */
+  slot?: number;
   lastStartedAt?: Date;
+  /** Ancien verrou (avant le passage au verrou par minute), ignoré. */
+  nextRunAt?: Date;
 }
 
 interface StatusDailyDoc {
@@ -70,17 +75,17 @@ function ensureIndexes(db: Db): Promise<void> {
 
 /* ----------------------------------- Verrou ----------------------------------- */
 
-/** Réserve atomiquement le prochain créneau de check. Retourne false si un check est déjà récent. */
-async function claimRun(db: Db, now: Date): Promise<boolean> {
+/** Réserve atomiquement la minute `slot`. Retourne false si elle est déjà prise (ou une plus récente). */
+async function claimSlot(db: Db, slot: number, arrival: Date): Promise<boolean> {
   try {
     await db.collection<StatusMetaDoc>("statusmeta").updateOne(
-      { _id: "checker", $or: [{ nextRunAt: { $lte: now } }, { nextRunAt: { $exists: false } }] },
-      { $set: { nextRunAt: new Date(now.getTime() + MIN_INTERVAL_MS), lastStartedAt: now } },
+      { _id: "checker", $or: [{ slot: { $lt: slot } }, { slot: { $exists: false } }] },
+      { $set: { slot, lastStartedAt: arrival } },
       { upsert: true }
     );
     return true;
   } catch (e) {
-    // Document déjà présent et créneau non échu → l'upsert tente un insert et échoue (E11000)
+    // Document déjà présent et minute déjà prise → l'upsert tente un insert et échoue (E11000)
     if ((e as { code?: number })?.code === 11000) return false;
     throw e;
   }
@@ -119,13 +124,18 @@ async function probeHttp(url: string): Promise<{ status: CheckStatus; latencyMs:
   return { status: "down", latencyMs: 0 };
 }
 
+/**
+ * Latence réelle d'un aller-retour vers MongoDB. Un premier ping (non mesuré) ouvre/réchauffe la connexion du pool :
+ * sans lui, un démarrage à froid (handshake TLS + authentification) gonflerait la mesure de plusieurs centaines de ms.
+ */
 async function probeDatabase(db: Db): Promise<{ status: CheckStatus; latencyMs: number }> {
-  const start = Date.now();
   try {
+    await db.command({ ping: 1 });
+    const start = Date.now();
     await db.command({ ping: 1 });
     return { status: "operational", latencyMs: Date.now() - start };
   } catch {
-    return { status: "down", latencyMs: Date.now() - start };
+    return { status: "down", latencyMs: 0 };
   }
 }
 
@@ -136,13 +146,17 @@ export type RunResult =
   | { ran: true; timestamp: Date; results: StatusLogDoc[] };
 
 export async function runStatusChecks(source: "cron" | "lazy"): Promise<RunResult> {
+  // Heure d'arrivée relevée AVANT toute attente (connexion, index) : le démarrage à froid ne décale pas la minute.
+  const arrival = new Date();
+  const slot = Math.floor(arrival.getTime() / MINUTE_MS);
+  const timestamp = new Date(slot * MINUTE_MS); // horodatage aligné sur la minute
+
   const client = await clientPromise;
   const db = client.db();
 
   await ensureIndexes(db);
 
-  const now = new Date();
-  if (!(await claimRun(db, now))) return { ran: false };
+  if (!(await claimSlot(db, slot, arrival))) return { ran: false };
 
   const [spotify, twitch, overlays] = await Promise.all([
     probeHttp(HTTP_TARGETS[0].url),
@@ -151,12 +165,12 @@ export async function runStatusChecks(source: "cron" | "lazy"): Promise<RunResul
   ]);
 
   const results: StatusLogDoc[] = [
-    { service: HTTP_TARGETS[0].name, ...spotify, timestamp: now },
-    { service: HTTP_TARGETS[1].name, ...twitch, timestamp: now },
-    { service: "Overlays Server", ...overlays, timestamp: now },
+    { service: HTTP_TARGETS[0].name, ...spotify, timestamp },
+    { service: HTTP_TARGETS[1].name, ...twitch, timestamp },
+    { service: "Overlays Server", ...overlays, timestamp },
   ];
 
-  const day = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const day = new Date(Date.UTC(timestamp.getUTCFullYear(), timestamp.getUTCMonth(), timestamp.getUTCDate()));
   const dayKey = day.toISOString().slice(0, 10);
 
   await Promise.all([
@@ -176,5 +190,5 @@ export async function runStatusChecks(source: "cron" | "lazy"): Promise<RunResul
   ]);
 
   console.log(`[status] check (${source}) :`, results.map((r) => `${r.service}=${r.status}`).join(", "));
-  return { ran: true, timestamp: now, results };
+  return { ran: true, timestamp, results };
 }

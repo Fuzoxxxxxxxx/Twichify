@@ -4,21 +4,28 @@ import { SERVICE_NAMES, getLastCheckStartedAt, runStatusChecks } from "@/lib/sta
 
 export const dynamic = "force-dynamic";
 
-const HOUR = 60 * 60 * 1000;
-const DAY = 24 * HOUR;
-const POINTS = 24;
 const MINUTE = 60_000;
-const MINUTE_POINTS = 90; // frise "par minute" : 90 dernières minutes
-const LAZY_AFTER_MS = 60_000; // sonde paresseuse si le dernier check a plus d'1 min
-const STALE_AFTER_MS = 5 * 60_000; // au-delà : « aucune donnée récente » (jamais de faux vert)
+const HOUR = 60 * MINUTE;
+const DAY = 24 * HOUR;
+const POINTS = 24; // frise horaire : 24 heures calendaires (la dernière est l'heure en cours)
+const MINUTE_POINTS = 90; // frise « par minute » : 90 minutes calendaires (la dernière est la minute en cours)
+const MAX_GAP_MINUTES = 2; // une minute sans mesure reprend la dernière valeur connue pendant 2 min, puis passe en gris
+const LAZY_AFTER_MS = 90_000; // sonde paresseuse si le pinger a raté un tour (> 1 min 30 sans check)
+const STALE_AFTER_MS = 5 * MINUTE; // au-delà : « aucune donnée récente » (jamais de faux vert)
+const LATENCY_SAMPLE = 10; // la latence BDD affichée est la médiane des 10 derniers pings
 
 type HistoryState = "green" | "yellow" | "red" | "gray";
 type CurrentStatus = "Operational" | "Degraded" | "Down" | "Unknown";
 
 interface RecentLog {
+  service: string;
   status: string;
+  latencyMs?: number;
   timestamp: Date;
 }
+
+const RANK: Record<string, number> = { operational: 1, degraded: 2, down: 3 };
+const STATE_BY_RANK: HistoryState[] = ["gray", "green", "yellow", "red"];
 
 /**
  * Statut actuel basé sur les derniers checks (et non sur le bucket horaire) :
@@ -40,11 +47,50 @@ function computeCurrentStatus(logs: RecentLog[], now: number): CurrentStatus {
 }
 
 /** Un check isolé en échec ne suffit pas à colorer une heure en rouge. */
-function bucketState(total: number, down: number, degraded: number): HistoryState {
+function hourState(total: number, down: number, degraded: number): HistoryState {
   if (total === 0) return "gray";
   if (down >= 2) return "red";
   if (down >= 1 || degraded >= 2) return "yellow";
   return "green";
+}
+
+/**
+ * Frise par minute, alignée sur les minutes calendaires : une mesure tombe toujours dans la même barre,
+ * quel que soit l'instant où la page est chargée (plus de barres qui apparaissent/disparaissent d'un rechargement à l'autre).
+ * Une minute sans mesure reprend la dernière valeur connue pendant MAX_GAP_MINUTES (gigue du pinger),
+ * puis devient grise : une vraie interruption de la surveillance reste visible.
+ */
+function buildMinuteHistory(logs: RecentLog[], now: number): HistoryState[] {
+  const firstMinute = Math.floor(now / MINUTE) - (MINUTE_POINTS - 1);
+  const worst = new Array<number>(MINUTE_POINTS).fill(0);
+
+  for (const l of logs) {
+    const idx = Math.floor(new Date(l.timestamp).getTime() / MINUTE) - firstMinute;
+    if (idx < 0 || idx >= MINUTE_POINTS) continue;
+    worst[idx] = Math.max(worst[idx], RANK[l.status] ?? 1);
+  }
+
+  let last = 0;
+  let missing = 0;
+  return worst.map((rank) => {
+    if (rank > 0) {
+      last = rank;
+      missing = 0;
+      return STATE_BY_RANK[rank];
+    }
+    missing++;
+    return last > 0 && missing <= MAX_GAP_MINUTES ? STATE_BY_RANK[last] : "gray";
+  });
+}
+
+/** Médiane (ms) des derniers pings MongoDB réussis, ou null s'il n'y en a pas. */
+function medianDbLatency(logs: RecentLog[]): number | null {
+  const values = logs
+    .filter((l) => l.status === "operational" && typeof l.latencyMs === "number")
+    .slice(0, LATENCY_SAMPLE) // `logs` est trié du plus récent au plus ancien
+    .map((l) => l.latencyMs as number)
+    .sort((a, b) => a - b);
+  return values.length ? values[Math.floor(values.length / 2)] : null;
 }
 
 export async function GET() {
@@ -55,7 +101,8 @@ export async function GET() {
     const db = client.db();
 
     const now = Date.now();
-    const windowStart = new Date(now - POINTS * HOUR);
+    // Fenêtre horaire alignée sur les heures calendaires : 23 heures pleines + l'heure en cours.
+    const windowStart = new Date(Math.floor(now / HOUR) * HOUR - (POINTS - 1) * HOUR);
     const sevenDaysAgo = new Date(now - 7 * DAY);
     const thirtyDaysAgo = new Date(now - 30 * DAY);
     const thirtyDaysAgoUtcDay = new Date(
@@ -65,15 +112,15 @@ export async function GET() {
     const [lastStartedAt, recent, hourly, daily, incidents] = await Promise.all([
       getLastCheckStartedAt(db),
 
-      // Derniers checks (90 min) : statut actuel + frise par minute
+      // Derniers checks (fenêtre « minutes » + marge d'une minute) : statut actuel, frise par minute, latence BDD
       db
         .collection("statuslogs")
-        .find({ timestamp: { $gte: new Date(now - MINUTE_POINTS * MINUTE) } })
+        .find({ timestamp: { $gte: new Date(now - (MINUTE_POINTS + 1) * MINUTE) } })
         .sort({ timestamp: -1 })
         .limit(1000)
         .toArray(),
 
-      // Frise 24 h : agrégation côté Mongo, un document par (service, heure)
+      // Frise 24 h : agrégation côté Mongo, un document par (service, heure calendaire)
       db
         .collection("statuslogs")
         .aggregate([
@@ -115,7 +162,7 @@ export async function GET() {
     ]);
 
     // Sonde paresseuse : si le pinger externe a raté un tour, une visite rattrape le retard.
-    // `after` exécute le check après l'envoi de la réponse ; le verrou en base évite les doublons.
+    // `after` exécute le check après l'envoi de la réponse ; le verrou par minute évite les doublons.
     if (lastStartedAt === null || now - lastStartedAt > LAZY_AFTER_MS) {
       after(async () => {
         try {
@@ -130,8 +177,10 @@ export async function GET() {
       daily.map((r) => [r._id as string, r.total > 0 ? (r.operational / r.total) * 100 : null])
     );
 
+    const typedRecent = recent as unknown as RecentLog[];
+
     const servicesData = SERVICE_NAMES.map((name) => {
-      // Frise
+      // Frise horaire
       const buckets = Array.from({ length: POINTS }, () => ({ total: 0, down: 0, degraded: 0 }));
       for (const row of hourly) {
         if (row._id.service !== name) continue;
@@ -140,29 +189,14 @@ export async function GET() {
         buckets[idx].down += row.down;
         buckets[idx].degraded += row.degraded;
       }
-      const history = buckets.map((b) => bucketState(b.total, b.down, b.degraded));
+      const history = buckets.map((b) => hourState(b.total, b.down, b.degraded));
 
       // Disponibilité 24 h = part de checks opérationnels
       const total = buckets.reduce((s, b) => s + b.total, 0);
       const bad = buckets.reduce((s, b) => s + b.down + b.degraded, 0);
       const percent = total > 0 ? `${(((total - bad) / total) * 100).toFixed(1)}%` : "--";
 
-      const logs = recent.filter((l) => l.service === name) as unknown as RecentLog[];
-
-      // Frise par minute : le pire statut observé dans la minute (pas de lissage, un check = une barre)
-      const minuteStart = now - MINUTE_POINTS * MINUTE;
-      const minuteRank: Record<string, number> = { operational: 1, degraded: 2, down: 3 };
-      const minuteWorst: number[] = Array(MINUTE_POINTS).fill(0);
-      for (const l of logs) {
-        const idx = Math.min(
-          Math.max(Math.floor((new Date(l.timestamp).getTime() - minuteStart) / MINUTE), 0),
-          MINUTE_POINTS - 1
-        );
-        minuteWorst[idx] = Math.max(minuteWorst[idx], minuteRank[l.status] ?? 1);
-      }
-      const historyMinutes: HistoryState[] = minuteWorst.map((r) =>
-        r === 3 ? "red" : r === 2 ? "yellow" : r === 1 ? "green" : "gray"
-      );
+      const logs = typedRecent.filter((l) => l.service === name);
 
       return {
         name,
@@ -170,17 +204,22 @@ export async function GET() {
         percent,
         uptime30d: uptime30dByService.get(name) ?? null,
         history,
-        historyMinutes,
+        historyMinutes: buildMinuteHistory(logs, now),
       };
     });
 
     const allSystemsOperational = servicesData.every((s) => s.status === "Operational");
     const lastCheckAt = recent[0]?.timestamp ? new Date(recent[0].timestamp).toISOString() : null;
 
+    // « Latence BDD » = vrai temps d'un aller-retour MongoDB (médiane des derniers pings mesurés par le check),
+    // et non la durée totale de cet appel d'API (qui inclut le démarrage à froid et la connexion).
+    const dbLatency = medianDbLatency(typedRecent.filter((l) => l.service === "Overlays Server"));
+
     return NextResponse.json(
       {
         services: servicesData,
-        latency: `${Date.now() - startTime}ms`,
+        latency: dbLatency !== null ? `${dbLatency}ms` : "--",
+        apiLatency: `${Date.now() - startTime}ms`,
         allSystemsOperational,
         lastCheckAt,
         incidents,
