@@ -1,6 +1,6 @@
 # Twichify/Spotify-Now-Playing - Project Analysis
 
-_Dernière mise à jour : 07/10/2026 — alignée sur la version **3.12.0** du changelog (`src/lib/changelog.ts`)._
+_Dernière mise à jour : 09/10/2026 — alignée sur la version **3.13.0** du changelog (`src/lib/changelog.ts`)._
 
 ## Executive Summary
 
@@ -23,10 +23,11 @@ _Dernière mise à jour : 07/10/2026 — alignée sur la version **3.12.0** du c
 - **HTTP**: Axios 1.13.5
 - **Validation / Email**: Zod 4.5.4, Resend 6.26 (declared dependencies)
 - **Security**: AES-256-GCM encryption of Spotify credentials at rest (`src/lib/crypto.ts`, requires `ENCRYPTION_KEY`)
-- **Deployment**: Vercel (with cron job support)
+- **Deployment**: Vercel Hobby, functions pinned to the Paris region (`cdg1`, next to the Atlas cluster in AWS eu-west-3). Hobby crons are limited to once a day, so service health checks are triggered every minute by an external pinger (cron-job.org)
 
 ### Deployment
-- Deployed on Vercel with cron jobs configured
+- Deployed on Vercel (Hobby plan, region `cdg1`); no Vercel cron: `vercel.json` only pins the region
+- Health checks come from an external pinger calling `/api/cron/check-status` every minute with `Authorization: Bearer $CRON_SECRET`
 - Database URL and API keys stored in environment variables
 - NextAuth secret configured for session management
 
@@ -113,20 +114,24 @@ Features:
 - Help center (`/help`): search, category filter chips, paginated accordion, light formatting in answers (`**bold**`, lines starting with "Note" highlighted), re-open welcome guide button, links to tickets
 
 ### G. **Admin Dashboard** ✅
-- Pages: overview (`/admin`), tickets, FAQ, ideas, users, owner space (`/admin/owner`)
+- Pages: overview (`/admin`), tickets, FAQ, ideas, users, status incidents (`/admin/status`), owner space (`/admin/owner`)
 - Ticket statistics overview and recent tickets
 - FAQ article management and ideas moderation (status + official response)
 - Users list (sort by name, role, sign-up date, Spotify status), role changes, account deletion
 - Every admin page is guarded server-side (`requirePagePermission`) and redirects to `/403?from=...` without the right permission; sections are hidden in the nav when the permission is missing
 
-### H. **Status Monitoring** ✅
-- Service health tracking (Spotify API, Twitch API, Overlays Server)
-- 24-hour uptime history with 90-point visualization
-- 30-day availability per service, ongoing incidents separated from history, key figures (v2.0.10, v3.0.1)
-- "Overlays Server" is now actually probed on each check (it previously always showed operational)
-- Status states: Operational, Degraded, Down
-- Latency measurement
-- Auto-expiring logs (TTL index: 24 hours)
+### H. **Status Monitoring & Incidents** ✅ (rebuilt in v3.13.0)
+- Public page `/status` (same visual language as the changelog/help pages): global state card tinted by situation, key figures, one card per service (Spotify API, Twitch API, Overlays Server), incidents in progress, incident history as a timeline
+- Bars: **90 minutes** (one bar per calendar minute) or **24 hours** (one bar per UTC hour), aligned on the clock so a measurement always lands in the same bar; a minute without data inherits the last known state for 2 minutes, then turns grey ("Aucune donnée"), never a false green
+- **Checks** (`src/lib/status-checker.ts`): every minute, GET on the Spotify and Twitch APIs (4 s timeout, 1 retry, any response < 500 counts as up) and a MongoDB ping (warm-up ping first, then the measured one). Triggered by the external pinger (`/api/cron/check-status`, secret header, fail-closed without `CRON_SECRET`) and by a **lazy probe** run via `after()` from `/api/status` when the last check is older than 90 s
+- **One check per calendar minute**: an atomic lock in `statusmeta` (`slot` = floor(epoch / 60 s)) so the pinger and the lazy probe never double-run; check timestamps are aligned on the minute
+- **Current state** from the last 3 checks (Down = 2 failures out of 3, Degraded = last check failing or 2 anomalies, Unknown after 5 min without data). An hour is red from 2 failed checks
+- **Real traffic** (`src/lib/passive-health.ts`): the widgets' real calls to Spotify (now-playing route) and Twitch (`lib/twitch.ts`, badges routes) are counted in memory and flushed in batches to `statuspassive` (per service and minute). Only network errors and 5xx count as failures (4xx depend on the user's account). ≥ 50 % failures over 10 min with ≥ 20 calls downgrades an operational service to Degraded (never to Down); the card shows the number of calls and the error rate
+- **Storage tiers**: raw logs `statuslogs` (TTL **3 h**, 90-min bars and current state), hourly aggregates `statushourly` (TTL 48 h, 24-h bars, rebuilt automatically from raw logs when they lag), daily aggregates `statusdaily` (TTL 95 d, 30-day availability), real traffic `statuspassive` (TTL 12 h). The TTL change on `statuslogs` is applied automatically (`collMod`, fallback drop/recreate) after freezing the old logs into the hourly aggregates
+- Displayed "Latence BDD" = median of the last 10 MongoDB pings measured by the checks (not the API response time); `apiLatency` is returned separately. `/api/status` is CDN-cached 15 s (`s-maxage`)
+- **Incidents** (`/admin/status`, permission `manageStatus`): create an incident (service, impact, status, public message with templates), publish updates, mark resolved, reopen, delete; a banner shown for a down service without an incident proposes to create one. Public side: incidents of the last 7 days (`incidents` collection, creator never exposed)
+- **Global banner link**: an incident can also be published in the site-wide banner (`lib/incident-banner.ts`, `SiteSettings.banner.incidentId`): level from the impact, removed automatically when the incident is resolved or deleted, never overwrites a manual owner announcement, detached if the owner saves a manual announcement
+- Audit log entries for incident creation, update and deletion
 
 ### I. **User Settings & Configuration** ✅
 - Spotify client ID/secret configuration
@@ -197,7 +202,7 @@ Features:
 - **Channel card**: banner = the channel's *offline image* (the profile banner is not exposed by the Helix API), avatar with live ring, bio, tags, live preview, copy-link button, quick figures
 - **Team tab = staff only** (moderators `moderation:read`, editors `channel:read:editors`); **VIPs are not staff** and moved to **Communauté** with subscribers (`channel:read:subscriptions`, affiliates/partners only; the broadcaster's own self-subscription is removed from the total) and the monthly bits leaderboard (`bits:read`). Team and community are loaded lazily, only when their tab is opened
 - Each section has its own status (`ok | missing_scope | expired | unavailable | error`) so a missing permission only affects that card
-- **Departures (unfollows)**: Twitch exposes no unfollow history, so this is an opt-in snapshot diff stored in `FollowerTracking` (compact `{i,l,n,f}` entries, 5 000 followers max, 200 departures kept). A scan reads the full followers list (cursor-paginated, rejected if incomplete), compares it to the previous snapshot, flags accounts that no longer exist (`accountGone`), 5 min cooldown, in-memory lock per user, automatic scan on tab open if last one is older than 30 min. `POST {action: enable|scan}`, `DELETE` removes everything. Included in account deletion and in the JSON export (counts only)
+- **Departures (unfollows)**: Twitch exposes no unfollow history, so this is an opt-in snapshot diff stored in `FollowerTracking` (**Twitch ids only**, as numbers: ~11 bytes per follower instead of ~100; 5 000 followers max, 200 departures kept as id + detection date + `accountGone`). Usernames and avatars of departures are re-read from Twitch by id at display time (`fetchUserInfos`); only a deleted/banned account keeps its last known username. Legacy documents (`{i,l,n,f}` entries) are rewritten to ids only on first read (`compactDocument`). A returning follower is removed from the departures list. A scan reads the full followers list (cursor-paginated, rejected if incomplete), compares it to the previous snapshot, flags accounts that no longer exist (`accountGone`), 5 min cooldown, in-memory lock per user, automatic scan on tab open if last one is older than 30 min. `POST {action: enable|scan}`, `DELETE` removes everything. Included in account deletion and in the JSON export (counts only)
 - Scrollbars restyled globally in `globals.css` (`-webkit-` rules for Chromium/Safari, `scrollbar-color` only for Firefox, `.twichify-scroll` for card lists)
 - **Followers tab**: full list paginated by cursor (page size 10/25/50/100, previous/next/start, quick filter on the current page; Twitch only paginates forward so the client keeps the cursor stack), gains 24 h / 7 d / 30 d, daily chart (7/14/30 days, bucketed client-side in the browser timezone)
 - Gains and chart use a sample of the 300 latest followers (3 pages of 100); values are marked `+` / greyed when the sample does not reach back far enough
@@ -245,6 +250,7 @@ Features:
 - `DELETE /api/admin/faq/[id]` - Delete FAQ article (staff only)
 - `/api/admin/users`, `/api/admin/users/[id]` - User list, role change, deletion (permission-based)
 - `/api/admin/owner/overview`, `/settings`, `/audit` - Owner space: overview, global announcement, audit log (`ownerZone`)
+- `GET/POST /api/admin/incidents`, `PATCH/DELETE /api/admin/incidents/[id]` - Status incidents: list, create (optional banner), publish update / change status / toggle banner, delete (`manageStatus`)
 
 ### User Management
 - `GET /api/user/profile` - Get current user profile
@@ -276,10 +282,10 @@ Features:
 - `GET /api/faq` - Public FAQ retrieval
 - `GET/POST /api/ideas`, `POST /api/ideas/[id]/vote`, `PATCH /api/ideas/[id]/status` - Ideas box, votes, moderation
 - `GET /api/site-banner` - Active global announcement
-- `GET /api/status` - Service status and uptime history
+- `GET /api/status` - Public status: per-service state, 90-min and 24-h bars, 24-h / 30-day availability, real-traffic figures, median DB latency, last 7 days of incidents (CDN-cached 15 s; also triggers the lazy probe)
 - `GET /api/twitch/badges/[login]` - Retrieve Twitch user badges
 - `GET /api/twitch/global-badges` - Retrieve Twitch global badges
-- `GET /api/cron/check-status` - Cron job for service health checks (runs every 15 min)
+- `GET /api/cron/check-status` - Health checks (called every minute by the external pinger; `Authorization: Bearer $CRON_SECRET`, 503 without the secret, 401 if wrong; answers `skipped: true` when the minute is already covered)
 - `GET /api/emotes/[channel]` - Third-party emotes for a channel (BTTV, 7TV, FFZ)
 
 ---
@@ -406,13 +412,25 @@ Features:
 }
 ```
 
-### StatusLog Model
+### Status collections (native driver, no Mongoose model)
+```
+statuslogs   { service, status: operational|degraded|down, latencyMs, timestamp }   # TTL 3 h, one doc per service per minute
+statushourly { _id: "Service|YYYY-MM-DDTHH", service, hour, total, operational, degraded, down }   # TTL 48 h
+statusdaily  { _id: "Service|YYYY-MM-DD", service, day, total, operational, degraded, down }        # TTL 95 d
+statuspassive{ _id: "Service|<minute slot>", service, minute, total, errors }                       # TTL 12 h, real widget calls
+statusmeta   { _id: "checker", slot, lastStartedAt }                                                # per-minute lock
+incidents    { title, service, impact, status, description, updates[{message,status,createdAt}],
+               createdAt, updatedAt, resolvedAt, bannerActive, createdBy }                          # createdBy never exposed publicly
+```
+(The former `StatusLog` Mongoose model is no longer used by the checks.)
+
+### FollowerTracking Model
 ```
 {
-  service: String (e.g., "Spotify API", "Twitch API", "Overlays Server")
-  status: enum["operational", "degraded", "down"]
-  latencyMs: Number (optional)
-  timestamp: Date (TTL: 86400 seconds = 24 hours)
+  user: ObjectId (unique)
+  followers: [Number]            # Twitch ids only (legacy documents may still hold { i, l, n, f } until first read)
+  departures: [{ id, detectedAt, accountGone, login?, name? }]   # login/name only kept for a deleted/banned account; max 200
+  baselineAt, scannedAt: Date
 }
 ```
 
@@ -457,7 +475,7 @@ Features:
 ### SiteSettings Model (single document, key = "global")
 ```
 {
-  banner: { enabled, message (max 200), level: info|warning|critical, startsAt, expiresAt, updatedAt }
+  banner: { enabled, message (max 200), level: info|warning|critical, startsAt, expiresAt, updatedAt, incidentId }   # incidentId set when published from a status incident
 }
 ```
 
@@ -490,7 +508,7 @@ Six roles with numeric levels; an actor can only act on / assign roles strictly 
 5. **Co-créateur** (4) - Admin rights + account deletion + owner space
 6. **Créateur** (5) - Same permissions as Co-créateur, highest level
 
-Permissions (matrix `ROLE_PERMISSIONS`): `viewAdminPanel`, `manageTickets`, `manageFaq`, `viewUsers`, `manageRoles`, `deleteUsers`, `manageIdeas`, `ownerZone`.
+Permissions (matrix `ROLE_PERMISSIONS`): `viewAdminPanel`, `manageTickets`, `manageFaq`, `viewUsers`, `manageRoles`, `deleteUsers`, `manageIdeas`, `manageStatus` (admin and above), `ownerZone`.
 
 ### Key Authentication Files
 - `src/lib/auth-helpers.ts` - Session utilities
@@ -518,7 +536,8 @@ Permissions (matrix `ROLE_PERMISSIONS`): `viewAdminPanel`, `manageTickets`, `man
 - **TermsModal.tsx** - Terms of service modal dialog
 - **TicketStatusBadge.tsx** - Visual badge for ticket status
 - **CanvasScaler.tsx** - Responsive canvas scaling utility
-- **Providers.tsx** - React providers wrapper (NextAuth session, etc.)
+- **Providers.tsx** - React providers wrapper (NextAuth session, `DialogProvider`)
+- **DialogProvider.tsx** - `useDialog()`: `confirm()` (promise-based, reuses `ConfirmDialog`) and `notify()` (always-on toast); replaces every browser `alert` / `confirm`
 - **SiteHeader.tsx** - Sticky public navbar (Changelog, Idées, Aide, login / profile)
 - **SiteBanner.tsx** - Global announcement banner (hidden on OBS overlays)
 - **WelcomeModal.tsx** / **ChangelogModal.tsx** - Onboarding guide and "Quoi de neuf" modal
@@ -537,6 +556,7 @@ Permissions (matrix `ROLE_PERMISSIONS`): `viewAdminPanel`, `manageTickets`, `man
 - **Admin Ideas (/admin/ideas)** - Ideas moderation (status, official response)
 - **Admin Users (/admin/users)** - Users, roles, deletion
 - **Admin Owner (/admin/owner)** - Owner space (announcement, permissions matrix, audit log)
+- **Admin Status (/admin/status)** - Status incidents: create, publish updates, resolve, banner toggle
 - **Admin Tickets (/admin/tickets/[ticketId])** - Ticket thread viewer
 - **Support New (/support/new)** - Create new support ticket
 - **Support My Tickets (/support/my-tickets)** - View user tickets
@@ -544,7 +564,7 @@ Permissions (matrix `ROLE_PERMISSIONS`): `viewAdminPanel`, `manageTickets`, `man
 - **Help (/help)** - Help center: searchable, paginated FAQ + welcome guide + support links
 - **Ideas (/ideas)** - Ideas box with votes
 - **Changelog (/changelog)** - Versioned update history
-- **Status (/status)** - Service status page
+- **Status (/status)** - Public service status: state card, 90-min / 24-h bars, availability, real-traffic figures, incidents
 - **Privacy (/privacy)** - Privacy policy and terms (CGU)
 - **Mentions légales (/mentions-legales)** - Legal notice
 - **Widget Spotify (/widget/[userId])** - Embeddable music widget
@@ -754,10 +774,8 @@ Roadmap shown on the home page (reset on 02/10/2026, all items still to build):
 ## 13. Deployment Configuration
 
 ### Vercel Setup
-- **File**: `vercel.json`
-- **Cron Jobs**: 
-  - `/api/cron/check-status` - Runs every 15 minutes
-  - Purpose: Monitors Spotify, Twitch, and overlay server health
+- **File**: `vercel.json` - pins the functions to the Paris region (`"regions": ["cdg1"]`, same area as the Atlas cluster in AWS eu-west-3); no `crons` block (Hobby only allows daily crons)
+- **Health checks**: external pinger (cron-job.org), GET `/api/cron/check-status` every minute with the header `Authorization: Bearer <CRON_SECRET>`; a lazy probe in `/api/status` covers a missed beat
 
 ### Environment Variables Required
 ```
@@ -771,6 +789,9 @@ TWITCH_CLIENT_SECRET=...
 
 # Encryption of Spotify credentials (AES-256-GCM, 64 hex chars)
 ENCRYPTION_KEY=...
+
+# Secret of the external status pinger (Authorization: Bearer ...)
+CRON_SECRET=...
 
 # Spotify (user-provided)
 # Stored per-user in database

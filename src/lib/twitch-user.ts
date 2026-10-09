@@ -296,7 +296,7 @@ function parseDuration(value: string | undefined): number {
 /* Avatars et infos de profil (avec cache mémoire)                     */
 /* ------------------------------------------------------------------ */
 
-export type UserInfo = { avatar: string | null; createdAt: string | null };
+export type UserInfo = { avatar: string | null; createdAt: string | null; login: string | null; name: string | null };
 
 // Les avatars Twitch sont servis en 300x300 par défaut (30 à 60 Ko pièce) : pour les listes on demande
 // la variante 70x70 que le CDN fournit en remplaçant le suffixe de taille (nette jusqu'à ~35 px en affichage retina).
@@ -333,7 +333,12 @@ export async function fetchUserInfos(ids: string[]): Promise<Map<string, UserInf
       try {
         const json = await helixApp<{ data: any[] }>(`/users?${chunk.map((id) => `id=${encodeURIComponent(id)}`).join("&")}`);
         for (const u of json.data ?? []) {
-          const info: UserInfo = { avatar: smallAvatar(u.profile_image_url), createdAt: u.created_at ?? null };
+          const info: UserInfo = {
+            avatar: smallAvatar(u.profile_image_url),
+            createdAt: u.created_at ?? null,
+            login: u.login ?? null,
+            name: u.display_name ?? null,
+          };
           userInfoCache.set(u.id, { at: now, info });
           result.set(u.id, info);
         }

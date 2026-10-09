@@ -20,6 +20,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       { type: "new", text: "Quand un incident survient, l'équipe publie des messages détaillés (en analyse, identifié, sous surveillance, résolu) avec le service touché et l'impact. Pour les pannes importantes, l'incident peut aussi s'afficher en bannière sur tout le site, retirée automatiquement à la résolution." },
       { type: "new", text: "Un service est aussi signalé comme dégradé quand une grande partie des vrais appels des widgets vers Spotify ou Twitch échouent, avec le nombre d'appels et le taux d'erreurs sur 10 minutes." },
       { type: "improved", text: "La page de statut reprend le design des autres pages du site : carte d'état global teintée selon la situation, chiffres clés, cartes de services et historique des incidents en chronologie." },
+      { type: "improved", text: "Le suivi des départs de followers n'enregistre plus que les identifiants Twitch de tes followers (plus de pseudos ni de dates stockés) : environ dix fois moins de données conservées. Les pseudos et avatars des départs sont relus sur Twitch à l'affichage." },
       { type: "improved", text: "Les confirmations et messages d'erreur du site s'affichent dans des fenêtres et notifications Twichify, au lieu des pop-up du navigateur." },
       { type: "fixed", text: "Les emotes FrankerFaceZ (FFZ) ne provoquent plus d'erreur dans le widget chat quand une chaîne n'en propose pas ou que leur format change." },
     ],

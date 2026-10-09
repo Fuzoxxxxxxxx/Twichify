@@ -1245,9 +1245,10 @@ export default function DashboardTwitch() {
                           <div className="rounded-2xl border border-rose-500/20 bg-rose-500/5 p-5">
                             <p className="text-sm font-bold text-rose-200">Savoir qui te quitte</p>
                             <p className="mt-2 text-xs leading-relaxed text-zinc-400">
-                              Twitch ne fournit aucun historique de désabonnements. Pour les repérer, Twichify enregistre la liste de tes followers (pseudos
-                              publics) et la compare à chaque analyse : ceux qui ont disparu sont des départs. Un départ n'est donc détecté qu'à l'analyse
-                              suivante, pas en temps réel. Tu peux désactiver le suivi à tout moment : la liste et l'historique sont alors supprimés.
+                              Twitch ne fournit aucun historique de désabonnements. Pour les repérer, Twichify enregistre uniquement les identifiants de tes
+                              followers (ni pseudo, ni nom, ni date) et les compare à chaque analyse : ceux qui ont disparu sont des départs. Un départ
+                              n'est donc détecté qu'à l'analyse suivante, pas en temps réel. Tu peux désactiver le suivi à tout moment : la liste et
+                              l'historique sont alors supprimés.
                             </p>
                             <button
                               onClick={() => unfollowAction("enable")}
@@ -1295,14 +1296,14 @@ export default function DashboardTwitch() {
                               <ul className="twichify-scroll max-h-[26rem] divide-y divide-zinc-900 overflow-y-auto pr-1">
                                 {unf.departures.map((d) => (
                                   <PersonRow
-                                    key={`${d.id}-${d.followedAt}`}
+                                    key={`${d.id}-${d.detectedAt}`}
                                     avatar={d.avatar}
                                     name={d.name}
                                     login={d.login}
-                                    linked={!d.accountGone}
+                                    linked={!d.accountGone && !!d.login}
                                     sub={
                                       <>
-                                        Te suivait depuis le {shortDate(d.followedAt)}
+                                        {d.followedAt ? `Te suivait depuis le ${shortDate(d.followedAt)}` : "Ne te suit plus"}
                                         {d.accountGone && <span className="ml-2 rounded-full border border-zinc-700 px-2 py-px text-[9px] font-bold uppercase tracking-wider text-zinc-500">Compte supprimé ou banni</span>}
                                       </>
                                     }
@@ -1830,7 +1831,7 @@ export default function DashboardTwitch() {
               )}
 
               <p className="flex items-center gap-2 text-[11px] text-zinc-600">
-                <Radio size={11} /> Données lues en direct sur Twitch, actualisées chaque minute. Seul le suivi des départs (si tu l'actives) enregistre une liste de tes followers.
+                <Radio size={11} /> Données lues en direct sur Twitch, actualisées chaque minute. Seul le suivi des départs (si tu l'actives) enregistre une liste d'identifiants de tes followers.
               </p>
             </>
           );

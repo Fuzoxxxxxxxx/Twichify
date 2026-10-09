@@ -98,7 +98,7 @@ const DATA_ROWS = [
   {
     data: "Suivi des départs (optionnel)",
     detail:
-      "Liste des followers de votre chaîne (identifiants, pseudos publics et dates de suivi ; 5 000 au maximum) et 200 derniers départs détectés",
+      "Identifiants Twitch des followers de votre chaîne (aucun pseudo, nom ni date ; 5 000 au maximum) et 200 derniers départs détectés (identifiant et date de détection ; le dernier pseudo connu n'est gardé que pour un compte supprimé ou banni)",
     purpose: "Indiquer qui a quitté votre chaîne, en comparant les analyses entre elles ; uniquement si vous activez le suivi",
     retention: "Tant que le suivi est actif ; supprimée à sa désactivation ou à la suppression du compte",
   },
@@ -109,6 +109,14 @@ const DATA_ROWS = [
     purpose: "Page Dashboard → Twitch → Chat ; uniquement si vous les activez",
     retention:
       "90 jours après la dernière activité de la session, ou jusqu'à la suppression de l'historique ou du compte",
+  },
+  {
+    data: "Supervision du service",
+    detail:
+      "Résultats des vérifications de disponibilité (Spotify, Twitch, base de données), compteurs agrégés d'appels réussis ou échoués des widgets, messages d'incident publiés par l'équipe",
+    purpose: "Page Statut et information en cas de panne ; aucune donnée personnelle ni identifiant d'utilisateur",
+    retention:
+      "Résultats détaillés 3 heures, compteurs horaires 48 heures, agrégats journaliers 95 jours ; messages d'incident conservés",
   },
   {
     data: "Session",
@@ -241,8 +249,9 @@ const SECTIONS = [
 
         <p className="text-xs leading-relaxed text-zinc-400">
           <strong className="text-zinc-200">Suivi des départs :</strong>{" "}
-          cette fonction est facultative et désactivée par défaut. Elle traite des données de tiers (les pseudos publics
-          de vos followers) uniquement pour vous les présenter dans votre tableau de bord : elles ne sont ni partagées,
+          cette fonction est facultative et désactivée par défaut. Elle traite des données de tiers (les identifiants
+          Twitch de vos followers) uniquement pour vous présenter les départs dans votre tableau de bord : seuls les
+          identifiants sont enregistrés, les pseudos et avatars sont relus sur Twitch au moment de l'affichage. Ces données ne sont ni partagées,
           ni utilisées à d'autres fins, ni conservées après la désactivation du suivi. Twitch ne fournissant aucun
           historique de désabonnements, Twichify compare des instantanés de votre liste : un départ n'est donc détecté
           qu'à l'analyse suivante, et il n'est pas possible de savoir pourquoi la personne est partie (hors compte
