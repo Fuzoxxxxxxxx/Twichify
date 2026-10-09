@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAppAccessToken } from "@/lib/twitch";
+import { trackedFetch } from "@/lib/passive-health";
 
 // Badges Twitch globaux (sans chaîne précise), utilisés par l'aperçu de la page d'accueil.
 // Route publique et très sollicitée : cache mémoire long + cache CDN, les badges changent rarement.
@@ -16,7 +17,7 @@ export async function GET() {
     }
 
     const token = await getAppAccessToken();
-    const res = await fetch("https://api.twitch.tv/helix/chat/badges/global", {
+    const res = await trackedFetch("Twitch API", "https://api.twitch.tv/helix/chat/badges/global", {
       headers: {
         "Client-ID": process.env.TWITCH_CLIENT_ID!,
         Authorization: `Bearer ${token}`,

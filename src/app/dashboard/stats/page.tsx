@@ -9,6 +9,7 @@ import {
 import { PageHeader } from "@/components/dashboard/DashboardUI";
 import { useToast, ToastDisplay } from "@/components/dashboard/useToast";
 import { KpiCard, Panel, EmptyState, Cover, DeltaBadge } from "@/components/dashboard/StatsUI";
+import { useDialog } from "@/components/DialogProvider";
 
 /* ------------------------------------------------------------------ */
 /* Types                                                               */
@@ -241,6 +242,7 @@ function Heatmap({ grid }: { grid: number[][] }) {
 export default function DashboardStats() {
   const { data: session } = useSession();
   const { toast, showToast } = useToast();
+  const { confirm } = useDialog();
 
   const [listeningStats, setListeningStats] = useState<ListeningStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(true);
@@ -332,7 +334,12 @@ export default function DashboardStats() {
   };
 
   const resetListeningStats = async () => {
-    if (!confirm("Réinitialiser toutes tes statistiques et ton historique d'écoute ? Cette action est irréversible.")) return;
+    const ok = await confirm({
+      title: "Réinitialiser tes statistiques ?",
+      description: "Toutes tes statistiques et ton historique d'écoute seront supprimés. Cette action est irréversible.",
+      confirmLabel: "Réinitialiser",
+    });
+    if (!ok) return;
     setResettingStats(true);
     try {
       const res = await fetch("/api/user/listening-stats", { method: "DELETE" });

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, CheckCircle2, ExternalLink, Loader2, Plus, Send, Trash2, X } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ExternalLink, Loader2, Megaphone, Plus, Send, Trash2, X } from "lucide-react";
 import {
   IMPACT_LABELS,
   INCIDENT_IMPACTS,
@@ -15,6 +15,7 @@ import {
   type IncidentImpact,
   type IncidentStatus,
 } from "@/lib/incidents";
+import { useDialog } from "@/components/DialogProvider";
 
 interface Incident {
   _id: string;
@@ -24,6 +25,7 @@ interface Incident {
   impact: IncidentImpact;
   createdAt: string;
   resolvedAt?: string;
+  bannerActive?: boolean;
   updates?: { message: string; status?: IncidentStatus; createdAt: string }[];
 }
 
@@ -32,7 +34,16 @@ interface LiveService {
   status: string;
 }
 
-type Form = { title: string; service: string; impact: IncidentImpact; status: IncidentStatus; message: string };
+type Form = {
+  title: string;
+  service: string;
+  impact: IncidentImpact;
+  status: IncidentStatus;
+  message: string;
+  showBanner: boolean;
+};
+
+type UpdatePayload = { status?: IncidentStatus; message?: string; banner?: boolean };
 
 const EMPTY_FORM: Form = {
   title: "",
@@ -40,6 +51,7 @@ const EMPTY_FORM: Form = {
   impact: "minor",
   status: "investigating",
   message: "",
+  showBanner: false,
 };
 
 const fmt = (iso: string) =>
@@ -55,15 +67,19 @@ const chip = (active: boolean) =>
 const inputCls =
   "w-full rounded-xl border border-zinc-800/80 bg-zinc-900/40 px-4 py-2.5 text-xs text-white placeholder-zinc-500 outline-none focus:border-purple-500/50 transition-colors";
 
-async function api(url: string, method: string, body?: unknown): Promise<{ ok: boolean; error?: string }> {
+async function api(
+  url: string,
+  method: string,
+  body?: unknown
+): Promise<{ ok: boolean; error?: string; data?: { bannerNote?: string } }> {
   try {
     const res = await fetch(url, {
       method,
       headers: body ? { "Content-Type": "application/json" } : undefined,
       body: body ? JSON.stringify(body) : undefined,
     });
-    if (res.ok) return { ok: true };
     const data = await res.json().catch(() => ({}));
+    if (res.ok) return { ok: true, data };
     return { ok: false, error: data.error || `Erreur ${res.status}` };
   } catch {
     return { ok: false, error: "Erreur réseau" };
@@ -109,7 +125,7 @@ function IncidentCard({
 }: {
   incident: Incident;
   busy: boolean;
-  onUpdate: (id: string, payload: { status?: IncidentStatus; message?: string }) => Promise<boolean>;
+  onUpdate: (id: string, payload: UpdatePayload) => Promise<boolean>;
   onDelete: (id: string) => void;
 }) {
   const [status, setStatus] = useState<IncidentStatus>(incident.status);
@@ -198,6 +214,20 @@ function IncidentCard({
               Marquer résolu
             </button>
           )}
+          {!resolved && (
+            <button
+              onClick={() => onUpdate(incident._id, { banner: !incident.bannerActive })}
+              disabled={busy}
+              className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-xs font-bold transition-all disabled:opacity-50 ${
+                incident.bannerActive
+                  ? "border-purple-500/40 bg-purple-500/15 text-purple-200 hover:bg-purple-500/25"
+                  : "border-zinc-800 bg-zinc-900/40 text-zinc-300 hover:text-white"
+              }`}
+            >
+              <Megaphone size={14} />
+              {incident.bannerActive ? "Retirer la bannière" : "Afficher en bannière"}
+            </button>
+          )}
           <button
             onClick={() => onDelete(incident._id)}
             disabled={busy}
@@ -213,6 +243,7 @@ function IncidentCard({
 }
 
 export default function AdminStatusPage() {
+  const { confirm } = useDialog();
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [services, setServices] = useState<LiveService[]>([]);
   const [loading, setLoading] = useState(true);
@@ -271,6 +302,7 @@ export default function AdminStatusPage() {
       impact: down ? "major" : "minor",
       status: MESSAGE_TEMPLATES[0].status,
       message: MESSAGE_TEMPLATES[0].text,
+      showBanner: down, // une panne franche mérite d'être signalée partout, une dégradation reste sur la page de statut
     });
     setCreating(true);
   };
@@ -281,13 +313,17 @@ export default function AdminStatusPage() {
     const res = await api("/api/admin/incidents", "POST", form);
     setSaving(false);
     if (!res.ok) return flash("error", res.error || "Échec de la création");
-    flash("ok", "Incident publié sur la page de statut");
+    const note = res.data?.bannerNote;
+    flash(
+      note ? "error" : "ok",
+      note ?? (form.showBanner ? "Incident publié sur la page de statut et en bannière" : "Incident publié sur la page de statut")
+    );
     setCreating(false);
     setForm(EMPTY_FORM);
     load();
   };
 
-  const updateIncident = async (id: string, payload: { status?: IncidentStatus; message?: string }) => {
+  const updateIncident = async (id: string, payload: UpdatePayload) => {
     setBusyId(id);
     const res = await api(`/api/admin/incidents/${id}`, "PATCH", payload);
     setBusyId(null);
@@ -295,13 +331,19 @@ export default function AdminStatusPage() {
       flash("error", res.error || "Échec de la mise à jour");
       return false;
     }
-    flash("ok", "Mise à jour publiée");
+    const bannerNote = res.data?.bannerNote;
+    flash(bannerNote ? "error" : "ok", bannerNote ?? "Mise à jour publiée");
     load();
     return true;
   };
 
   const deleteIncident = async (id: string) => {
-    if (!confirm("Supprimer définitivement cet incident ? Pour le clore normalement, utilise « Marquer résolu ».")) return;
+    const ok = await confirm({
+      title: "Supprimer cet incident ?",
+      description: "Suppression définitive. Pour le clore normalement, utilise « Marquer résolu ».",
+      confirmLabel: "Supprimer",
+    });
+    if (!ok) return;
     setBusyId(id);
     const res = await api(`/api/admin/incidents/${id}`, "DELETE");
     setBusyId(null);
@@ -447,6 +489,21 @@ export default function AdminStatusPage() {
               {form.message.length}/{MESSAGE_MAX}
             </p>
           </div>
+
+          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-zinc-800/80 bg-zinc-900/40 p-4">
+            <input
+              type="checkbox"
+              checked={form.showBanner}
+              onChange={(e) => setForm((f) => ({ ...f, showBanner: e.target.checked }))}
+              className="mt-0.5 h-4 w-4 accent-purple-500"
+            />
+            <span>
+              <span className="block text-xs font-bold text-white">Afficher aussi en bannière sur tout le site</span>
+              <span className="block text-[11px] text-zinc-500">
+                Retirée automatiquement à la résolution. Ne remplace jamais une annonce manuelle du propriétaire.
+              </span>
+            </span>
+          </label>
 
           <button
             onClick={createIncident}

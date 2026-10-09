@@ -24,9 +24,11 @@ const HTTP_TARGETS = [
 ] as const;
 
 const MINUTE_MS = 60_000;
+const HOUR_MS = 60 * MINUTE_MS;
 const REQUEST_TIMEOUT_MS = 4_000;
 const RETRY_DELAY_MS = 500;
-const LOG_TTL_SECONDS = 24 * 60 * 60; // logs bruts : 24 h (frise horaire)
+const LOG_TTL_SECONDS = 3 * 60 * 60; // logs bruts : 3 h (frise par minute sur 90 min + statut actuel)
+const HOURLY_TTL_SECONDS = 48 * 60 * 60; // agrégats horaires : 48 h (frise 24 h)
 const DAILY_TTL_SECONDS = 95 * 24 * 60 * 60; // agrégats journaliers : 95 j (disponibilité 30 j)
 
 interface StatusLogDoc {
@@ -55,6 +57,17 @@ interface StatusDailyDoc {
   down?: number;
 }
 
+/** Agrégat par service et par heure UTC : la frise 24 h lit ~72 documents au lieu de milliers de logs bruts. */
+interface StatusHourlyDoc {
+  _id: string;
+  service: string;
+  hour: Date;
+  total?: number;
+  operational?: number;
+  degraded?: number;
+  down?: number;
+}
+
 /* ------------------------------- Index (1×/process) ------------------------------- */
 
 let indexesReady: Promise<void> | null = null;
@@ -65,12 +78,134 @@ function ensureIndexes(db: Db): Promise<void> {
       p.catch((e: unknown) => console.warn("[status] index ignoré :", (e as Error)?.message));
 
     indexesReady = Promise.all([
-      safe(db.collection("statuslogs").createIndex({ timestamp: 1 }, { expireAfterSeconds: LOG_TTL_SECONDS })),
+      safe(ensureLogsTtl(db)),
       safe(db.collection("statuslogs").createIndex({ service: 1, timestamp: -1 })),
+      safe(db.collection("statushourly").createIndex({ hour: 1 }, { expireAfterSeconds: HOURLY_TTL_SECONDS })),
       safe(db.collection("statusdaily").createIndex({ day: 1 }, { expireAfterSeconds: DAILY_TTL_SECONDS })),
     ]).then(() => undefined);
   }
   return indexesReady;
+}
+
+/**
+ * Applique la durée de conservation des logs bruts (LOG_TTL_SECONDS), y compris sur une base existante dont l'index TTL
+ * a une autre durée : createIndex refuse de modifier un index existant, il faut collMod (ou le recréer).
+ * Avant de raccourcir la conservation, on fige dans les agrégats horaires ce que les anciens logs contiennent encore.
+ */
+async function ensureLogsTtl(db: Db): Promise<void> {
+  const col = db.collection("statuslogs");
+  const existing = (await col.indexes()).find(
+    (i) => Object.keys(i.key).length === 1 && (i.key as Record<string, number>).timestamp === 1
+  );
+
+  if (!existing) {
+    await col.createIndex({ timestamp: 1 }, { expireAfterSeconds: LOG_TTL_SECONDS });
+    return;
+  }
+  if (existing.expireAfterSeconds === LOG_TTL_SECONDS) return;
+
+  await rebuildHourlyFromLogs(db); // agrégats d'abord : le TTL supprimera les vieux logs dans la minute qui suit
+
+  try {
+    if (existing.expireAfterSeconds === undefined) throw new Error("index sans TTL");
+    await db.command({
+      collMod: "statuslogs",
+      index: { keyPattern: { timestamp: 1 }, expireAfterSeconds: LOG_TTL_SECONDS },
+    });
+  } catch {
+    // collMod indisponible (ou index sans TTL) : on recrée l'index avec la bonne durée.
+    await col.dropIndex(existing.name as string);
+    await col.createIndex({ timestamp: 1 }, { expireAfterSeconds: LOG_TTL_SECONDS });
+  }
+}
+
+/* ----------------------- Rattrapage des agrégats horaires ----------------------- */
+
+/** Clé d'un agrégat horaire : `Service|2026-10-08T14` (heure UTC). */
+const hourlyId = (service: string, hourStartMs: number) => `${service}|${new Date(hourStartMs).toISOString().slice(0, 13)}`;
+
+async function backfillHourly(db: Db): Promise<void> {
+  const hourly = db.collection<StatusHourlyDoc>("statushourly");
+  const currentHourMs = Math.floor(Date.now() / HOUR_MS) * HOUR_MS;
+
+  // Déjà rattrapé (ou installation récente) : au moins une heure terminée existe déjà.
+  const past = await hourly.findOne({ hour: { $lt: new Date(currentHourMs) } }, { projection: { _id: 1 } });
+  if (past) return;
+
+  await rebuildHourlyFromLogs(db);
+}
+
+/**
+ * Reconstruit (ou complète) les agrégats horaires depuis les logs bruts encore conservés (3 h). Idempotent.
+ * Sert au rattrapage initial et à la réparation automatique quand les agrégats ont du retard sur les logs.
+ */
+export async function rebuildHourlyFromLogs(db: Db): Promise<void> {
+  const hourly = db.collection<StatusHourlyDoc>("statushourly");
+
+  // Arithmétique sur les millisecondes plutôt que $dateTrunc : fonctionne quelle que soit la version de MongoDB.
+  const rows = await db
+    .collection("statuslogs")
+    .aggregate([
+      {
+        $group: {
+          _id: {
+            service: "$service",
+            hourMs: { $subtract: [{ $toLong: "$timestamp" }, { $mod: [{ $toLong: "$timestamp" }, HOUR_MS] }] },
+          },
+          total: { $sum: 1 },
+          down: { $sum: { $cond: [{ $eq: ["$status", "down"] }, 1, 0] } },
+          degraded: { $sum: { $cond: [{ $eq: ["$status", "degraded"] }, 1, 0] } },
+        },
+      },
+    ])
+    .toArray();
+
+  if (rows.length === 0) return;
+
+  // $max : idempotent si plusieurs instances rattrapent en même temps, et ne réduit jamais un compteur déjà incrémenté.
+  await hourly.bulkWrite(
+    rows.map((r) => {
+      const hourMs = Number(r._id.hourMs);
+      return {
+        updateOne: {
+          filter: { _id: hourlyId(r._id.service, hourMs) },
+          update: {
+            $setOnInsert: { service: r._id.service as string, hour: new Date(hourMs) },
+            $max: {
+              total: r.total as number,
+              operational: (r.total - r.down - r.degraded) as number,
+              degraded: r.degraded as number,
+              down: r.down as number,
+            },
+          },
+          upsert: true,
+        },
+      };
+    })
+  );
+}
+
+let backfillPromise: Promise<void> | null = null;
+
+/** Rattrapage unique par processus des agrégats horaires depuis les logs bruts. Sans effet une fois fait. */
+export function ensureHourlyBackfill(db: Db): Promise<void> {
+  if (!backfillPromise) {
+    backfillPromise = backfillHourly(db).catch((e: unknown) => {
+      console.warn("[status] rattrapage horaire ignoré :", (e as Error)?.message);
+      backfillPromise = null; // nouvelle tentative au prochain appel
+    });
+  }
+  return backfillPromise;
+}
+
+let lastRepairAt = 0;
+
+/** Réparation à la demande des agrégats horaires (au plus une fois par minute et par instance). */
+export async function repairHourly(db: Db): Promise<boolean> {
+  if (Date.now() - lastRepairAt < MINUTE_MS) return false;
+  lastRepairAt = Date.now();
+  await rebuildHourlyFromLogs(db);
+  return true;
 }
 
 /* ----------------------------------- Verrou ----------------------------------- */
@@ -155,6 +290,7 @@ export async function runStatusChecks(source: "cron" | "lazy"): Promise<RunResul
   const db = client.db();
 
   await ensureIndexes(db);
+  await ensureHourlyBackfill(db);
 
   if (!(await claimSlot(db, slot, arrival))) return { ran: false };
 
@@ -172,9 +308,26 @@ export async function runStatusChecks(source: "cron" | "lazy"): Promise<RunResul
 
   const day = new Date(Date.UTC(timestamp.getUTCFullYear(), timestamp.getUTCMonth(), timestamp.getUTCDate()));
   const dayKey = day.toISOString().slice(0, 10);
+  const hourMs = Math.floor(timestamp.getTime() / HOUR_MS) * HOUR_MS;
+  const hour = new Date(hourMs);
 
-  await Promise.all([
-    db.collection<StatusLogDoc>("statuslogs").insertMany(results.map((r) => ({ ...r }))),
+  // Les logs bruts sont essentiels : s'ils échouent, le check échoue. Les agrégats, eux, ne doivent jamais faire
+  // échouer le check : leur erreur est journalisée (Vercel → Logs) et la page les répare depuis les logs bruts.
+  await db.collection<StatusLogDoc>("statuslogs").insertMany(results.map((r) => ({ ...r })));
+
+  const rollups = await Promise.allSettled([
+    db.collection<StatusHourlyDoc>("statushourly").bulkWrite(
+      results.map((r) => ({
+        updateOne: {
+          filter: { _id: hourlyId(r.service, hourMs) },
+          update: {
+            $setOnInsert: { service: r.service, hour },
+            $inc: { total: 1, [r.status]: 1 } as Record<string, number>,
+          },
+          upsert: true,
+        },
+      }))
+    ),
     db.collection<StatusDailyDoc>("statusdaily").bulkWrite(
       results.map((r) => ({
         updateOne: {
@@ -188,6 +341,9 @@ export async function runStatusChecks(source: "cron" | "lazy"): Promise<RunResul
       }))
     ),
   ]);
+  rollups.forEach((r, i) => {
+    if (r.status === "rejected") console.error(`[status] agrégat ${i === 0 ? "horaire" : "journalier"} en échec :`, r.reason);
+  });
 
   console.log(`[status] check (${source}) :`, results.map((r) => `${r.service}=${r.status}`).join(", "));
   return { ran: true, timestamp, results };

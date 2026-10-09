@@ -12,6 +12,9 @@ const SiteSettingsSchema = new Schema(
       startsAt: { type: Date, default: null },
       expiresAt: { type: Date, default: null },
       updatedAt: { type: Date, default: null },
+      // Renseigné quand l'annonce a été publiée automatiquement depuis un incident de la page de statut
+      // (elle est alors retirée à la résolution de l'incident). Null pour une annonce rédigée à la main.
+      incidentId: { type: String, default: null },
     },
   },
   { timestamps: false }

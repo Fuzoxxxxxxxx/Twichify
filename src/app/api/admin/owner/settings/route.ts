@@ -111,6 +111,8 @@ export async function PUT(req: Request) {
           "banner.startsAt": startsAt,
           "banner.expiresAt": expiresAt,
           "banner.updatedAt": new Date(),
+          // Une annonce enregistrée ici est manuelle : elle se détache de tout incident (et n'est plus retirée à sa résolution).
+          "banner.incidentId": null,
         },
       },
       { upsert: true }

@@ -15,6 +15,7 @@ import {
   Search 
 } from "lucide-react";
 import { hasPermission, PERMISSIONS } from "@/lib/roles";
+import { useDialog } from "@/components/DialogProvider";
 
 interface FaqArticle {
   _id: string;
@@ -27,6 +28,7 @@ interface FaqArticle {
 const categories = ["tous", "spotify", "obs", "api", "compte", "autre"];
 
 export default function AdminFaqPage() {
+  const { confirm } = useDialog();
   const [articles, setArticles] = useState<FaqArticle[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -112,7 +114,12 @@ export default function AdminFaqPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Voulez-vous vraiment supprimer cet article ?")) return;
+    const ok = await confirm({
+      title: "Supprimer cet article ?",
+      description: "L'article sera supprimé de la FAQ pour tous les utilisateurs.",
+      confirmLabel: "Supprimer",
+    });
+    if (!ok) return;
     try {
       const res = await fetch(`/api/admin/faq/${id}`, { method: "DELETE" });
       if (res.status === 403) return setError(true);

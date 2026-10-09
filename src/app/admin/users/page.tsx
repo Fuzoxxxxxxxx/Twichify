@@ -24,6 +24,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { ROLE_LABELS, canActOn, assignableRoles, hasPermission, PERMISSIONS, getRoleLevel, ALL_ROLES, PERMISSION_LABELS } from "@/lib/roles";
+import { useDialog } from "@/components/DialogProvider";
 
 interface AdminUser {
   _id: string;
@@ -74,6 +75,7 @@ const permissionIcons: Record<string, any> = {
 
 export default function AdminUsersPage() {
   const { data: session } = useSession();
+  const { confirm, notify } = useDialog();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -154,7 +156,7 @@ export default function AdminUsersPage() {
         setUsers((prev) => prev.map((u) => (u._id === userId ? { ...u, role: newRole } : u)));
       } else {
         const data = await res.json();
-        alert(data.error || "Erreur lors de la mise à jour du rôle.");
+        notify(data.error || "Erreur lors de la mise à jour du rôle.", "error");
       }
     } finally {
       setUpdatingId(null);
@@ -162,7 +164,12 @@ export default function AdminUsersPage() {
   };
 
   const handleDelete = async (userId: string, userName: string) => {
-    if (!confirm(`Supprimer définitivement le compte de ${userName} ? Cette action est irréversible.`)) return;
+    const ok = await confirm({
+      title: `Supprimer le compte de ${userName} ?`,
+      description: "Cette action est définitive et irréversible.",
+      confirmLabel: "Supprimer",
+    });
+    if (!ok) return;
     setUpdatingId(userId);
     try {
       const res = await fetch(`/api/admin/users/${userId}`, { method: "DELETE" });
@@ -170,7 +177,7 @@ export default function AdminUsersPage() {
         setUsers((prev) => prev.filter((u) => u._id !== userId));
       } else {
         const data = await res.json();
-        alert(data.error || "Erreur lors de la suppression.");
+        notify(data.error || "Erreur lors de la suppression.", "error");
       }
     } finally {
       setUpdatingId(null);

@@ -3,6 +3,7 @@ import clientPromise from "@/lib/mongodb";
 import { requirePermission } from "@/lib/auth-helpers";
 import { PERMISSIONS } from "@/lib/roles";
 import { logAudit } from "@/lib/audit";
+import { applyIncidentBanner } from "@/lib/incident-banner";
 import {
   MESSAGE_MAX,
   TITLE_MAX,
@@ -53,6 +54,8 @@ export async function POST(req: Request) {
     const service = body?.service;
     const impact = isIncidentImpact(body?.impact) ? body.impact : "minor";
     const status = isIncidentStatus(body?.status) ? body.status : "investigating";
+    // Publier aussi l'incident dans la bannière globale du site (sans effet sur un incident déjà résolu).
+    const showBanner = body?.showBanner === true && status !== "resolved";
 
     if (!title) return NextResponse.json({ error: "Titre requis" }, { status: 400 });
     if (!message) return NextResponse.json({ error: "Message requis" }, { status: 400 });
@@ -68,22 +71,43 @@ export async function POST(req: Request) {
       updates: [{ message, status, createdAt: now }],
       createdAt: now,
       updatedAt: now,
+      bannerActive: false,
       ...(status === "resolved" ? { resolvedAt: now } : {}),
       // Jamais renvoyé par l'API publique /api/status (projection).
       createdBy: { id: String(staff._id), name: staff.name || "Staff" },
     };
 
     const client = await clientPromise;
-    const result = await client.db().collection("incidents").insertOne(doc);
+    const col = client.db().collection("incidents");
+    const result = await col.insertOne(doc);
+    const id = String(result.insertedId);
+
+    // Bannière globale : l'incident est créé quoi qu'il arrive, un échec de bannière n'annule rien.
+    let bannerApplied = false;
+    let bannerNote: string | undefined;
+    if (showBanner) {
+      try {
+        const banner = await applyIncidentBanner({ id, title, impact });
+        bannerApplied = banner.applied;
+        bannerNote = banner.note;
+        if (bannerApplied) await col.updateOne({ _id: result.insertedId }, { $set: { bannerActive: true } });
+      } catch (e) {
+        console.error("Erreur bannière d'incident:", e);
+        bannerNote = "L'incident est publié, mais la bannière n'a pas pu l'être.";
+      }
+    }
 
     await logAudit({
       actor: staff,
       action: "incident.create",
-      target: { id: String(result.insertedId), name: title },
-      details: `${service} · ${impact} · ${status}`,
+      target: { id, name: title },
+      details: `${service} · ${impact} · ${status}${bannerApplied ? " · bannière" : ""}`,
     });
 
-    return NextResponse.json({ incident: { _id: result.insertedId, ...doc } }, { status: 201 });
+    return NextResponse.json(
+      { incident: { _id: result.insertedId, ...doc, bannerActive: bannerApplied }, bannerApplied, bannerNote },
+      { status: 201 }
+    );
   } catch (error) {
     console.error("Erreur POST incident admin:", error);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });

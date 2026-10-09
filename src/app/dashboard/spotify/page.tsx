@@ -5,10 +5,12 @@ import { useState, useEffect, useCallback } from "react";
 import { Music, Sliders, Eye, EyeOff, Save, Unlink } from "lucide-react";
 import { PageHeader, InfoStep } from "@/components/dashboard/DashboardUI";
 import { useToast, ToastDisplay } from "@/components/dashboard/useToast";
+import { useDialog } from "@/components/DialogProvider";
 
 export default function DashboardSpotify() {
   const { data: session } = useSession();
   const { toast, showToast } = useToast();
+  const { confirm } = useDialog();
 
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
@@ -56,7 +58,12 @@ export default function DashboardSpotify() {
   };
 
   const handleDisconnectSpotify = async () => {
-    if (!confirm("Voulez-vous vraiment vous déconnecter de Spotify ?")) return;
+    const ok = await confirm({
+      title: "Se déconnecter de Spotify ?",
+      description: "Ton widget musique n'affichera plus ta musique tant que tu n'auras pas réassocié ton compte.",
+      confirmLabel: "Se déconnecter",
+    });
+    if (!ok) return;
     setLoading(true);
     try {
       const res = await fetch("/api/spotify/disconnect", { method: "POST" });

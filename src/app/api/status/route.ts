@@ -1,6 +1,12 @@
 import { NextResponse, after } from "next/server";
 import clientPromise from "@/lib/mongodb";
-import { SERVICE_NAMES, getLastCheckStartedAt, runStatusChecks } from "@/lib/status-checker";
+import {
+  SERVICE_NAMES,
+  ensureHourlyBackfill,
+  getLastCheckStartedAt,
+  repairHourly,
+  runStatusChecks,
+} from "@/lib/status-checker";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +19,11 @@ const MAX_GAP_MINUTES = 2; // une minute sans mesure reprend la dernière valeur
 const LAZY_AFTER_MS = 90_000; // sonde paresseuse si le pinger a raté un tour (> 1 min 30 sans check)
 const STALE_AFTER_MS = 5 * MINUTE; // au-delà : « aucune donnée récente » (jamais de faux vert)
 const LATENCY_SAMPLE = 10; // la latence BDD affichée est la médiane des 10 derniers pings
+
+// Trafic réel (mesure passive, voir lib/passive-health) : fenêtre et seuils.
+const PASSIVE_WINDOW_MS = 10 * MINUTE;
+const PASSIVE_MIN_SAMPLE = 20; // en dessous, l'échantillon est trop petit pour conclure
+const PASSIVE_DEGRADED_RATE = 0.5; // au moins la moitié des appels réels en panne → « Dégradé »
 
 type HistoryState = "green" | "yellow" | "red" | "gray";
 type CurrentStatus = "Operational" | "Degraded" | "Down" | "Unknown";
@@ -100,6 +111,9 @@ export async function GET() {
     const client = await clientPromise;
     const db = client.db();
 
+    // Reconstruit une seule fois (par processus) les agrégats horaires à partir des logs bruts après la mise en place.
+    await ensureHourlyBackfill(db);
+
     const now = Date.now();
     // Fenêtre horaire alignée sur les heures calendaires : 23 heures pleines + l'heure en cours.
     const windowStart = new Date(Math.floor(now / HOUR) * HOUR - (POINTS - 1) * HOUR);
@@ -109,7 +123,7 @@ export async function GET() {
       Date.UTC(thirtyDaysAgo.getUTCFullYear(), thirtyDaysAgo.getUTCMonth(), thirtyDaysAgo.getUTCDate())
     );
 
-    const [lastStartedAt, recent, hourly, daily, incidents] = await Promise.all([
+    const [lastStartedAt, recent, hourlyDocs, daily, passiveDocs, incidents] = await Promise.all([
       getLastCheckStartedAt(db),
 
       // Derniers checks (fenêtre « minutes » + marge d'une minute) : statut actuel, frise par minute, latence BDD
@@ -120,26 +134,10 @@ export async function GET() {
         .limit(1000)
         .toArray(),
 
-      // Frise 24 h : agrégation côté Mongo, un document par (service, heure calendaire)
-      db
-        .collection("statuslogs")
-        .aggregate([
-          { $match: { timestamp: { $gte: windowStart } } },
-          {
-            $group: {
-              _id: {
-                service: "$service",
-                hour: { $floor: { $divide: [{ $subtract: ["$timestamp", windowStart] }, HOUR] } },
-              },
-              total: { $sum: 1 },
-              down: { $sum: { $cond: [{ $eq: ["$status", "down"] }, 1, 0] } },
-              degraded: { $sum: { $cond: [{ $eq: ["$status", "degraded"] }, 1, 0] } },
-            },
-          },
-        ])
-        .toArray(),
+      // Frise 24 h : agrégats horaires (≈ 72 documents), plus de parcours des logs bruts
+      db.collection("statushourly").find({ hour: { $gte: windowStart } }).toArray(),
 
-      // Disponibilité 30 j : agrégats journaliers (les logs bruts n'en gardent que 24 h)
+      // Disponibilité 30 j : agrégats journaliers (les logs bruts n'en gardent que 3 h)
       db
         .collection("statusdaily")
         .aggregate([
@@ -152,6 +150,12 @@ export async function GET() {
             },
           },
         ])
+        .toArray(),
+
+      // Trafic réel des 10 dernières minutes (mesure passive des appels des widgets)
+      db
+        .collection("statuspassive")
+        .find({ minute: { $gte: new Date(now - PASSIVE_WINDOW_MS) } })
         .toArray(),
 
       db
@@ -179,15 +183,47 @@ export async function GET() {
 
     const typedRecent = recent as unknown as RecentLog[];
 
+    // Auto-réparation : des checks existent pour l'heure en cours mais leur agrégat horaire est absent (écriture échouée,
+    // ancien déploiement, instance sans le nouveau code…). On reconstruit alors les agrégats depuis les logs bruts (3 h),
+    // ce qui comble aussi les heures récentes manquantes, puis on relit : la frise ne reste jamais grise à tort.
+    let hourlyRows = hourlyDocs;
+    const currentHourMs = Math.floor(now / HOUR) * HOUR;
+    const rollupStale = SERVICE_NAMES.some(
+      (name) =>
+        typedRecent.some((l) => l.service === name && new Date(l.timestamp).getTime() >= currentHourMs) &&
+        !hourlyDocs.some(
+          (d) => d.service === name && new Date(d.hour).getTime() === currentHourMs && Number(d.total) > 0
+        )
+    );
+    if (rollupStale) {
+      try {
+        if (await repairHourly(db)) {
+          hourlyRows = await db.collection("statushourly").find({ hour: { $gte: windowStart } }).toArray();
+        }
+      } catch (e) {
+        console.error("[status] réparation des agrégats horaires en échec :", e);
+      }
+    }
+
+    // Trafic réel cumulé par service sur la fenêtre
+    const passiveByService = new Map<string, { total: number; errors: number }>();
+    for (const doc of passiveDocs) {
+      const entry = passiveByService.get(doc.service as string) ?? { total: 0, errors: 0 };
+      entry.total += Number(doc.total) || 0;
+      entry.errors += Number(doc.errors) || 0;
+      passiveByService.set(doc.service as string, entry);
+    }
+
     const servicesData = SERVICE_NAMES.map((name) => {
-      // Frise horaire
+      // Frise horaire, depuis les agrégats
       const buckets = Array.from({ length: POINTS }, () => ({ total: 0, down: 0, degraded: 0 }));
-      for (const row of hourly) {
-        if (row._id.service !== name) continue;
-        const idx = Math.min(Math.max(Number(row._id.hour), 0), POINTS - 1);
-        buckets[idx].total += row.total;
-        buckets[idx].down += row.down;
-        buckets[idx].degraded += row.degraded;
+      for (const doc of hourlyRows) {
+        if (doc.service !== name) continue;
+        const idx = Math.round((new Date(doc.hour).getTime() - windowStart.getTime()) / HOUR);
+        if (idx < 0 || idx >= POINTS) continue;
+        buckets[idx].total += Number(doc.total) || 0;
+        buckets[idx].down += Number(doc.down) || 0;
+        buckets[idx].degraded += Number(doc.degraded) || 0;
       }
       const history = buckets.map((b) => hourState(b.total, b.down, b.degraded));
 
@@ -197,14 +233,27 @@ export async function GET() {
       const percent = total > 0 ? `${(((total - bad) / total) * 100).toFixed(1)}%` : "--";
 
       const logs = typedRecent.filter((l) => l.service === name);
+      let status = computeCurrentStatus(logs, now);
+
+      // Trafic réel : un taux d'erreur élevé sur les vrais appels des utilisateurs rétrograde un service par ailleurs
+      // « opérationnel » en « dégradé » (jamais en « panne » : seule la sonde active peut le décider).
+      const passive = passiveByService.get(name);
+      const errorRate = passive && passive.total > 0 ? passive.errors / passive.total : 0;
+      const trafficDegraded = !!passive && passive.total >= PASSIVE_MIN_SAMPLE && errorRate >= PASSIVE_DEGRADED_RATE;
+      if (status === "Operational" && trafficDegraded) status = "Degraded";
 
       return {
         name,
-        status: computeCurrentStatus(logs, now),
+        status,
         percent,
         uptime30d: uptime30dByService.get(name) ?? null,
         history,
         historyMinutes: buildMinuteHistory(logs, now),
+        // Null quand il n'y a pas (ou trop peu) de trafic réel : le service n'est pas mesuré passivement.
+        realTraffic:
+          passive && passive.total >= 10
+            ? { requests: passive.total, errorRate: Math.round(errorRate * 1000) / 10, degraded: trafficDegraded }
+            : null,
       };
     });
 

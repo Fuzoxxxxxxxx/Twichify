@@ -1,3 +1,5 @@
+import { trackedFetch } from "@/lib/passive-health";
+
 let cachedToken: { token: string; expiresAt: number } | null = null;
 
 export async function getAppAccessToken() {
@@ -5,7 +7,8 @@ export async function getAppAccessToken() {
     return cachedToken.token;
   }
 
-  const res = await fetch("https://id.twitch.tv/oauth2/token", {
+  // trackedFetch = fetch + mesure passive de la santé de Twitch (voir lib/passive-health).
+  const res = await trackedFetch("Twitch API", "https://id.twitch.tv/oauth2/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
@@ -27,7 +30,7 @@ export async function getAppAccessToken() {
 
 export async function getBroadcasterId(login: string) {
   const token = await getAppAccessToken();
-  const res = await fetch(`https://api.twitch.tv/helix/users?login=${login}`, {
+  const res = await trackedFetch("Twitch API", `https://api.twitch.tv/helix/users?login=${login}`, {
     headers: {
       "Client-ID": process.env.TWITCH_CLIENT_ID!,
       Authorization: `Bearer ${token}`,

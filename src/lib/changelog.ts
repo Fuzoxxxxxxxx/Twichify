@@ -12,6 +12,19 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "3.13.0",
+    date: "09/10/2026",
+    title: "Page de statut en temps réel",
+    changes: [
+      { type: "new", text: "La page /status vérifie Spotify, Twitch et nos serveurs chaque minute. Elle affiche l'état actuel de chaque service, la disponibilité sur 24 h et 30 jours, la latence de la base de données, et une frise par minute (90 dernières minutes) ou par heure (24 h)." },
+      { type: "new", text: "Quand un incident survient, l'équipe publie des messages détaillés (en analyse, identifié, sous surveillance, résolu) avec le service touché et l'impact. Pour les pannes importantes, l'incident peut aussi s'afficher en bannière sur tout le site, retirée automatiquement à la résolution." },
+      { type: "new", text: "Un service est aussi signalé comme dégradé quand une grande partie des vrais appels des widgets vers Spotify ou Twitch échouent, avec le nombre d'appels et le taux d'erreurs sur 10 minutes." },
+      { type: "improved", text: "La page de statut reprend le design des autres pages du site : carte d'état global teintée selon la situation, chiffres clés, cartes de services et historique des incidents en chronologie." },
+      { type: "improved", text: "Les confirmations et messages d'erreur du site s'affichent dans des fenêtres et notifications Twichify, au lieu des pop-up du navigateur." },
+      { type: "fixed", text: "Les emotes FrankerFaceZ (FFZ) ne provoquent plus d'erreur dans le widget chat quand une chaîne n'en propose pas ou que leur format change." },
+    ],
+  },
+  {
     version: "3.12.0",
     date: "07/10/2026",
     title: "Statistiques musicales repensées",

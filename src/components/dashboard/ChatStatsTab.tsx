@@ -6,6 +6,7 @@ import {
   TrendingUp, TrendingDown, Trophy, Info, AlertTriangle, History,
 } from "lucide-react";
 import type { ChatStatsData, ChatSessionSummary, ChatRankRow } from "@/lib/chat-stats";
+import { useDialog } from "@/components/DialogProvider";
 
 /**
  * Onglet « Chat » de la page Twitch : statistiques du chat collectées par le widget chat (optionnel).
@@ -287,6 +288,7 @@ function NameBars({ rows, empty }: { rows: { name: string; count: number }[]; em
 /* ------------------------------------------------------------------ */
 
 export default function ChatStatsTab() {
+  const { confirm } = useDialog();
   const [data, setData] = useState<ChatStatsData | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -339,7 +341,12 @@ export default function ChatStatsTab() {
   };
 
   const deleteAll = async () => {
-    if (!window.confirm("Supprimer tout l'historique des statistiques de chat ? Cette action est définitive.")) return;
+    const ok = await confirm({
+      title: "Supprimer l'historique du chat ?",
+      description: "Toutes les statistiques de chat enregistrées seront supprimées. Cette action est définitive.",
+      confirmLabel: "Supprimer",
+    });
+    if (!ok) return;
     setBusy("delete");
     try {
       const res = await fetch("/api/user/chat-stats", { method: "DELETE" });

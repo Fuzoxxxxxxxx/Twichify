@@ -12,6 +12,7 @@ import type { TwitchStats, FollowersPage, SectionStatus } from "@/lib/twitch-use
 import type { TeamData, TeamSection, TeamMember, CommunityData } from "@/lib/twitch-community";
 import type { UnfollowState } from "@/lib/twitch-unfollows";
 import ChatStatsTab from "@/components/dashboard/ChatStatsTab";
+import { useDialog } from "@/components/DialogProvider";
 
 /* ------------------------------------------------------------------ */
 /* Helpers                                                             */
@@ -554,6 +555,7 @@ function useLazy<T>(url: string, active: boolean) {
 
 export default function DashboardTwitch() {
   const { data: session } = useSession();
+  const { confirm } = useDialog();
 
   const [stats, setStats] = useState<TwitchStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -1208,10 +1210,13 @@ export default function DashboardTwitch() {
                                 {unfBusy === "scan" ? "Analyse…" : "Analyser maintenant"}
                               </button>
                               <button
-                                onClick={() => {
-                                  if (window.confirm("Désactiver le suivi ? La liste enregistrée et l'historique des départs seront supprimés immédiatement.")) {
-                                    unfollowAction("disable");
-                                  }
+                                onClick={async () => {
+                                  const ok = await confirm({
+                                    title: "Désactiver le suivi des départs ?",
+                                    description: "La liste enregistrée et l'historique des départs seront supprimés immédiatement.",
+                                    confirmLabel: "Désactiver",
+                                  });
+                                  if (ok) unfollowAction("disable");
                                 }}
                                 disabled={!!unfBusy}
                                 className="cursor-pointer rounded-xl border border-zinc-800 bg-zinc-950/60 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-500 transition hover:text-rose-300 disabled:cursor-default disabled:opacity-40"

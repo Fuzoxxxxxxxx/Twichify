@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAppAccessToken, getBroadcasterId } from "@/lib/twitch";
+import { trackedFetch } from "@/lib/passive-health";
 
 export async function GET(
   req: Request,
@@ -20,8 +21,8 @@ export async function GET(
     };
 
     const [globalRes, channelRes] = await Promise.all([
-      fetch("https://api.twitch.tv/helix/chat/badges/global", { headers }),
-      fetch(`https://api.twitch.tv/helix/chat/badges?broadcaster_id=${broadcasterId}`, { headers }),
+      trackedFetch("Twitch API", "https://api.twitch.tv/helix/chat/badges/global", { headers }),
+      trackedFetch("Twitch API", `https://api.twitch.tv/helix/chat/badges?broadcaster_id=${broadcasterId}`, { headers }),
     ]);
 
     const global = (await globalRes.json()).data || [];

@@ -5,6 +5,7 @@ import TrackHistory from "@/models/TrackHistory";
 import axios from "axios";
 import { decrypt } from "@/lib/crypto";
 import { findUserByWidgetRef } from "@/lib/widget-token";
+import { recordApiCall } from "@/lib/passive-health";
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -137,6 +138,8 @@ export async function GET(
     const trackResponse = await axios.get("https://api.spotify.com/v1/me/player/currently-playing", {
       headers: { Authorization: `Bearer ${accessToken}` }
     });
+    // Mesure passive : appel réel abouti (Spotify a répondu).
+    recordApiCall("Spotify API", true);
 
     // CORRECTION PAUSE : On vérifie si Spotify dit explicitement que ça ne joue pas
     if (
@@ -267,6 +270,12 @@ export async function GET(
     });
 
   } catch (error: any) {
+    // Mesure passive : seules les pannes de Spotify comptent (réseau, délai, 5xx). Un 4xx dépend du compte
+    // de l'utilisateur (jeton, clés, quota) et prouve que l'API répond.
+    if (axios.isAxiosError(error)) {
+      recordApiCall("Spotify API", error.response ? error.response.status < 500 : false);
+    }
+
     const retryAfter = error.response?.headers["retry-after"];
     if (retryAfter) {
       console.log(`⏳ Spotify demande d'attendre ${retryAfter} secondes avant la prochaine requête.`);

@@ -75,10 +75,12 @@ try {
   if (ffzRes?.ok) {
     const ffzData = await ffzRes.json();
     const setId = ffzData.room?.set;
-    if (setId && ffzData.sets[setId]) {
-      for (const e of ffzData.sets[setId].emotes) {
+    // L'API FFZ v1 nomme la liste « emoticons » (et non « emotes »).
+    const emoticons = ffzData.sets?.[setId]?.emoticons;
+    if (setId && Array.isArray(emoticons)) {
+      for (const e of emoticons) {
         // FFZ propose plusieurs tailles (1, 2, 4)
-        const url = e.urls['2'] || e.urls['1'];
+        const url = e?.urls?.['2'] || e?.urls?.['1'];
         if (url) emoteMap[e.name] = `https:${url}`;
       }
     }
