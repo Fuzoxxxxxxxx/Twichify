@@ -108,7 +108,7 @@ Features:
 ### F. **FAQ Management** ✅
 - Dynamic FAQ articles by category
 - Admin can create/edit/delete articles
-- Categories align with ticket system
+- 13 categories shared by the model, the API validation, the admin and the help page (`src/lib/faq-categories.ts`, single source: key, label, description, display order): `demarrage` (Premiers pas), `spotify`, `bot`, `obs` (OBS & overlays), `chat`, `twitch`, `stats`, `statut`, `compte`, `securite`, `api`, `communaute` (Idées & support), `autre`. Support tickets keep their own 5 categories. The help page only lists categories that contain articles (with counts and a description of the selected one); articles are grouped by category in display order
 - Public FAQ retrieval endpoint
 - Article ordering system
 - Help center (`/help`): search, category filter chips, paginated accordion, light formatting in answers (`**bold**`, lines starting with "Note" highlighted), re-open welcome guide button, links to tickets
@@ -121,12 +121,12 @@ Features:
 - Every admin page is guarded server-side (`requirePagePermission`) and redirects to `/403?from=...` without the right permission; sections are hidden in the nav when the permission is missing
 
 ### H. **Status Monitoring & Incidents** ✅ (rebuilt in v3.13.0)
-- Public page `/status` (same visual language as the changelog/help pages): global state card tinted by situation, key figures, one card per service (Spotify API, Twitch API, Overlays Server), incidents in progress, incident history as a timeline
+- Public page `/status` (same visual language as the changelog/help pages): global state card tinted by situation, key figures, one card per service (Spotify API, Twitch API, Overlays Server), a separate "Émotes du chat" section for the third-party emote services (BetterTTV, 7TV, FrankerFaceZ), incidents in progress, incident history as a timeline
 - Bars: **90 minutes** (one bar per calendar minute) or **24 hours** (one bar per UTC hour), aligned on the clock so a measurement always lands in the same bar; a minute without data inherits the last known state for 2 minutes, then turns grey ("Aucune donnée"), never a false green
-- **Checks** (`src/lib/status-checker.ts`): every minute, GET on the Spotify and Twitch APIs (4 s timeout, 1 retry, any response < 500 counts as up) and a MongoDB ping (warm-up ping first, then the measured one). Triggered by the external pinger (`/api/cron/check-status`, secret header, fail-closed without `CRON_SECRET`) and by a **lazy probe** run via `after()` from `/api/status` when the last check is older than 90 s
+- **Checks** (`src/lib/status-checker.ts`): every minute, all probes run in parallel: GET on the Spotify and Twitch APIs (anonymous, so any response < 500 counts as up), GET on the **public global emote lists** of BetterTTV (`/3/cached/emotes/global`), 7TV (`/v3/emote-sets/global`) and FrankerFaceZ (`/v1/set/global`) where only a 2xx counts as up (a 404 or 429 means a changed address or a block that would silently break the chat widget), and a MongoDB ping (warm-up ping first, then the measured one). 4 s timeout and 1 retry per probe, response bodies are cancelled (status only). Service names/groups live in `SERVICE_NAMES` / `SERVICE_GROUPS` (`lib/status-checker.ts`); incidents can target any of them (`lib/incidents.ts`). Triggered by the external pinger (`/api/cron/check-status`, secret header, fail-closed without `CRON_SECRET`) and by a **lazy probe** run via `after()` from `/api/status` when the last check is older than 90 s
 - **One check per calendar minute**: an atomic lock in `statusmeta` (`slot` = floor(epoch / 60 s)) so the pinger and the lazy probe never double-run; check timestamps are aligned on the minute
 - **Current state** from the last 3 checks (Down = 2 failures out of 3, Degraded = last check failing or 2 anomalies, Unknown after 5 min without data). An hour is red from 2 failed checks
-- **Real traffic** (`src/lib/passive-health.ts`): the widgets' real calls to Spotify (now-playing route) and Twitch (`lib/twitch.ts`, badges routes) are counted in memory and flushed in batches to `statuspassive` (per service and minute). Only network errors and 5xx count as failures (4xx depend on the user's account). ≥ 50 % failures over 10 min with ≥ 20 calls downgrades an operational service to Degraded (never to Down); the card shows the number of calls and the error rate
+- **Real traffic** (`src/lib/passive-health.ts`): the widgets' real calls to Spotify (now-playing route), Twitch (`lib/twitch.ts`, badges routes) and the emote providers (`/api/emotes/[channel]`) are counted in memory and flushed in batches to `statuspassive` (per service and minute). Only network errors and 5xx count as failures (4xx depend on the user's account). ≥ 50 % failures over 10 min with ≥ 20 calls downgrades an operational service to Degraded (never to Down); the card shows the number of calls and the error rate
 - **Storage tiers**: raw logs `statuslogs` (TTL **3 h**, 90-min bars and current state), hourly aggregates `statushourly` (TTL 48 h, 24-h bars, rebuilt automatically from raw logs when they lag), daily aggregates `statusdaily` (TTL 95 d, 30-day availability), real traffic `statuspassive` (TTL 12 h). The TTL change on `statuslogs` is applied automatically (`collMod`, fallback drop/recreate) after freezing the old logs into the hourly aggregates
 - Displayed "Latence BDD" = median of the last 10 MongoDB pings measured by the checks (not the API response time); `apiLatency` is returned separately. `/api/status` is CDN-cached 15 s (`s-maxage`)
 - **Incidents** (`/admin/status`, permission `manageStatus`): create an incident (service, impact, status, public message with templates), publish updates, mark resolved, reopen, delete; a banner shown for a down service without an incident proposes to create one. Public side: incidents of the last 7 days (`incidents` collection, creator never exposed)
@@ -439,7 +439,7 @@ incidents    { title, service, impact, status, description, updates[{message,sta
 {
   question: String (required)
   answer: String (required)
-  category: enum["spotify", "obs", "api", "compte", "autre"]
+  category: enum from `FAQ_CATEGORY_KEYS` (lib/faq-categories.ts, 13 keys; default "autre")
   order: Number
   createdAt: Date
   updatedAt: Date

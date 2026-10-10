@@ -18,10 +18,18 @@ import {
   Ticket,
   Rocket,
   ArrowRight,
+  Bot,
+  MessageSquare,
+  Radio,
+  TrendingUp,
+  Activity,
+  ShieldCheck,
+  Lightbulb,
 } from "lucide-react";
 import SiteHeader from "@/components/SiteHeader";
 import WelcomeModal from "@/components/WelcomeModal";
 import Pagination, { usePagination } from "@/components/Pagination";
+import { FAQ_CATEGORIES, faqCategoryDescription, faqCategoryOrder } from "@/lib/faq-categories";
 
 interface FaqArticle {
   _id: string;
@@ -30,13 +38,26 @@ interface FaqArticle {
   category: string;
 }
 
-const categoryMeta: Record<string, { label: string; icon: ComponentType<LucideProps> }> = {
-  spotify: { label: "Spotify", icon: Music },
-  obs: { label: "OBS", icon: Tv },
-  api: { label: "API", icon: Key },
-  compte: { label: "Compte", icon: UserIcon },
-  autre: { label: "Autre", icon: HelpCircle },
+// Icône par catégorie ; libellés, ordre et descriptions viennent de lib/faq-categories.ts.
+const CATEGORY_ICONS: Record<string, ComponentType<LucideProps>> = {
+  demarrage: Rocket,
+  spotify: Music,
+  bot: Bot,
+  obs: Tv,
+  chat: MessageSquare,
+  twitch: Radio,
+  stats: TrendingUp,
+  statut: Activity,
+  compte: UserIcon,
+  securite: ShieldCheck,
+  api: Key,
+  communaute: Lightbulb,
+  autre: HelpCircle,
 };
+
+const categoryMeta: Record<string, { label: string; icon: ComponentType<LucideProps> }> = Object.fromEntries(
+  FAQ_CATEGORIES.map((c) => [c.key, { label: c.label, icon: CATEGORY_ICONS[c.key] ?? HelpCircle }])
+);
 
 // Nombre d'articles de FAQ affichés par page.
 const PAGE_SIZE = 8;
@@ -97,7 +118,7 @@ export default function HelpPage() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return articles.filter((a) => {
+    const result = articles.filter((a) => {
       const matchesCategory = !activeCategory || a.category === activeCategory;
       const matchesQuery =
         !q ||
@@ -105,13 +126,24 @@ export default function HelpPage() {
         a.answer.toLowerCase().includes(q);
       return matchesCategory && matchesQuery;
     });
+    // Regroupé par catégorie dans l'ordre d'affichage (tri stable : l'ordre propre à chaque catégorie est conservé).
+    return result.sort((a, b) => faqCategoryOrder(a.category) - faqCategoryOrder(b.category));
   }, [articles, query, activeCategory]);
 
   const listRef = useRef<HTMLDivElement>(null);
   const { page, setPage, pageCount, pageItems } = usePagination(filtered, PAGE_SIZE, `${query}|${activeCategory}`);
 
+  // Seules les catégories qui contiennent des articles sont proposées, dans l'ordre d'affichage, avec leur effectif.
   const categories = useMemo(() => {
-    return Array.from(new Set(articles.map((a) => a.category)));
+    return Array.from(new Set(articles.map((a) => a.category))).sort(
+      (a, b) => faqCategoryOrder(a) - faqCategoryOrder(b)
+    );
+  }, [articles]);
+
+  const counts = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const a of articles) map[a.category] = (map[a.category] || 0) + 1;
+    return map;
   }, [articles]);
 
   return (
@@ -199,10 +231,16 @@ export default function HelpPage() {
                   >
                     <Icon size={14} />
                     <span>{meta.label}</span>
+                    <span className="text-[10px] opacity-60">{counts[cat]}</span>
                   </button>
                 );
               })}
             </div>
+          )}
+
+          {/* Description de la catégorie choisie */}
+          {activeCategory && (
+            <p className="-mt-4 mb-8 text-center text-xs text-zinc-500">{faqCategoryDescription(activeCategory)}</p>
           )}
 
           {/* GUIDE DE BIENVENUE */}

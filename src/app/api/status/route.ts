@@ -1,6 +1,7 @@
 import { NextResponse, after } from "next/server";
 import clientPromise from "@/lib/mongodb";
 import {
+  SERVICE_GROUPS,
   SERVICE_NAMES,
   ensureHourlyBackfill,
   getLastCheckStartedAt,
@@ -244,6 +245,7 @@ export async function GET() {
 
       return {
         name,
+        group: SERVICE_GROUPS[name],
         status,
         percent,
         uptime30d: uptime30dByService.get(name) ?? null,

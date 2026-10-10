@@ -1,11 +1,13 @@
 import mongoose, { Schema, model, models } from "mongoose";
+import { FAQ_CATEGORY_KEYS } from "@/lib/faq-categories";
 
 const FaqArticleSchema = new Schema({
   question: { type: String, required: true },
   answer: { type: String, required: true },
   category: {
     type: String,
-    enum: ["spotify", "obs", "api", "compte", "autre"],
+    // Liste partagée : voir lib/faq-categories.ts
+    enum: [...FAQ_CATEGORY_KEYS],
     default: "autre",
   },
   order: { type: Number, default: 0 },

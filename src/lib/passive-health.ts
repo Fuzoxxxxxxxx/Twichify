@@ -13,7 +13,7 @@ import clientPromise from "@/lib/mongodb";
  * répond : il est compté comme un succès, car il dépend du compte de l'utilisateur et non de la santé du service.
  */
 
-export type PassiveService = "Spotify API" | "Twitch API";
+export type PassiveService = "Spotify API" | "Twitch API" | "BetterTTV" | "7TV" | "FrankerFaceZ";
 
 const MINUTE_MS = 60_000;
 const FLUSH_EVERY_MS = 10_000;

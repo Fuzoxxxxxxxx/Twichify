@@ -1,6 +1,7 @@
 // src/app/api/emotes/[channel]/route.ts
 import { NextResponse } from "next/server";
 import { getBroadcasterId } from "@/lib/twitch";
+import { trackedFetch } from "@/lib/passive-health";
 
 export async function GET(
   req: Request,
@@ -14,9 +15,9 @@ export async function GET(
     // BTTV
     try {
       const [globalRes, channelRes] = await Promise.all([
-        fetch("https://api.betterttv.net/3/cached/emotes/global"),
+        trackedFetch("BetterTTV", "https://api.betterttv.net/3/cached/emotes/global"),
         broadcasterId
-          ? fetch(`https://api.betterttv.net/3/cached/users/twitch/${broadcasterId}`)
+          ? trackedFetch("BetterTTV", `https://api.betterttv.net/3/cached/users/twitch/${broadcasterId}`)
           : Promise.resolve(null),
       ]);
 
@@ -41,9 +42,9 @@ export async function GET(
     // 7TV
     try {
       const [globalRes, channelRes] = await Promise.all([
-        fetch("https://7tv.io/v3/emote-sets/global"),
+        trackedFetch("7TV", "https://7tv.io/v3/emote-sets/global"),
         broadcasterId
-          ? fetch(`https://7tv.io/v3/users/twitch/${broadcasterId}`)
+          ? trackedFetch("7TV", `https://7tv.io/v3/users/twitch/${broadcasterId}`)
           : Promise.resolve(null),
       ]);
 
@@ -69,7 +70,7 @@ export async function GET(
     // FFZ
 try {
   const ffzRes = broadcasterId 
-    ? await fetch(`https://api.frankerfacez.com/v1/room/id/${broadcasterId}`)
+    ? await trackedFetch("FrankerFaceZ", `https://api.frankerfacez.com/v1/room/id/${broadcasterId}`)
     : null;
 
   if (ffzRes?.ok) {

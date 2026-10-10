@@ -16,12 +16,43 @@ import clientPromise from "@/lib/mongodb";
 
 export type CheckStatus = "operational" | "degraded" | "down";
 
-export const SERVICE_NAMES = ["Spotify API", "Twitch API", "Overlays Server"] as const;
-
-const HTTP_TARGETS = [
-  { name: "Spotify API", url: "https://api.spotify.com/v1" },
-  { name: "Twitch API", url: "https://api.twitch.tv/helix" },
+export const SERVICE_NAMES = [
+  "Spotify API",
+  "Twitch API",
+  "Overlays Server",
+  "BetterTTV",
+  "7TV",
+  "FrankerFaceZ",
 ] as const;
+
+export type ServiceName = (typeof SERVICE_NAMES)[number];
+
+/** « core » : services dont dépend le fonctionnement ; « emotes » : services tiers d'emotes du widget de chat. */
+export const SERVICE_GROUPS: Record<ServiceName, "core" | "emotes"> = {
+  "Spotify API": "core",
+  "Twitch API": "core",
+  "Overlays Server": "core",
+  BetterTTV: "emotes",
+  "7TV": "emotes",
+  FrankerFaceZ: "emotes",
+};
+
+/**
+ * Sondes HTTP. `isUp` décide quelles réponses prouvent que le service fonctionne :
+ *  - Spotify et Twitch sont interrogés sans authentification : un 401/403/404 est normal, seul un 5xx est une anomalie ;
+ *  - les services d'emotes sont interrogés sur leur liste globale publique : seul un 2xx est normal, un 404 ou un 429
+ *    signale une adresse changée ou un blocage, ce qui casserait le widget de chat sans qu'on s'en aperçoive.
+ */
+const isBelow500 = (status: number) => status < 500;
+const isSuccess = (status: number) => status >= 200 && status < 300;
+
+const HTTP_TARGETS: { name: ServiceName; url: string; isUp: (status: number) => boolean }[] = [
+  { name: "Spotify API", url: "https://api.spotify.com/v1", isUp: isBelow500 },
+  { name: "Twitch API", url: "https://api.twitch.tv/helix", isUp: isBelow500 },
+  { name: "BetterTTV", url: "https://api.betterttv.net/3/cached/emotes/global", isUp: isSuccess },
+  { name: "7TV", url: "https://7tv.io/v3/emote-sets/global", isUp: isSuccess },
+  { name: "FrankerFaceZ", url: "https://api.frankerfacez.com/v1/set/global", isUp: isSuccess },
+];
 
 const MINUTE_MS = 60_000;
 const HOUR_MS = 60 * MINUTE_MS;
@@ -237,7 +268,10 @@ export async function getLastCheckStartedAt(db: Db): Promise<number | null> {
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** GET avec 1 retry : évite qu'un timeout isolé ne soit enregistré comme panne. */
-async function probeHttp(url: string): Promise<{ status: CheckStatus; latencyMs: number }> {
+async function probeHttp(
+  url: string,
+  isUp: (status: number) => boolean
+): Promise<{ status: CheckStatus; latencyMs: number }> {
   const attempts = 2;
   for (let i = 0; i < attempts; i++) {
     const start = Date.now();
@@ -246,11 +280,15 @@ async function probeHttp(url: string): Promise<{ status: CheckStatus; latencyMs:
       const res = await fetch(url, {
         method: "GET",
         cache: "no-store",
+        headers: { Accept: "application/json", "User-Agent": "Twichify-Status/1.0" },
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
-      // Toute réponse < 500 (même 401/403/404/429 sur un appel anonyme) prouve que l'API répond.
-      if (res.status < 500) return { status: "operational", latencyMs: Date.now() - start };
-      if (last) return { status: "degraded", latencyMs: Date.now() - start };
+      const latencyMs = Date.now() - start;
+      // Seul le statut compte : on n'embarque pas le corps (les listes d'emotes globales pèsent plusieurs dizaines de Ko).
+      void res.body?.cancel().catch(() => {});
+
+      if (isUp(res.status)) return { status: "operational", latencyMs };
+      if (last) return { status: "degraded", latencyMs };
     } catch {
       if (last) return { status: "down", latencyMs: Date.now() - start };
     }
@@ -294,15 +332,14 @@ export async function runStatusChecks(source: "cron" | "lazy"): Promise<RunResul
 
   if (!(await claimSlot(db, slot, arrival))) return { ran: false };
 
-  const [spotify, twitch, overlays] = await Promise.all([
-    probeHttp(HTTP_TARGETS[0].url),
-    probeHttp(HTTP_TARGETS[1].url),
+  // Toutes les sondes partent en parallèle : la durée du check reste celle de la plus lente (≤ ~9 s dans le pire cas).
+  const [overlays, ...http] = await Promise.all([
     probeDatabase(db),
+    ...HTTP_TARGETS.map((t) => probeHttp(t.url, t.isUp)),
   ]);
 
   const results: StatusLogDoc[] = [
-    { service: HTTP_TARGETS[0].name, ...spotify, timestamp },
-    { service: HTTP_TARGETS[1].name, ...twitch, timestamp },
+    ...HTTP_TARGETS.map((t, i) => ({ service: t.name as string, ...http[i], timestamp })),
     { service: "Overlays Server", ...overlays, timestamp },
   ];
 

@@ -16,6 +16,12 @@ import {
 } from "lucide-react";
 import { hasPermission, PERMISSIONS } from "@/lib/roles";
 import { useDialog } from "@/components/DialogProvider";
+import {
+  FAQ_CATEGORY_KEYS,
+  faqCategoryDescription,
+  faqCategoryLabel,
+  faqCategoryOrder,
+} from "@/lib/faq-categories";
 
 interface FaqArticle {
   _id: string;
@@ -25,7 +31,8 @@ interface FaqArticle {
   order: number;
 }
 
-const categories = ["tous", "spotify", "obs", "api", "compte", "autre"];
+// Liste partagée (lib/faq-categories.ts) : mêmes catégories et même ordre que la page d'aide.
+const categories = ["tous", ...FAQ_CATEGORY_KEYS];
 
 export default function AdminFaqPage() {
   const { confirm } = useDialog();
@@ -137,7 +144,10 @@ export default function AdminFaqPage() {
         (a) => a.question.toLowerCase().includes(q) || a.answer.toLowerCase().includes(q)
       );
     }
-    return result;
+    // Regroupé par catégorie dans l'ordre d'affichage (tri stable : l'ordre propre à chaque catégorie est conservé).
+    return [...result].sort(
+      (a, b) => faqCategoryOrder(a.category) - faqCategoryOrder(b.category) || a.order - b.order
+    );
   }, [articles, filter, search]);
 
   const counts = useMemo(() => {
@@ -230,7 +240,8 @@ export default function AdminFaqPage() {
                 : "border-zinc-800 bg-zinc-950/60 text-zinc-500 hover:text-zinc-300"
             }`}
           >
-            {cat} {counts[cat] !== undefined && <span className="opacity-60">({counts[cat] || 0})</span>}
+            {cat === "tous" ? "Tous" : faqCategoryLabel(cat)}{" "}
+            {counts[cat] !== undefined && <span className="opacity-60">({counts[cat] || 0})</span>}
           </button>
         ))}
       </div>
@@ -260,16 +271,17 @@ export default function AdminFaqPage() {
                   key={cat}
                   type="button"
                   onClick={() => setForm((f) => ({ ...f, category: cat }))}
-                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold border transition-all capitalize ${
+                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold border transition-all ${
                     form.category === cat
                       ? "border-purple-500 bg-purple-500/20 text-purple-300"
                       : "border-zinc-800 bg-zinc-900/40 text-zinc-400 hover:text-white"
                   }`}
                 >
-                  {cat}
+                  {faqCategoryLabel(cat)}
                 </button>
               ))}
             </div>
+            <p className="text-[11px] text-zinc-500">{faqCategoryDescription(form.category)}</p>
           </div>
 
           <div className="space-y-2">
@@ -330,7 +342,7 @@ export default function AdminFaqPage() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 mb-1.5">
                   <span className="text-[10px] text-purple-400/80 font-mono uppercase bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded-md">
-                    {article.category}
+                    {faqCategoryLabel(article.category)}
                   </span>
                 </div>
                 <p className="text-sm font-bold text-white mb-1">{article.question}</p>

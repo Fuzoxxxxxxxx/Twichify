@@ -14,6 +14,7 @@ import {
   Radio,
   Layers,
   ChevronDown,
+  Smile,
 } from "lucide-react";
 import SiteHeader from "@/components/SiteHeader";
 
@@ -21,6 +22,8 @@ type BarState = "green" | "yellow" | "red" | "gray";
 
 interface Service {
   name: string;
+  // « core » : Spotify, Twitch, serveurs ; « emotes » : services tiers d'emotes du widget de chat.
+  group?: "core" | "emotes";
   status: string;
   percent: string;
   uptime30d: number | null;
@@ -146,6 +149,7 @@ const serviceIcon = (name: string) => {
   const n = name.toLowerCase();
   if (n.includes("spotify")) return Music;
   if (n.includes("twitch")) return Radio;
+  if (n.includes("ttv") || n.includes("frankerfacez")) return Smile;
   if (n.includes("overlay")) return Layers;
   return Server;
 };
@@ -409,6 +413,8 @@ export default function StatusPage() {
   }, []);
 
   const total = services.length;
+  const coreServices = services.filter((s) => (s.group ?? "core") === "core");
+  const emoteServices = services.filter((s) => s.group === "emotes");
   const okCount = services.filter((s) => s.status === "Operational").length;
   const activeIncidents = incidents.filter((i) => !isResolved(i));
   const resolvedIncidents = incidents.filter(isResolved);
@@ -609,9 +615,31 @@ export default function StatusPage() {
                         <p className="text-sm text-zinc-500">Aucune métrique disponible pour le moment.</p>
                       </div>
                     )
-                : services.map((service, i) => <ServiceCard key={service.name} service={service} index={i} view={view} />)}
+                : coreServices.map((service, i) => <ServiceCard key={service.name} service={service} index={i} view={view} />)}
             </div>
           </section>
+
+          {/* Émotes du chat (services tiers) */}
+          {emoteServices.length > 0 && (
+            <section className="mb-12">
+              <div className="rounded-2xl border border-zinc-800/80 bg-zinc-950/60 backdrop-blur-xl p-4 sm:p-5 mb-5">
+                <h2 className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-zinc-400">
+                  <Smile size={14} className="text-purple-400" />
+                  <span>Émotes du chat</span>
+                </h2>
+                <p className="mt-2 text-[11px] leading-relaxed text-zinc-500">
+                  Services tiers utilisés par le widget de chat pour afficher les emotes. Une panne n&apos;empêche pas le chat
+                  de s&apos;afficher, mais certaines emotes peuvent manquer.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                {emoteServices.map((service, i) => (
+                  <ServiceCard key={service.name} service={service} index={coreServices.length + i} view={view} />
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* Historique des incidents */}
           <section>

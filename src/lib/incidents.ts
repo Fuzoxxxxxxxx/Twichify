@@ -3,7 +3,15 @@
  * Aucun import serveur ici : ce fichier est utilisable côté client (page admin) comme côté API.
  */
 
-export const INCIDENT_SERVICES = ["Spotify API", "Twitch API", "Overlays Server", "Plusieurs services"] as const;
+export const INCIDENT_SERVICES = [
+  "Spotify API",
+  "Twitch API",
+  "Overlays Server",
+  "BetterTTV",
+  "7TV",
+  "FrankerFaceZ",
+  "Plusieurs services",
+] as const;
 
 export const INCIDENT_STATUSES = ["investigating", "identified", "monitoring", "resolved"] as const;
 export type IncidentStatus = (typeof INCIDENT_STATUSES)[number];

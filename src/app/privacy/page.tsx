@@ -113,7 +113,7 @@ const DATA_ROWS = [
   {
     data: "Supervision du service",
     detail:
-      "Résultats des vérifications de disponibilité (Spotify, Twitch, base de données), compteurs agrégés d'appels réussis ou échoués des widgets, messages d'incident publiés par l'équipe",
+      "Résultats des vérifications de disponibilité (Spotify, Twitch, base de données, services d'emotes), compteurs agrégés d'appels réussis ou échoués des widgets, messages d'incident publiés par l'équipe",
     purpose: "Page Statut et information en cas de panne ; aucune donnée personnelle ni identifiant d'utilisateur",
     retention:
       "Résultats détaillés 3 heures, compteurs horaires 48 heures, agrégats journaliers 95 jours ; messages d'incident conservés",
