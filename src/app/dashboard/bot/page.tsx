@@ -3,7 +3,7 @@
 import { useSession } from "next-auth/react";
 import { useState, useEffect, useCallback } from "react";
 import { Copy, MessageSquareText, Timer } from "lucide-react";
-import { PageHeader } from "@/components/dashboard/DashboardUI";
+import { PageHeader, DashboardLoading, DashboardLoadError } from "@/components/dashboard/DashboardUI";
 import { useToast, ToastDisplay } from "@/components/dashboard/useToast";
 import { useWidgetToken } from "@/components/dashboard/useWidgetToken";
 
@@ -28,7 +28,7 @@ const chatbotProviders = [
 export default function DashboardBot() {
   const { data: session } = useSession();
   const { toast, showToast } = useToast();
-  const { token: widgetToken } = useWidgetToken(!!session);
+  const { token: widgetToken, loading: tokenLoading } = useWidgetToken(!!session);
 
   const [selectedBot, setSelectedBot] = useState("nightbot");
   const [customBotMessage, setCustomBotMessage] = useState("Now playing: {artist} - {title}");
@@ -36,17 +36,23 @@ export default function DashboardBot() {
   const [loading, setLoading] = useState(false);
   const [copiedCommand, setCopiedCommand] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  // Message du bot et état Spotify viennent du serveur : rien n'est affiché avant leur arrivée.
+  const [loadState, setLoadState] = useState<"loading" | "ready" | "error">("loading");
+  // Première réponse de la route now-playing (utilisée seulement si Spotify est connecté) : évite d'afficher un morceau d'exemple d'abord.
+  const [liveLoaded, setLiveLoaded] = useState(false);
 
   const loadUserData = useCallback(async () => {
+    setLoadState("loading");
     try {
       const res = await fetch("/api/user/profile");
-      if (res.ok) {
-        const data = await res.json();
-        setIsConnected(!!data.hasSpotifyToken);
-        if (data.botSettings?.customMessage) setCustomBotMessage(data.botSettings.customMessage);
-      }
+      if (!res.ok) throw new Error(String(res.status));
+      const data = await res.json();
+      setIsConnected(!!data.hasSpotifyToken);
+      if (data.botSettings?.customMessage) setCustomBotMessage(data.botSettings.customMessage);
+      setLoadState("ready");
     } catch (e) {
       console.error("Erreur de chargement profil", e);
+      setLoadState("error");
     }
   }, []);
 
@@ -63,6 +69,8 @@ export default function DashboardBot() {
         if (res.ok) setLiveTrack(await res.json());
       } catch (e) {
         console.error("Erreur chargement musique live", e);
+      } finally {
+        setLiveLoaded(true);
       }
     };
 
@@ -122,6 +130,11 @@ export default function DashboardBot() {
   };
 
   if (!session) return null;
+  if (loadState === "loading" || tokenLoading) return <DashboardLoading eyebrow="Intégrations" title="Bot" />;
+  if (loadState === "error") return <DashboardLoadError eyebrow="Intégrations" title="Bot" onRetry={loadUserData} />;
+
+  // Connecté : on attend la vraie musique avant d'afficher l'aperçu (sinon on verrait d'abord un titre d'exemple).
+  const previewPending = isConnected && !!widgetToken && !liveLoaded;
 
   const selectedProvider = chatbotProviders.find((provider) => provider.id === selectedBot) ?? chatbotProviders[0];
   const command = getBotCommand(selectedProvider.id);
@@ -297,7 +310,9 @@ export default function DashboardBot() {
                     BOT
                   </span>
                 </div>
-                <p className="text-xs text-zinc-200 break-words leading-relaxed">{previewText}</p>
+                <p className="text-xs text-zinc-200 break-words leading-relaxed">
+                  {previewPending ? <span className="twichify-skeleton inline-block h-3 w-48 rounded align-middle" /> : previewText}
+                </p>
               </div>
             </div>
           </div>

@@ -4,19 +4,33 @@ import { useSession } from "next-auth/react";
 import { useState, useEffect, useCallback } from "react";
 import {
   Palette, Sliders, Shield, Bot, Layout, Sparkles, Zap, Eye, EyeOff, Check,
-  ChevronRight, MessageSquare, Clock, Save, RefreshCw,
+  ChevronRight, MessageSquare, Clock, Save, RefreshCw, Type,
 } from "lucide-react";
-import { PageHeader, SliderRow } from "@/components/dashboard/DashboardUI";
+import { PageHeader, SliderRow, DashboardLoading, DashboardLoadError } from "@/components/dashboard/DashboardUI";
 import { useToast, ToastDisplay } from "@/components/dashboard/useToast";
+import { useWidgetToken } from "@/components/dashboard/useWidgetToken";
 import { getChatThemeClasses } from "@/lib/chat-widget-theme";
+import {
+  ALL_FONTS,
+  GOOGLE_FONTS,
+  FONT_CATEGORY_LABELS,
+  ensureStylesheet,
+  googleFontsUrl,
+  resolveFont,
+  type FontCategory,
+} from "@/lib/widget-fonts";
 
 export default function DashboardChat() {
   const { data: session } = useSession();
   const twitchLogin = (session?.user as any)?.name?.toLowerCase();
   const { toast, showToast } = useToast();
+  const { token: widgetToken } = useWidgetToken(!!session);
 
   const [loading, setLoading] = useState(false);
+  // Les réglages viennent du serveur : rien n'est affiché (ni enregistrable) avant leur arrivée.
+  const [loadState, setLoadState] = useState<"loading" | "ready" | "error">("loading");
   const [chatTheme, setChatTheme] = useState("glass");
+  const [chatFontFamily, setChatFontFamily] = useState("font-sans");
   const [chatFontSize, setChatFontSize] = useState("14");
   const [showBadges, setShowBadges] = useState(true);
   const [hideBots, setHideBots] = useState(false);
@@ -44,11 +58,16 @@ export default function DashboardChat() {
   const [showReplies, setShowReplies] = useState(false);
   const [highlightFirstMessage, setHighlightFirstMessage] = useState(false);
   const [ignoredUsersText, setIgnoredUsersText] = useState("");
+  const [fontCategory, setFontCategory] = useState<FontCategory | "all">("all");
+  // Modifications non enregistrées : on compare les réglages actuels à un instantané pris au chargement puis à chaque sauvegarde.
+  const [savedSnapshot, setSavedSnapshot] = useState<string | null>(null);
+  const [loadTick, setLoadTick] = useState(0);
 
   const [badgeMap, setBadgeMap] = useState<Record<string, Record<string, string>>>({});
   const [previewMessages, setPreviewMessages] = useState<any[]>([]);
 
   const loadUserData = useCallback(async () => {
+    setLoadState("loading");
     try {
       const res = await fetch("/api/user/profile");
       if (res.ok) {
@@ -56,6 +75,7 @@ export default function DashboardChat() {
         if (data.chatWidgetSettings) {
           const c = data.chatWidgetSettings;
           setChatTheme(c.theme || "glass");
+          setChatFontFamily(c.fontFamily || "font-sans");
           setChatFontSize(c.fontSize || "14");
           setShowBadges(c.showBadges !== false);
           setHideBots(!!c.hideBots);
@@ -84,9 +104,14 @@ export default function DashboardChat() {
           setHighlightFirstMessage(!!c.highlightFirstMessage);
           setIgnoredUsersText((c.ignoredUsers || []).join(", "));
         }
+        setLoadTick((t) => t + 1);
+        setLoadState("ready");
+      } else {
+        throw new Error(String(res.status));
       }
     } catch (e) {
       console.error("Erreur de chargement profil", e);
+      setLoadState("error");
     }
   }, []);
 
@@ -102,6 +127,58 @@ export default function DashboardChat() {
       .catch(() => setBadgeMap({}));
   }, [twitchLogin]);
 
+  // ── Modifications non enregistrées ──
+  const snapshot = JSON.stringify({
+    chatTheme, chatFontFamily, chatFontSize, showBadges, hideBots, chatAnimation, hideCommands, maxMessages,
+    chatPosition, chatWidgetWidth, showTimestamps, showColors, compactMode, charLimit, roleHighlights,
+    moderationWordsText, moderationMode, messageLifetime, showReplies, highlightFirstMessage, ignoredUsersText,
+  });
+  const isDirty = savedSnapshot !== null && snapshot !== savedSnapshot;
+
+  // Instantané de référence : pris dans le même rendu que les réglages chargés (loadTick change avec eux).
+  useEffect(() => {
+    if (loadTick > 0) setSavedSnapshot(snapshot);
+  }, [loadTick]);
+
+  // Fermeture ou rechargement de l'onglet.
+  useEffect(() => {
+    if (!isDirty) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [isDirty]);
+
+  // Navigation interne (liens du menu) : on demande confirmation avant de perdre les modifications.
+  useEffect(() => {
+    if (!isDirty) return;
+    const onClick = (e: MouseEvent) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      const link = (e.target as Element | null)?.closest?.("a[href]") as HTMLAnchorElement | null;
+      if (!link || link.target === "_blank" || link.hasAttribute("download")) return;
+      const url = new URL(link.href, window.location.href);
+      if (url.origin !== window.location.origin) return;
+      if (url.pathname === window.location.pathname && url.search === window.location.search) return;
+      if (!window.confirm("Tu as des modifications non enregistrées. Quitter la page sans sauvegarder ?")) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+    document.addEventListener("click", onClick, true);
+    return () => document.removeEventListener("click", onClick, true);
+  }, [isDirty]);
+
+  // Polices : la police choisie est toujours chargée ; toute la bibliothèque seulement quand l'onglet Apparence est ouvert.
+  const resolvedFont = resolveFont(chatFontFamily);
+  useEffect(() => {
+    if (resolvedFont.href && resolvedFont.family) ensureStylesheet(`wf-${resolvedFont.family}`, resolvedFont.href);
+  }, [resolvedFont.href, resolvedFont.family]);
+  useEffect(() => {
+    if (chatConfigSubTab === "apparence") ensureStylesheet("wf-all", googleFontsUrl(GOOGLE_FONTS));
+  }, [chatConfigSubTab]);
+
   const saveChatDesign = async () => {
     setLoading(true);
     try {
@@ -110,6 +187,7 @@ export default function DashboardChat() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           theme: chatTheme,
+          fontFamily: chatFontFamily,
           fontSize: chatFontSize,
           showBadges,
           hideBots,
@@ -139,6 +217,7 @@ export default function DashboardChat() {
       });
 
       if (res.ok) {
+        setSavedSnapshot(snapshot);
         showToast("Design du widget chat mis à jour !");
       } else {
         showToast("Erreur lors de la sauvegarde.", "error");
@@ -154,18 +233,19 @@ export default function DashboardChat() {
   const getChatThemeClasses_ = () => getChatThemeClasses(chatTheme);
 
   const chatPresets = [
-    { id: "streamer-pro", label: "Streamer Pro", desc: "Glass + slide", config: { theme: "glass", animation: "slide", fontSize: "14" } },
-    { id: "minimaliste", label: "Minimaliste", desc: "Épuré + fondu", config: { theme: "epure", animation: "fade", fontSize: "13" } },
-    { id: "compact-preset", label: "Compact", desc: "Dense, sans anim", config: { theme: "compact", animation: "none", fontSize: "12" } },
-    { id: "arcade", label: "Arcade Rétro", desc: "Rétro + rebond", config: { theme: "retro", animation: "bounce", fontSize: "14" } },
-    { id: "cyber", label: "Cyber Néon", desc: "Néon + glissement", config: { theme: "neon", animation: "slide", fontSize: "15" } },
-    { id: "cosmic", label: "Cosmic", desc: "Aurora + fondu", config: { theme: "aurora", animation: "fade", fontSize: "14" } },
+    { id: "streamer-pro", label: "Streamer Pro", desc: "Glass + slide", config: { theme: "glass", animation: "slide", fontSize: "14", fontFamily: "google:Poppins" } },
+    { id: "minimaliste", label: "Minimaliste", desc: "Épuré + fondu", config: { theme: "epure", animation: "fade", fontSize: "13", fontFamily: "google:Inter" } },
+    { id: "compact-preset", label: "Compact", desc: "Dense, sans anim", config: { theme: "compact", animation: "none", fontSize: "12", fontFamily: "font-sans" } },
+    { id: "arcade", label: "Arcade Rétro", desc: "Rétro + rebond", config: { theme: "retro", animation: "bounce", fontSize: "16", fontFamily: "google:VT323" } },
+    { id: "cyber", label: "Cyber Néon", desc: "Néon + glissement", config: { theme: "neon", animation: "slide", fontSize: "15", fontFamily: "google:Orbitron" } },
+    { id: "cosmic", label: "Cosmic", desc: "Aurora + fondu", config: { theme: "aurora", animation: "fade", fontSize: "14", fontFamily: "google:Montserrat" } },
   ];
 
-  const applyPreset = (config: { theme: string; animation: string; fontSize: string }) => {
+  const applyPreset = (config: { theme: string; animation: string; fontSize: string; fontFamily: string }) => {
     setChatTheme(config.theme);
     setChatAnimation(config.animation);
     setChatFontSize(config.fontSize);
+    setChatFontFamily(config.fontFamily);
   };
 
   const broadcasterBadgeUrl = badgeMap.broadcaster?.["1"];
@@ -270,6 +350,8 @@ export default function DashboardChat() {
   };
 
   if (!session) return null;
+  if (loadState === "loading") return <DashboardLoading eyebrow="Widgets" title="Widget chat" />;
+  if (loadState === "error") return <DashboardLoadError eyebrow="Widgets" title="Widget chat" onRetry={loadUserData} />;
 
   return (
     <div className="space-y-12">
@@ -277,14 +359,25 @@ export default function DashboardChat() {
         eyebrow="Widgets"
         title="Widget chat"
         action={
-          <button
-            onClick={saveChatDesign}
-            disabled={loading}
-            className="flex items-center justify-center gap-2 rounded-2xl bg-white text-black hover:bg-zinc-200 px-6 py-3 text-xs font-black uppercase tracking-[0.1em] shadow-[0_0_20px_rgba(255,255,255,0.2)] transition-all disabled:opacity-50"
-          >
-            <Save size={16} />
-            {loading ? "Sauvegarde..." : "Sauvegarder"}
-          </button>
+          <div className="flex flex-wrap items-center justify-end gap-4">
+            {isDirty && (
+              <span className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-amber-400">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-amber-400" />
+                Modifications non enregistrées
+              </span>
+            )}
+            <button
+              onClick={saveChatDesign}
+              disabled={loading}
+              className="relative flex items-center justify-center gap-2 rounded-2xl bg-white text-black hover:bg-zinc-200 px-6 py-3 text-xs font-black uppercase tracking-[0.1em] shadow-[0_0_20px_rgba(255,255,255,0.2)] transition-all disabled:opacity-50"
+            >
+              <Save size={16} />
+              {loading ? "Sauvegarde..." : "Sauvegarder"}
+              {isDirty && !loading && (
+                <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-zinc-950 bg-amber-400" aria-hidden="true" />
+              )}
+            </button>
+          </div>
         }
       />
 
@@ -324,7 +417,8 @@ export default function DashboardChat() {
                     const isActive =
                       chatTheme === preset.config.theme &&
                       chatAnimation === preset.config.animation &&
-                      chatFontSize === preset.config.fontSize;
+                      chatFontSize === preset.config.fontSize &&
+                      chatFontFamily === preset.config.fontFamily;
                     return (
                       <button
                         key={preset.id}
@@ -393,6 +487,58 @@ export default function DashboardChat() {
                   </select>
                   <ChevronRight size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 rotate-90 pointer-events-none" />
                 </div>
+              </div>
+
+              <div className="space-y-4">
+                <label className="text-[11px] font-bold uppercase tracking-widest text-zinc-500 flex items-center gap-2">
+                  <Type size={14} className="text-violet-400" /> Typographie
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {(["all", "sans", "display", "mono", "serif", "script"] as const).map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => setFontCategory(cat)}
+                      className={`rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-all ${
+                        fontCategory === cat
+                          ? "border-violet-500 bg-violet-500/15 text-violet-300"
+                          : "border-white/10 bg-black/20 text-zinc-500 hover:bg-white/5 hover:text-zinc-300"
+                      }`}
+                    >
+                      {FONT_CATEGORY_LABELS[cat]}
+                    </button>
+                  ))}
+                </div>
+                <div className="grid grid-cols-2 gap-3 max-h-80 overflow-y-auto pr-1">
+                  {ALL_FONTS.filter((f) => fontCategory === "all" || f.category === fontCategory).map((f) => {
+                    const r = resolveFont(f.id);
+                    const selected = chatFontFamily === f.id;
+                    return (
+                      <button
+                        key={f.id}
+                        onClick={() => setChatFontFamily(f.id)}
+                        className={`flex flex-col items-start gap-1 rounded-2xl border p-4 text-left transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] ${
+                          selected
+                            ? "border-violet-500 bg-violet-500/10 shadow-[0_0_20px_rgba(139,92,246,0.15)]"
+                            : "border-white/5 bg-black/20 hover:bg-white/5"
+                        }`}
+                      >
+                        <span
+                          className={`w-full truncate text-base font-bold leading-tight ${r.className} ${selected ? "text-violet-300" : "text-zinc-200"}`}
+                          style={r.fontFamily ? { fontFamily: r.fontFamily } : undefined}
+                        >
+                          Super stream !
+                        </span>
+                        <span className="flex w-full items-center justify-between text-[10px] text-zinc-500">
+                          <span>{f.label}</span>
+                          <span className="uppercase tracking-widest text-zinc-600">{f.family ? "Google" : "Système"}</span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-[10px] text-zinc-600">
+                  {ALL_FONTS.length} polices. Les polices Google sont chargées par OBS à l'affichage du widget (connexion internet requise).
+                </p>
               </div>
 
               <SliderRow label="Taille de la police" value={chatFontSize} onChange={setChatFontSize} suffix="px" max={32} />
@@ -543,6 +689,27 @@ export default function DashboardChat() {
                   style={{ background: `linear-gradient(to right, #9333ea ${(Number(charLimit) / 300) * 100}%, #3f3f46 ${(Number(charLimit) / 300) * 100}%)` }}
                 />
                 <p className="text-[10px] text-zinc-600">0 = illimité. Les messages plus longs sont tronqués avec …</p>
+              </div>
+
+              <div className="space-y-4 border-t border-white/5 pt-6">
+                <label className="text-[11px] font-bold uppercase tracking-widest text-zinc-500 flex items-center gap-2">
+                  <Eye size={14} className="text-violet-400" /> Tester sans être en live
+                </label>
+                <p className="text-[11px] text-zinc-600 -mt-2">
+                  Le mode test ajoute <span className="font-mono text-zinc-300">?test=1</span> à l'URL du widget : il joue de faux messages en
+                  boucle (modérateur, VIP, bot, commande, premier message, réponse, message long) avec tes réglages enregistrés, filtres compris.
+                  Aucune statistique n'est enregistrée. Pense à sauvegarder avant.
+                </p>
+                {widgetToken && (
+                  <a
+                    href={`/widget/chat/${widgetToken}?test=1`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-zinc-300 transition hover:border-violet-500/50 hover:text-white"
+                  >
+                    <Eye size={14} /> Ouvrir le widget en mode test
+                  </a>
+                )}
               </div>
             </div>
           )}
@@ -731,16 +898,32 @@ export default function DashboardChat() {
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
               Aperçu OBS {twitchLogin ? `· #${twitchLogin}` : "· chargement…"}
             </p>
-            <button
-              onClick={() => setPreviewMessages([])}
-              className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-500 hover:text-violet-400 transition-colors"
-            >
-              <RefreshCw size={12} /> Vider
-            </button>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setPreviewMessages([])}
+                className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-500 hover:text-violet-400 transition-colors"
+              >
+                <RefreshCw size={12} /> Vider
+              </button>
+              {widgetToken && (
+                <a
+                  href={`/widget/chat/${widgetToken}?test=1`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Ouvre le vrai widget avec de faux messages (enregistre d'abord ta configuration)"
+                  className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-500 hover:text-emerald-400 transition-colors"
+                >
+                  <Eye size={12} /> Vrai widget
+                </a>
+              )}
+            </div>
           </div>
 
           <div className={`relative z-10 flex-1 flex flex-col p-6 ${positionMap[chatPosition] || positionMap["bottom-left"]}`}>
-            <div className={`${compactMode ? "space-y-1" : "space-y-3"}`} style={{ maxWidth: `${chatWidgetWidth}px`, width: "100%" }}>
+            <div
+              className={`${compactMode ? "space-y-1" : "space-y-3"} ${resolvedFont.className}`}
+              style={{ maxWidth: `${chatWidgetWidth}px`, width: "100%", fontFamily: resolvedFont.fontFamily }}
+            >
               {previewMessages.slice(-(maxMessages ? Number(maxMessages) : 8)).map((msg) => {
                 const isFirstHighlighted = highlightFirstMessage && !!msg.isFirst;
                 const highlightColor = getPreviewHighlight(msg.role) ?? (isFirstHighlighted ? "#facc15" : null);

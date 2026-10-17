@@ -386,6 +386,8 @@ export default function DashboardAccount() {
 
   const canDelete = confirmText.trim() === CONFIRM_WORD && !deleting;
   const avatarFallback = (summary?.name || session.user?.name || "?").charAt(0).toUpperCase();
+  // Tant que le rôle n'est pas connu : anneau neutre et badge de chargement (pas de rôle "Utilisateur" affiché par défaut à un admin).
+  const roleGlow = summary ? ROLE_GLOW[summary.role] || ROLE_GLOW.user : "from-zinc-700/70 to-zinc-800/40";
 
   return (
     <div className="relative space-y-8">
@@ -405,7 +407,7 @@ export default function DashboardAccount() {
       <section className="acc-fade flex flex-col items-start gap-5 rounded-[28px] border border-zinc-800/80 bg-zinc-950/40 p-6 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
           {summary?.image || session.user?.image ? (
-            <div className={`relative shrink-0 rounded-2xl bg-gradient-to-br p-[2px] ${ROLE_GLOW[summary?.role || "user"] || ROLE_GLOW.user}`}>
+            <div className={`relative shrink-0 rounded-2xl bg-gradient-to-br p-[2px] ${roleGlow}`}>
               <img
                 src={summary?.image || session.user?.image || ""}
                 alt=""
@@ -413,7 +415,7 @@ export default function DashboardAccount() {
               />
             </div>
           ) : (
-            <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br p-[2px] ${ROLE_GLOW[summary?.role || "user"] || ROLE_GLOW.user}`}>
+            <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br p-[2px] ${roleGlow}`}>
               <div className="flex h-full w-full items-center justify-center rounded-[14px] bg-zinc-950 text-lg font-black text-zinc-300">
                 {avatarFallback}
               </div>
@@ -436,9 +438,13 @@ export default function DashboardAccount() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <span className={`rounded-full border px-3 py-1.5 text-[10px] font-black uppercase tracking-wider ${ROLE_TONE[summary?.role || "user"] || ROLE_TONE.user}`}>
-            {ROLE_LABELS[summary?.role || "user"] || "Utilisateur"}
-          </span>
+          {summary ? (
+            <span className={`rounded-full border px-3 py-1.5 text-[10px] font-black uppercase tracking-wider ${ROLE_TONE[summary.role] || ROLE_TONE.user}`}>
+              {ROLE_LABELS[summary.role] || "Utilisateur"}
+            </span>
+          ) : loadingSummary ? (
+            <span className="twichify-skeleton h-7 w-24 rounded-full" />
+          ) : null}
           {summary && (
             <>
               <span

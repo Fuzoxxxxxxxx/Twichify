@@ -78,9 +78,9 @@ const DATA_ROWS = [
   },
   {
     data: "Support & boîte à idées",
-    detail: "Tickets et messages, idées publiées, votes",
+    detail: "Tickets et messages (avec d'éventuelles notes internes de l'équipe), idées publiées, commentaires sur les idées, votes",
     purpose: "Assistance et retours de la communauté",
-    retention: "Tickets supprimés avec le compte ; idées conservées de façon anonymisée",
+    retention: "Tickets (et notes internes) supprimés avec le compte ; idées et commentaires conservés de façon anonymisée",
   },
   {
     data: "Flux du chat Twitch",

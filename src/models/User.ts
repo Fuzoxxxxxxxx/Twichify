@@ -22,6 +22,12 @@ const UserSchema = new Schema({
   widgetToken: { type: String },
   widgetLegacyIdDisabled: { type: Boolean, default: false },
 
+  // Suivi d'installation (assistant du dashboard) : dernier vrai chargement de chaque widget dans OBS (voir lib/widget-seen).
+  widgetSeen: {
+    musicAt: { type: Date, default: null },
+    chatAt: { type: Date, default: null },
+  },
+
   // Widget Settings
   widgetSettings: {
     layout: { type: String, default: "default" },
@@ -45,6 +51,12 @@ const UserSchema = new Schema({
     showEqualizer: { type: Boolean, default: false }, // égaliseur animé
     autoHide: { type: Boolean, default: false }, // n'affiche le widget que quelques secondes à chaque nouveau morceau
     autoHideSeconds: { type: Number, default: 10 },
+
+    // Animation du widget musique (styles et vitesses validés côté API et widget)
+    animationStyle: { type: String, default: "expand" }, // expand | reveal | slide | fade | pop
+    animationSpeed: { type: String, default: "normal" }, // slow | normal | fast
+    trackChangeAnimation: { type: Boolean, default: true }, // transition douce du titre et de la pochette à chaque morceau
+    glowPulse: { type: Boolean, default: false }, // le néon "respire" doucement
   },
 
   // Bot message settings
@@ -54,6 +66,7 @@ const UserSchema = new Schema({
 
   chatWidgetSettings: {
     theme: { type: String, default: "glass" },
+    fontFamily: { type: String, default: "font-sans" }, // "font-sans" | "font-mono" | "font-serif" | "google:<Famille>" (lib/widget-fonts)
     fontSize: { type: String, default: "14" },
     showBadges: { type: Boolean, default: true },
     hideBots: { type: Boolean, default: false },

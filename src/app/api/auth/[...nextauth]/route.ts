@@ -70,8 +70,11 @@ export const authOptions: NextAuthOptions = {
     },
   },
   pages: {
-    // Se déclenche UNIQUEMENT en cas d'erreur de connexion
+    // Erreurs d'autorisation (ex. refus sur Twitch) : page "connexion annulée"
     error: "/auth/cancelled",
+    // NextAuth v4 envoie OAuthAccountNotLinked (et d'autres erreurs de connexion) vers la page de connexion, pas vers `error` :
+    // /auth/signin aiguille vers /auth/not-linked ou /auth/cancelled selon le code d'erreur.
+    signIn: "/auth/signin",
   },
   session: {
     strategy: "database",

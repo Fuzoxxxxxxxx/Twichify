@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, AlertTriangle, RotateCw } from "lucide-react";
 
 // Composants UI partagés entre toutes les pages du dashboard utilisateur
 // (Accueil, Spotify, Bot, Widget musique, Widget chat, Statistiques).
@@ -22,6 +22,52 @@ export function PageHeader({
         <h1 className="text-4xl font-black tracking-tighter text-white">{title}</h1>
       </div>
       {action}
+    </div>
+  );
+}
+
+// ── États de chargement partagés ──
+// Une page qui dépend des réglages de l'utilisateur affiche DashboardLoading tant qu'ils ne sont pas arrivés : jamais de valeurs
+// par défaut en dur qui sauteraient ensuite vers les vraies. Si le chargement échoue, DashboardLoadError remplace la page, ce qui
+// évite aussi d'enregistrer par erreur ces valeurs par défaut par-dessus la vraie configuration.
+
+export function DashboardLoading({ eyebrow, title }: { eyebrow: string; title: string }) {
+  return (
+    <div className="space-y-8" aria-busy="true" aria-live="polite">
+      <PageHeader eyebrow={eyebrow} title={title} />
+      <div className="twichify-skeleton h-24 rounded-[28px] border border-zinc-800/60" />
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="twichify-skeleton h-32 rounded-[24px] border border-zinc-800/60" />
+        ))}
+      </div>
+      <div className="twichify-skeleton h-72 rounded-[32px] border border-zinc-800/60" />
+      <span className="sr-only">Chargement de tes réglages…</span>
+    </div>
+  );
+}
+
+export function DashboardLoadError({ eyebrow, title, onRetry }: { eyebrow: string; title: string; onRetry: () => void }) {
+  return (
+    <div className="space-y-8">
+      <PageHeader eyebrow={eyebrow} title={title} />
+      <div className="flex flex-col items-start gap-4 rounded-[28px] border border-amber-500/20 bg-amber-500/5 p-6 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3">
+          <AlertTriangle size={20} className="mt-0.5 shrink-0 text-amber-400" />
+          <div>
+            <p className="text-sm font-bold text-amber-200">Impossible de charger tes réglages</p>
+            <p className="mt-1 text-xs leading-relaxed text-zinc-400">
+              Rien n'a été modifié. Vérifie ta connexion puis réessaie : la page reste bloquée pour ne pas remplacer ta configuration par des valeurs par défaut.
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={onRetry}
+          className="inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-[11px] font-black uppercase tracking-widest text-amber-200 transition hover:bg-amber-500/20"
+        >
+          <RotateCw size={13} /> Réessayer
+        </button>
+      </div>
     </div>
   );
 }

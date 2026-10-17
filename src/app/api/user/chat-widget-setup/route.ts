@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "../../auth/[...nextauth]/route"; // À ajuster selon ton arborescence
 import mongoose from "mongoose";
 import User from "@/models/User";
+import { isValidFontId, DEFAULT_FONT_ID } from "@/lib/widget-fonts";
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
@@ -12,6 +13,7 @@ export async function POST(req: Request) {
     // On récupère les paramètres envoyés par le Dashboard pour le widget chat
     const { 
       theme,
+      fontFamily,
       fontSize,
       showBadges,
       hideBots,
@@ -43,6 +45,7 @@ export async function POST(req: Request) {
       { 
         $set: { 
           "chatWidgetSettings.theme": theme,
+          "chatWidgetSettings.fontFamily": isValidFontId(fontFamily) ? fontFamily : DEFAULT_FONT_ID,
           "chatWidgetSettings.fontSize": fontSize,
           "chatWidgetSettings.showBadges": showBadges,
           "chatWidgetSettings.hideBots": hideBots,

@@ -14,9 +14,20 @@ import {
   Loader2,
   CheckCircle2,
   LogOut,
-  Lock
+  Lock,
+  ArrowRightLeft,
+  StickyNote,
+  Trash2,
 } from "lucide-react";
 import LinkifiedText from "@/components/LinkifiedText";
+import ReplyTemplatePicker from "@/components/ReplyTemplatePicker";
+import { TICKET_TEMPLATES, fillTemplate, type ReplyTemplate } from "@/lib/reply-templates";
+import { useDialog } from "@/components/DialogProvider";
+import { ROLE_LABELS } from "@/lib/roles";
+import { TICKET_NOTE_MAX, TRANSFER_REASON_MAX } from "@/lib/ticket-admin";
+
+const roleLabel = (role?: string | null) =>
+  (role && (ROLE_LABELS as Record<string, string>)[role]) || role || "";
 
 interface Message {
   authorId: string;
@@ -31,6 +42,19 @@ interface TypingState {
   userName: string;
   role: string;
   at: string;
+}
+
+interface InternalNote {
+  _id: string;
+  text: string;
+  by?: { userId: string | null; name: string | null; role: string | null };
+  createdAt: string;
+}
+
+interface StaffMember {
+  id: string;
+  name: string;
+  role: string;
 }
 
 interface Ticket {
@@ -68,14 +92,31 @@ export default function AdminTicketThreadPage() {
   const [loading, setLoading] = useState(true);
   const [claimError, setClaimError] = useState<string | null>(null);
   const [releasing, setReleasing] = useState(false);
+  const { confirm, notify } = useDialog();
+
+  // Notes internes (jamais visibles du demandeur) et transfert : espace de travail du staff.
+  const [notes, setNotes] = useState<InternalNote[]>([]);
+  const [notesOpen, setNotesOpen] = useState(false);
+  const [noteDraft, setNoteDraft] = useState("");
+  const [noteBusy, setNoteBusy] = useState(false);
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [staffList, setStaffList] = useState<StaffMember[] | null>(null);
+  const [transferTo, setTransferTo] = useState("");
+  const [transferReason, setTransferReason] = useState("");
+  const [transferBusy, setTransferBusy] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const replyRef = useRef<HTMLTextAreaElement>(null);
   const hasClaimedRef = useRef(false);
   const lastTypingPingRef = useRef(0);
 
   const fetchTicket = useCallback(() => {
     fetch(`/api/support/tickets/${ticketId}`)
       .then((r) => r.json())
-      .then((data) => setTicket(data.ticket || null))
+      .then((data) => {
+        setTicket(data.ticket || null);
+        // Les réponses des autres routes (claim, statut…) ne contiennent pas les notes : on ne les écrase pas.
+        if (data.ticket?.internalNotes) setNotes(data.ticket.internalNotes);
+      })
       .catch(() => setTicket(null))
       .finally(() => setLoading(false));
   }, [ticketId]);
@@ -152,6 +193,17 @@ export default function AdminTicketThreadPage() {
     }
   };
 
+  // Insère un modèle dans le champ de réponse : jamais envoyé automatiquement, l'agent le relit et l'adapte.
+  const insertTemplate = (template: ReplyTemplate) => {
+    const filled = fillTemplate(template.text, {
+      pseudo: ticket?.userName,
+      agent: session?.user?.name,
+    });
+    // Texte déjà saisi : le modèle est ajouté à la suite, séparé par une ligne vide.
+    setReply((current) => (current.trim() ? `${current.replace(/\s+$/, "")}\n\n${filled}` : filled));
+    requestAnimationFrame(() => replyRef.current?.focus());
+  };
+
   const handleStatusChange = async (status: string) => {
     setUpdatingStatus(true);
     try {
@@ -207,6 +259,81 @@ export default function AdminTicketThreadPage() {
       setTicket(data.ticket);
     } else {
       setClaimError(data.error || "Impossible de reprendre ce ticket.");
+    }
+  };
+
+  const addNote = async () => {
+    const text = noteDraft.trim();
+    if (!text || noteBusy) return;
+    setNoteBusy(true);
+    try {
+      const res = await fetch(`/api/support/tickets/${ticketId}/notes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return notify(data.error || "Impossible d'ajouter la note", "error");
+      setNotes(data.notes || []);
+      setNoteDraft("");
+    } catch {
+      notify("Erreur réseau", "error");
+    } finally {
+      setNoteBusy(false);
+    }
+  };
+
+  const deleteNote = async (noteId: string) => {
+    const ok = await confirm({
+      title: "Supprimer cette note ?",
+      description: "Elle disparaîtra pour tout le staff.",
+      confirmLabel: "Supprimer",
+    });
+    if (!ok) return;
+    try {
+      const res = await fetch(`/api/support/tickets/${ticketId}/notes?noteId=${noteId}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return notify(data.error || "Impossible de supprimer la note", "error");
+      setNotes(data.notes || []);
+    } catch {
+      notify("Erreur réseau", "error");
+    }
+  };
+
+  const openTransfer = async () => {
+    setTransferOpen(true);
+    setTransferTo("");
+    setTransferReason("");
+    if (staffList === null) {
+      try {
+        const res = await fetch("/api/support/staff");
+        const data = await res.json();
+        setStaffList(res.ok ? data.staff : []);
+      } catch {
+        setStaffList([]);
+      }
+    }
+  };
+
+  const doTransfer = async () => {
+    if (!transferTo || transferBusy) return;
+    setTransferBusy(true);
+    try {
+      const res = await fetch(`/api/support/tickets/${ticketId}/transfer`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ toUserId: transferTo, reason: transferReason }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return notify(data.error || "Transfert impossible", "error");
+      setTicket(data.ticket);
+      if (data.ticket?.internalNotes) setNotes(data.ticket.internalNotes);
+      setTransferOpen(false);
+      notify(`Ticket transféré à ${data.ticket?.assignedTo?.userName ?? "un collègue"}`, "success");
+    } catch {
+      notify("Erreur réseau", "error");
+    } finally {
+      setTransferBusy(false);
     }
   };
 
@@ -273,14 +400,90 @@ export default function AdminTicketThreadPage() {
             <CheckCircle2 size={14} className="shrink-0" />
             <span>Tu as pris en charge ce ticket.</span>
           </div>
-          <button
-            onClick={handleRelease}
-            disabled={releasing}
-            className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-colors disabled:opacity-40"
-          >
-            <LogOut size={11} />
-            Se retirer
-          </button>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={openTransfer}
+              className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-purple-300 hover:text-purple-200 transition-colors"
+            >
+              <ArrowRightLeft size={11} />
+              Transférer
+            </button>
+            <button
+              onClick={handleRelease}
+              disabled={releasing}
+              className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-colors disabled:opacity-40"
+            >
+              <LogOut size={11} />
+              Se retirer
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Transfert / escalade : choix du destinataire, motif privé */}
+      {transferOpen && isAssignedToMe && !isClosed && (
+        <div className="rounded-2xl border border-zinc-800/80 bg-zinc-950/70 p-4 mb-4 space-y-3 backdrop-blur-xl">
+          <p className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-widest text-zinc-400">
+            <ArrowRightLeft size={12} className="text-purple-400" />
+            Transférer ou escalader ce ticket
+          </p>
+
+          {staffList === null ? (
+            <div className="flex justify-center py-3">
+              <Loader2 size={16} className="animate-spin text-purple-500" />
+            </div>
+          ) : staffList.length === 0 ? (
+            <p className="text-xs text-zinc-500">Aucun autre membre du staff ne peut prendre en charge des tickets.</p>
+          ) : (
+            <div className="max-h-48 space-y-1.5 overflow-y-auto pr-1">
+              {staffList.map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => setTransferTo(m.id)}
+                  className={`flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left text-xs transition-all ${
+                    transferTo === m.id
+                      ? "border-purple-500 bg-purple-500/15 text-purple-200"
+                      : "border-zinc-800/80 bg-zinc-900/40 text-zinc-300 hover:border-zinc-700"
+                  }`}
+                >
+                  <span className="font-semibold">{m.name}</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+                    {roleLabel(m.role)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          <textarea
+            value={transferReason}
+            onChange={(e) => setTransferReason(e.target.value)}
+            maxLength={TRANSFER_REASON_MAX}
+            rows={2}
+            placeholder="Motif ou contexte pour la personne qui reprend (visible du staff uniquement)..."
+            className="w-full resize-none rounded-xl border border-zinc-800/80 bg-zinc-900/40 px-3.5 py-2.5 text-xs text-white placeholder-zinc-500 outline-none transition-colors focus:border-purple-500/50"
+          />
+          <p className="text-[10px] leading-relaxed text-zinc-600">
+            Le demandeur voit seulement « La conversation a été transférée à … ». Le motif est enregistré dans les notes internes.
+          </p>
+
+          <div className="flex gap-2">
+            <button
+              onClick={doTransfer}
+              disabled={!transferTo || transferBusy}
+              className="flex items-center gap-2 rounded-xl bg-purple-600 px-4 py-2 text-xs font-bold text-white transition-all hover:bg-purple-500 disabled:opacity-50"
+            >
+              {transferBusy ? <Loader2 size={13} className="animate-spin" /> : <ArrowRightLeft size={13} />}
+              Transférer
+            </button>
+            <button
+              onClick={() => setTransferOpen(false)}
+              className="rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-2 text-xs font-bold text-zinc-400 transition-colors hover:text-white"
+            >
+              Annuler
+            </button>
+          </div>
         </div>
       )}
 
@@ -336,6 +539,87 @@ export default function AdminTicketThreadPage() {
             })}
           </div>
         </div>
+      </div>
+
+      {/* Notes internes : espace de travail du staff, jamais visibles du demandeur */}
+      <div className="mb-6 rounded-2xl border border-dashed border-amber-500/25 bg-amber-500/[0.03] backdrop-blur-xl">
+        <button
+          onClick={() => setNotesOpen((o) => !o)}
+          aria-expanded={notesOpen}
+          className="flex w-full items-center justify-between px-4 py-3 text-left"
+        >
+          <span className="flex items-center gap-2 text-xs font-bold text-amber-300">
+            <StickyNote size={14} />
+            Notes internes
+            <span className="font-normal text-zinc-500">· invisibles du demandeur</span>
+          </span>
+          <span className="font-mono text-[10px] text-zinc-500">{notes.length}</span>
+        </button>
+
+        {notesOpen && (
+          <div className="space-y-2.5 border-t border-amber-500/15 px-4 py-3">
+            {notes.length === 0 ? (
+              <p className="text-xs text-zinc-500">Aucune note pour le moment.</p>
+            ) : (
+              <ul className="space-y-1.5">
+                {notes.map((n) => (
+                  <li
+                    key={n._id}
+                    className="flex items-start justify-between gap-3 rounded-lg border border-zinc-800/80 bg-zinc-900/40 px-3 py-2"
+                  >
+                    <div className="min-w-0">
+                      <p className="whitespace-pre-line text-xs leading-relaxed text-zinc-300">
+                        <LinkifiedText text={n.text} />
+                      </p>
+                      <p className="mt-0.5 font-mono text-[10px] text-zinc-600">
+                        {n.by?.name ?? "Staff"}
+                        {n.by?.role ? ` (${roleLabel(n.by.role)})` : ""} ·{" "}
+                        {new Date(n.createdAt).toLocaleString("fr-FR", {
+                          day: "2-digit",
+                          month: "short",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => deleteNote(n._id)}
+                      className="shrink-0 p-1 text-zinc-600 transition-colors hover:text-red-400"
+                      title="Supprimer la note"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={noteDraft}
+                maxLength={TICKET_NOTE_MAX}
+                onChange={(e) => setNoteDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addNote();
+                  }
+                }}
+                placeholder="Ajouter une note pour l'équipe (contexte, piste testée, suite à donner)..."
+                className="w-full rounded-xl border border-zinc-800/80 bg-zinc-900/40 px-3.5 py-2.5 text-xs text-white placeholder-zinc-500 outline-none transition-colors focus:border-amber-500/40"
+              />
+              <button
+                onClick={addNote}
+                disabled={!noteDraft.trim() || noteBusy}
+                className="shrink-0 rounded-xl border border-zinc-800 bg-zinc-900/50 px-3 text-zinc-300 transition-colors hover:text-white disabled:opacity-40"
+                title="Ajouter la note"
+              >
+                {noteBusy ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex-1 space-y-4 mb-6">
@@ -414,8 +698,14 @@ export default function AdminTicketThreadPage() {
         </div>
       ) : (
         <div className="rounded-2xl border border-zinc-800/80 bg-zinc-950/80 p-3 sm:p-4 backdrop-blur-xl shadow-lg">
+          <ReplyTemplatePicker
+            templates={TICKET_TEMPLATES}
+            suggestedCategories={["general", ticket.category]}
+            onPick={insertTemplate}
+          />
           <div className="flex gap-2">
             <textarea
+              ref={replyRef}
               value={reply}
               onChange={(e) => setReply(e.target.value)}
               onKeyDown={handleReplyKeyDown}

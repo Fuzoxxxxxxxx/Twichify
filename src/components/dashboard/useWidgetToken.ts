@@ -8,6 +8,8 @@ export function useWidgetToken(enabled: boolean = true) {
   const [token, setToken] = useState<string | null>(null);
   const [legacyActive, setLegacyActive] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
+  // true tant que la première réponse n'est pas arrivée : permet aux pages d'attendre le jeton avant d'afficher leurs liens.
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!enabled) return;
@@ -20,7 +22,10 @@ export function useWidgetToken(enabled: boolean = true) {
         setToken(data.token);
         setLegacyActive(!!data.legacyActive);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
 
     return () => {
       cancelled = true;
@@ -45,5 +50,5 @@ export function useWidgetToken(enabled: boolean = true) {
     }
   }, []);
 
-  return { token, legacyActive, regenerating, regenerate };
+  return { token, legacyActive, regenerating, regenerate, loading };
 }

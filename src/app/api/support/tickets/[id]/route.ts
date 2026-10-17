@@ -14,7 +14,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       await mongoose.connect(process.env.DATABASE_URL!);
     }
 
-    const ticket = await SupportTicket.findById(id);
+    // Les notes internes ne sont chargées que pour le staff : pour tout autre lecteur, le champ n'est jamais sélectionné.
+    const staffReader = ["moderator", "admin", "helper", "co_creator", "creator"].includes(user.role);
+    const ticket = await (staffReader
+      ? SupportTicket.findById(id).select("+internalNotes")
+      : SupportTicket.findById(id));
     if (!ticket) return NextResponse.json({ error: "Ticket introuvable" }, { status: 404 });
 
     const isOwner = ticket.userId === user._id.toString();

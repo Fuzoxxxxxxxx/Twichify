@@ -26,10 +26,15 @@ import {
   TrendingUp,
   CheckCircle2,
   Vote,
+  MessageCircle,
+  Trash2,
+  Send,
 } from "lucide-react";
 import IdeaStatusBadge from "@/components/IdeaStatusBadge";
 import SiteHeader from "@/components/SiteHeader";
 import Pagination, { usePagination } from "@/components/Pagination";
+import { useDialog } from "@/components/DialogProvider";
+import { COMMENT_MAX, COMMENTS_SHOWN } from "@/lib/idea-comments";
 import { hasPermission, PERMISSIONS } from "@/lib/roles";
 
 interface Idea {
@@ -44,7 +49,18 @@ interface Idea {
   downvotes: string[];
   score: number;
   officialResponse?: { content: string | null; updatedAt: string | null } | null;
+  commentCount?: number;
   createdAt: string;
+}
+
+interface PublicComment {
+  id: string;
+  authorName: string;
+  isStaff: boolean;
+  content: string;
+  createdAt: string;
+  mine: boolean;
+  canDelete: boolean;
 }
 
 const CATEGORY_META: Record<string, { label: string; icon: any; text: string; bg: string; border: string; accent: string }> = {
@@ -671,7 +687,222 @@ function IdeaCard({
             )}
           </div>
         )}
+
+        <IdeaComments ideaId={idea._id} initialCount={idea.commentCount ?? 0} isLoggedIn={isLoggedIn} />
       </div>
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Commentaires publics                                                        */
+/* -------------------------------------------------------------------------- */
+
+function IdeaComments({
+  ideaId,
+  initialCount,
+  isLoggedIn,
+}: {
+  ideaId: string;
+  initialCount: number;
+  isLoggedIn: boolean;
+}) {
+  const { confirm, notify } = useDialog();
+  const [open, setOpen] = useState(false);
+  const [comments, setComments] = useState<PublicComment[] | null>(null);
+  const [total, setTotal] = useState(initialCount);
+  const [loadError, setLoadError] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [posting, setPosting] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoadError(false);
+    try {
+      const res = await fetch(`/api/ideas/${ideaId}/comments`, { cache: "no-store" });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setComments(data.comments || []);
+      setTotal(data.total ?? (data.comments || []).length);
+    } catch {
+      setLoadError(true);
+      setComments([]);
+    }
+  }, [ideaId]);
+
+  const toggle = () => {
+    const next = !open;
+    setOpen(next);
+    if (next && comments === null) load();
+  };
+
+  const post = async () => {
+    const content = draft.trim();
+    if (!content || posting) return;
+    setPosting(true);
+    try {
+      const res = await fetch(`/api/ideas/${ideaId}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        notify(data.error || "Impossible de publier le commentaire", "error");
+        return;
+      }
+      setComments((prev) => [...(prev ?? []), data.comment]);
+      setTotal((t) => t + 1);
+      setDraft("");
+    } catch {
+      notify("Erreur réseau", "error");
+    } finally {
+      setPosting(false);
+    }
+  };
+
+  const remove = async (comment: PublicComment) => {
+    const ok = await confirm({
+      title: "Supprimer ce commentaire ?",
+      description: comment.mine
+        ? "Il disparaîtra définitivement de l'idée."
+        : `Le commentaire de ${comment.authorName} sera supprimé (action de modération, enregistrée dans le journal).`,
+      confirmLabel: "Supprimer",
+    });
+    if (!ok) return;
+    try {
+      const res = await fetch(`/api/ideas/${ideaId}/comments/${comment.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        notify(data.error || "Suppression impossible", "error");
+        return;
+      }
+      setComments((prev) => (prev ?? []).filter((c) => c.id !== comment.id));
+      setTotal((t) => Math.max(0, t - 1));
+    } catch {
+      notify("Erreur réseau", "error");
+    }
+  };
+
+  return (
+    <div className="mt-3 border-t border-zinc-800/60 pt-2.5">
+      <button
+        onClick={toggle}
+        aria-expanded={open}
+        className="inline-flex items-center gap-1.5 text-[11px] font-bold text-zinc-500 transition-colors hover:text-purple-400"
+      >
+        <MessageCircle size={13} />
+        {total === 0 ? "Commenter" : `${total} commentaire${total > 1 ? "s" : ""}`}
+        <ChevronDown size={12} className={`transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+
+      {open && (
+        <div className="mt-3 space-y-3">
+          {comments === null ? (
+            <div className="flex justify-center py-3">
+              <Loader2 size={15} className="animate-spin text-purple-500" />
+            </div>
+          ) : loadError ? (
+            <p className="text-xs text-red-400">
+              Impossible de charger les commentaires.{" "}
+              <button onClick={load} className="font-bold underline hover:text-red-300">
+                Réessayer
+              </button>
+            </p>
+          ) : (
+            <>
+              {total > COMMENTS_SHOWN && (
+                <p className="text-[10px] text-zinc-600">
+                  Les {COMMENTS_SHOWN} commentaires les plus récents sont affichés.
+                </p>
+              )}
+
+              {comments.length === 0 ? (
+                <p className="text-xs text-zinc-500">Aucun commentaire pour le moment. Soyez le premier !</p>
+              ) : (
+                <ul className="space-y-2">
+                  {comments.map((c) => (
+                    <li
+                      key={c.id}
+                      className={`rounded-xl border px-3.5 py-2.5 ${
+                        c.isStaff ? "border-purple-500/25 bg-purple-500/5" : "border-zinc-800/80 bg-zinc-900/40"
+                      }`}
+                    >
+                      <div className="mb-1 flex items-center justify-between gap-3">
+                        <p className="flex min-w-0 items-center gap-2 text-[11px]">
+                          <span className="truncate font-bold text-zinc-200">{c.authorName}</span>
+                          {c.isStaff && (
+                            <span className="shrink-0 rounded-md border border-purple-500/30 bg-purple-500/10 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-purple-300">
+                              Équipe
+                            </span>
+                          )}
+                          <span className="shrink-0 font-mono text-[10px] text-zinc-600">
+                            {new Date(c.createdAt).toLocaleString("fr-FR", {
+                              day: "2-digit",
+                              month: "short",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </span>
+                        </p>
+                        {c.canDelete && (
+                          <button
+                            onClick={() => remove(c)}
+                            className="shrink-0 p-1 text-zinc-600 transition-colors hover:text-red-400"
+                            title={c.mine ? "Supprimer mon commentaire" : "Supprimer (modération)"}
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        )}
+                      </div>
+                      {/* Texte brut : jamais interprété comme du HTML ni transformé en liens */}
+                      <p className="whitespace-pre-wrap break-words text-xs leading-relaxed text-zinc-300">{c.content}</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {isLoggedIn ? (
+                <div className="space-y-1.5">
+                  <textarea
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                        e.preventDefault();
+                        post();
+                      }
+                    }}
+                    maxLength={COMMENT_MAX}
+                    rows={2}
+                    placeholder="Ajouter un commentaire (soyez constructif et respectueux)..."
+                    className="w-full resize-none rounded-xl border border-zinc-800/80 bg-zinc-900/40 px-3.5 py-2.5 text-xs text-white placeholder-zinc-500 outline-none transition-colors focus:border-purple-500/50"
+                  />
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-zinc-600">
+                      {draft.trim().length}/{COMMENT_MAX} · Ctrl + Entrée pour publier
+                    </span>
+                    <button
+                      onClick={post}
+                      disabled={!draft.trim() || posting}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-purple-600 px-3.5 py-1.5 text-[11px] font-bold text-white transition-all hover:bg-purple-500 disabled:opacity-50"
+                    >
+                      {posting ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
+                      Publier
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-zinc-500">
+                  <Link href="/login" className="font-bold text-purple-400 hover:text-purple-300">
+                    Connectez-vous
+                  </Link>{" "}
+                  pour commenter.
+                </p>
+              )}
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }

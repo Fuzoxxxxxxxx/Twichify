@@ -6,6 +6,7 @@ import axios from "axios";
 import { decrypt } from "@/lib/crypto";
 import { findUserByWidgetRef } from "@/lib/widget-token";
 import { recordApiCall } from "@/lib/passive-health";
+import { noteWidgetSeen } from "@/lib/widget-seen";
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -107,6 +108,9 @@ export async function GET(
 
   if (!user) return NextResponse.json({ isPlaying: false });
 
+  // Suivi d'installation : le widget annonce un vrai chargement avec ?w=1 (ni le mode test ni l'aperçu du dashboard).
+  if (req.nextUrl.searchParams.get("w") === "1") await noteWidgetSeen(user, "music");
+
   // `userId` est la valeur de l'URL (jeton ou ancien _id) : elle sert de clé au cache de réponse
   // ci-dessus, pour qu'un lien révoqué ne soit jamais servi. Les jetons Spotify et l'historique
   // d'écoute, eux, restent indexés par l'_id réel du compte.
@@ -121,7 +125,10 @@ export async function GET(
     enableBlurBg: true
   };
 
-  if (!user.spotifyRefreshToken) return NextResponse.json({ isPlaying: false });
+  // Sans jeton Spotify : on renvoie quand même les réglages (le mode test des widgets en a besoin).
+  if (!user.spotifyRefreshToken) {
+    return NextResponse.json({ isPlaying: false, source: "spotify", settings: user.widgetSettings || defaultSettings });
+  }
 
   const decryptedRefreshToken = decrypt(user.spotifyRefreshToken);
   const decryptedClientId = decrypt(user.spotifyClientId);

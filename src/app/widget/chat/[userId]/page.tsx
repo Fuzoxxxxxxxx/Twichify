@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import tmi from "tmi.js";
 import { getChatThemeClasses, getChatAnimationClass, renderMessageSegments } from "@/lib/chat-widget-theme";
 import { createStatsBuffer } from "@/lib/chat-stats-client";
+import { resolveFont, ensureStylesheet } from "@/lib/widget-fonts";
 
 interface ChatMessage {
   id: string;
@@ -28,6 +29,41 @@ const REMOVE_ANIM_DURATION = 350;
 const statsBuffer = createStatsBuffer();
 const STATS_FLUSH_INTERVAL_MS = 30_000;
 
+// ── MODE TEST (?test=1) ──
+// Messages factices émis en boucle dans le même circuit que les vrais messages (filtres, modération, rôles, réponses,
+// premier message...), avec les vrais réglages du streamer. Aucune connexion Twitch, aucune statistique enregistrée.
+const TEST_INTERVAL_MS = 2200;
+const TEST_CHAT_MESSAGES: {
+  user: string;
+  color: string;
+  badges: Record<string, string>;
+  message: string;
+  first?: boolean;
+  reply?: { user: string; body: string };
+}[] = [
+  { user: "StreamerPro", color: "#FF4500", badges: { broadcaster: "1" }, message: "Bienvenue sur le stream tout le monde !" },
+  { user: "ModeratriceLea", color: "#00C8A0", badges: { moderator: "1" }, message: "Rappel : pas de spoil svp" },
+  { user: "VipMarco", color: "#E91E63", badges: { vip: "1" }, message: "Cette musique est incroyable" },
+  { user: "AbonneZed", color: "#9146FF", badges: { subscriber: "0" }, message: "Premier mois d'abonnement, merci !" },
+  { user: "Nightbot", color: "#5B9BD5", badges: { moderator: "1" }, message: "N'oubliez pas de suivre la chaîne" },
+  { user: "Viewer42", color: "#FFD700", badges: {}, message: "!song" },
+  { user: "NouveauVenu", color: "#1E90FF", badges: {}, message: "Salut, c'est ma première fois ici", first: true },
+  {
+    user: "Curieuse",
+    color: "#FF69B4",
+    badges: {},
+    message:
+      "Un message beaucoup plus long pour vérifier le retour à la ligne, la largeur du widget et la limite de caractères réglée dans le dashboard.",
+  },
+  {
+    user: "Replier",
+    color: "#32CD32",
+    badges: {},
+    message: "Je suis d'accord !",
+    reply: { user: "VipMarco", body: "Cette musique est incroyable" },
+  },
+];
+
 const POSITION_CLASSES: Record<string, string> = {
   "bottom-left": "left-4 bottom-4",
   "bottom-right": "right-4 bottom-4 items-end",
@@ -49,6 +85,12 @@ export default function ChatWidget() {
   const [emoteMap, setEmoteMap] = useState<Record<string, string>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Mode test (?test=1) : null tant que l'URL n'est pas lue.
+  const [testMode, setTestMode] = useState<boolean | null>(null);
+  useEffect(() => {
+    setTestMode(new URLSearchParams(window.location.search).get("test") === "1");
+  }, []);
+
   const clientRef = useRef<tmi.Client | null>(null);
   const settingsRef = useRef<any>(null);
   useEffect(() => {
@@ -62,13 +104,13 @@ export default function ChatWidget() {
     emoteMapRef.current = emoteMap;
   }, [emoteMap]);
 
-  // 1. Config (polling live)
+  // 1. Config (polling live). `?w=1` annonce un vrai chargement du widget (assistant d'installation) ; pas en mode test.
   useEffect(() => {
-    if (!userId || userId === "undefined" || userId.includes("[")) return;
+    if (!userId || userId === "undefined" || userId.includes("[") || testMode === null) return;
 
     const fetchSettings = async () => {
       try {
-        const res = await fetch(`/api/widget/chat/config/${userId}`, { cache: "no-store" });
+        const res = await fetch(`/api/widget/chat/config/${userId}${testMode ? "" : "?w=1"}`, { cache: "no-store" });
         if (res.ok) {
           const data = await res.json();
           setSettings(data.chatWidgetSettings);
@@ -84,7 +126,7 @@ export default function ChatWidget() {
     fetchSettings();
     const interval = setInterval(fetchSettings, 5000);
     return () => clearInterval(interval);
-  }, [userId]);
+  }, [userId, testMode]);
 
   // 2. Badges + emotes tierces
   useEffect(() => {
@@ -100,9 +142,10 @@ export default function ChatWidget() {
       .catch((err) => console.error("Erreur emotes:", err));
   }, [twitchChannel]);
 
-  // 3. Connexion tmi.js + modération
+  // 3. Connexion tmi.js + modération (en mode test : pas de connexion, des messages factices passent par les mêmes handlers)
   useEffect(() => {
-    if (!twitchChannel) return;
+    if (testMode === null) return;
+    if (!twitchChannel && !testMode) return;
 
     if (clientRef.current) {
       clientRef.current.disconnect().catch(() => {});
@@ -112,16 +155,18 @@ export default function ChatWidget() {
     const client = new tmi.Client({
       options: { debug: false },
       connection: { reconnect: true, secure: true },
-      channels: [twitchChannel],
+      channels: testMode || !twitchChannel ? [] : [twitchChannel],
     });
 
     clientRef.current = client;
     let cancelled = false;
 
-    client.connect().catch((err) => {
-      if (cancelled) return;
-      console.error("Erreur de connexion TMI.js:", err);
-    });
+    if (!testMode) {
+      client.connect().catch((err) => {
+        if (cancelled) return;
+        console.error("Erreur de connexion TMI.js:", err);
+      });
+    }
 
     client.on("message", (channel, tags, message, self) => {
       if (self) return;
@@ -139,7 +184,7 @@ export default function ChatWidget() {
 
       // Statistiques de chat (si activées) : comptées AVANT les filtres d'affichage, pour que masquer les bots,
       // les commandes ou des mots ne fausse pas les chiffres. Seuls les utilisateurs ignorés sont exclus.
-      if (statsEnabledRef.current) {
+      if (statsEnabledRef.current && !testMode) {
         const ignored = ((currentSettings.ignoredUsers || []) as string[]).some(
           (u) => u.trim().replace(/^@/, "").toLowerCase() === lowerUser
         );
@@ -231,14 +276,40 @@ export default function ChatWidget() {
     client.on("timeout", (channel, username) => removeUserMessages(username));
     client.on("clearchat", () => setMessages([]));
 
+    // Mode test : on émet de faux messages "message", traités exactement comme ceux de Twitch.
+    let testTimer: ReturnType<typeof setInterval> | undefined;
+    if (testMode) {
+      let n = 0;
+      const emitNext = () => {
+        const m = TEST_CHAT_MESSAGES[n % TEST_CHAT_MESSAGES.length];
+        const tags: Record<string, any> = {
+          id: `test-${Date.now()}-${n}`,
+          username: m.user.toLowerCase(),
+          "display-name": m.user,
+          color: m.color,
+          badges: m.badges,
+          "first-msg": !!m.first,
+        };
+        if (m.reply) {
+          tags["reply-parent-display-name"] = m.reply.user;
+          tags["reply-parent-msg-body"] = m.reply.body;
+        }
+        n++;
+        (client as any).emit("message", "#test", tags, m.message, false);
+      };
+      emitNext();
+      testTimer = setInterval(emitNext, TEST_INTERVAL_MS);
+    }
+
     return () => {
       cancelled = true;
+      if (testTimer) clearInterval(testTimer);
       if (clientRef.current === client) {
         clientRef.current.disconnect().catch(() => {});
         clientRef.current = null;
       }
     };
-  }, [twitchChannel]);
+  }, [twitchChannel, testMode]);
 
   // Envoi des statistiques de chat toutes les 30 s (et à la fermeture de la source OBS).
   useEffect(() => {
@@ -311,6 +382,12 @@ export default function ChatWidget() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Police : classe Tailwind (polices système) ou police Google Fonts chargée à la demande (lib/widget-fonts).
+  const font = resolveFont(settings?.fontFamily);
+  useEffect(() => {
+    if (font.href && font.family) ensureStylesheet(`wf-${font.family}`, font.href);
+  }, [font.href, font.family]);
+
   if (!settings) return null;
 
   const getThemeClasses = () => getChatThemeClasses(settings.theme);
@@ -341,7 +418,15 @@ export default function ChatWidget() {
   };
 
   return (
-    <div className="h-screen w-screen overflow-hidden relative font-sans">
+    <div
+      className={`h-screen w-screen overflow-hidden relative ${font.className}`}
+      style={font.fontFamily ? { fontFamily: font.fontFamily } : undefined}
+    >
+      {testMode && (
+        <div className="fixed right-2 top-2 z-50 rounded bg-amber-500/90 px-2 py-0.5 font-mono text-[10px] font-black uppercase tracking-widest text-black">
+          Mode test
+        </div>
+      )}
       <style jsx global>{`
         @keyframes msgInSlide { from { opacity: 0; transform: translateX(-16px); } to { opacity: 1; transform: translateX(0); } }
         @keyframes msgInFade { from { opacity: 0; } to { opacity: 1; } }

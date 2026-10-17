@@ -3,7 +3,7 @@
 import { useSession } from "next-auth/react";
 import { useState, useEffect, useCallback } from "react";
 import { Music, Sliders, Eye, EyeOff, Save, Unlink } from "lucide-react";
-import { PageHeader, InfoStep } from "@/components/dashboard/DashboardUI";
+import { PageHeader, InfoStep, DashboardLoading, DashboardLoadError } from "@/components/dashboard/DashboardUI";
 import { useToast, ToastDisplay } from "@/components/dashboard/useToast";
 import { useDialog } from "@/components/DialogProvider";
 
@@ -18,21 +18,25 @@ export default function DashboardSpotify() {
   const [showClientSecret, setShowClientSecret] = useState(false);
   const [copiedUri, setCopiedUri] = useState(false);
   const [loading, setLoading] = useState(false);
+  // Les identifiants et l'état de connexion viennent du serveur : rien n'est affiché avant leur arrivée.
+  const [loadState, setLoadState] = useState<"loading" | "ready" | "error">("loading");
 
   const redirectUri = typeof window !== "undefined"
     ? `${window.location.origin}/api/callback/spotify`
     : "";
 
   const loadUserData = useCallback(async () => {
+    setLoadState("loading");
     try {
       const res = await fetch("/api/user/profile");
-      if (res.ok) {
-        const data = await res.json();
-        setIsConnected(!!data.hasSpotifyToken);
-        if (data.spotifyClientId) setClientId(data.spotifyClientId);
-      }
+      if (!res.ok) throw new Error(String(res.status));
+      const data = await res.json();
+      setIsConnected(!!data.hasSpotifyToken);
+      if (data.spotifyClientId) setClientId(data.spotifyClientId);
+      setLoadState("ready");
     } catch (e) {
       console.error("Erreur de chargement profil", e);
+      setLoadState("error");
     }
   }, []);
 
@@ -89,6 +93,8 @@ export default function DashboardSpotify() {
   };
 
   if (!session) return null;
+  if (loadState === "loading") return <DashboardLoading eyebrow="Intégrations" title="Spotify" />;
+  if (loadState === "error") return <DashboardLoadError eyebrow="Intégrations" title="Spotify" onRetry={loadUserData} />;
 
   return (
     <div className="space-y-8">

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import mongoose from "mongoose";
 import Idea from "@/models/Idea";
+import IdeaComment from "@/models/IdeaComment";
 import { getSessionUser } from "@/lib/auth-helpers";
 
 export const dynamic = "force-dynamic";
@@ -25,13 +26,23 @@ export async function GET(req: Request) {
     if (status && VALID_STATUSES.includes(status)) query.status = status;
     if (category && VALID_CATEGORIES.includes(category)) query.category = category;
 
-    const ideas = await Idea.find(query).sort(
-      sort === "recent" ? { createdAt: -1 } : { createdAt: -1 } // tri fin (score) fait ensuite en mémoire
+    // Route publique : l'espace de travail du staff (notes internes, historique, auteur de la réponse) n'en sort jamais.
+    const ideas = await Idea.find(query)
+      .select("-internalNotes -history -officialResponse.by")
+      .sort(sort === "recent" ? { createdAt: -1 } : { createdAt: -1 } // tri fin (score) fait ensuite en mémoire
+      );
+
+    // Nombre de commentaires par idée (un seul regroupement pour toute la liste)
+    const commentCounts = new Map<string, number>(
+      (await IdeaComment.aggregate([{ $group: { _id: "$ideaId", n: { $sum: 1 } } }])).map(
+        (r: { _id: string; n: number }) => [r._id, r.n] as [string, number]
+      )
     );
 
     const withScore = ideas.map((idea) => ({
       ...idea.toObject(),
       score: (idea.upvotes?.length || 0) - (idea.downvotes?.length || 0),
+      commentCount: commentCounts.get(String(idea._id)) ?? 0,
     }));
 
     if (sort === "popular") {

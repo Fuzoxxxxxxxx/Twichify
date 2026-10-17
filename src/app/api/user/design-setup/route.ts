@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import mongoose from "mongoose";
 import User from "@/models/User";
+import { isValidFontId, DEFAULT_FONT_ID } from "@/lib/widget-fonts";
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
@@ -27,6 +28,10 @@ export async function POST(req: Request) {
       showEqualizer,
       autoHide,
       autoHideSeconds,
+      animationStyle,
+      animationSpeed,
+      trackChangeAnimation,
+      glowPulse,
     } = await req.json();
 
     if (mongoose.connection.readyState !== 1) {
@@ -40,7 +45,7 @@ export async function POST(req: Request) {
       { 
         $set: { 
           "widgetSettings.layout": layout,
-          "widgetSettings.fontFamily": fontFamily,
+          "widgetSettings.fontFamily": isValidFontId(fontFamily) ? fontFamily : DEFAULT_FONT_ID,
           "widgetSettings.showCover": showCover,
           "widgetSettings.showProgress": showProgress,
           "widgetSettings.showTimestamp": showTimestamp,
@@ -55,6 +60,10 @@ export async function POST(req: Request) {
           "widgetSettings.showEqualizer": showEqualizer,
           "widgetSettings.autoHide": autoHide,
           "widgetSettings.autoHideSeconds": autoHideSeconds,
+          "widgetSettings.animationStyle": ["expand", "reveal", "slide", "fade", "pop"].includes(animationStyle) ? animationStyle : "expand",
+          "widgetSettings.animationSpeed": ["slow", "normal", "fast"].includes(animationSpeed) ? animationSpeed : "normal",
+          "widgetSettings.trackChangeAnimation": trackChangeAnimation !== false,
+          "widgetSettings.glowPulse": !!glowPulse,
         } 
       },
       { upsert: true, new: true }

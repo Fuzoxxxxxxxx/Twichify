@@ -12,6 +12,17 @@ const MessageSchema = new Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
+// Note interne : espace de travail du staff, jamais visible du demandeur.
+const InternalNoteSchema = new Schema({
+  text: { type: String, required: true },
+  by: {
+    userId: { type: String, default: null },
+    name: { type: String, default: null },
+    role: { type: String, default: null },
+  },
+  createdAt: { type: Date, default: Date.now },
+});
+
 const SupportTicketSchema = new Schema({
   userId: { type: String, required: true },
   userName: { type: String, required: true },
@@ -42,6 +53,9 @@ const SupportTicketSchema = new Schema({
     role: { type: String, default: null },
     at: { type: Date, default: null },
   },
+  // Notes internes du staff. `select: false` : le champ n'est JAMAIS renvoyé par défaut (le demandeur reçoit les tickets
+  // tels quels via les routes publiques) ; seules les routes du staff le demandent explicitement (`.select("+internalNotes")`).
+  internalNotes: { type: [InternalNoteSchema], default: [], select: false },
   messages: [MessageSchema],
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },

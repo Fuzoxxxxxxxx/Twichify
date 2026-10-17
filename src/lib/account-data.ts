@@ -4,6 +4,7 @@ import clientPromise from "@/lib/mongodb";
 import User from "@/models/User";
 import SupportTicket from "@/models/SupportTicket";
 import Idea from "@/models/Idea";
+import IdeaComment from "@/models/IdeaComment";
 import TrackHistory from "@/models/TrackHistory";
 import FollowerTracking from "@/models/FollowerTracking";
 import ChatSession from "@/models/ChatSession";
@@ -51,6 +52,13 @@ export async function exportUserData(user: any) {
 
   const tracking: any = await FollowerTracking.findOne({ user: userId }, "baselineAt scannedAt followers departures").lean();
   const chatSessionsStored = await ChatSession.countDocuments({ user: userId });
+
+  // Commentaires publics sur les idées, et notes internes écrites en tant que staff (contenu de l'utilisateur)
+  const [ownComments, ticketNotesTickets, ideaNotesIdeas] = await Promise.all([
+    IdeaComment.find({ authorId: userId }).sort({ createdAt: -1 }).lean(),
+    SupportTicket.find({ "internalNotes.by.userId": userId }).select("+internalNotes").lean(),
+    Idea.find({ "internalNotes.by.userId": userId }).lean(),
+  ]);
   const u = user.toObject();
 
   return {
@@ -137,6 +145,24 @@ export async function exportUserData(user: any) {
       downvotes: (i.downvotes || []).length,
     })),
     votesCast: { upvoted, downvoted },
+    ideaComments: ownComments.map((c: any) => ({
+      ideaId: c.ideaId,
+      content: c.content,
+      createdAt: c.createdAt,
+    })),
+    // Notes internes écrites en tant que membre du staff (visibles uniquement du staff)
+    staffNotesWritten: [
+      ...ticketNotesTickets.flatMap((t: any) =>
+        (t.internalNotes || [])
+          .filter((n: any) => n.by?.userId === userId)
+          .map((n: any) => ({ on: `ticket ${t._id.toString()}`, text: n.text, createdAt: n.createdAt }))
+      ),
+      ...ideaNotesIdeas.flatMap((i: any) =>
+        (i.internalNotes || [])
+          .filter((n: any) => n.by?.userId === userId)
+          .map((n: any) => ({ on: `idée ${i._id.toString()}`, text: n.text, createdAt: n.createdAt }))
+      ),
+    ],
   };
 }
 
@@ -198,12 +224,39 @@ export async function deleteUserData(user: any) {
     }
   );
 
+  // Notes internes de tickets signées par ce membre du staff : contenu conservé, signature anonymisée
+  await SupportTicket.updateMany(
+    { "internalNotes.by.userId": userId },
+    { $set: { "internalNotes.$[n].by": { userId: DELETED_ID, name: DELETED_LABEL, role: null } } },
+    { arrayFilters: [{ "n.by.userId": userId }] }
+  );
+
   // 3. Idées : conservées (elles appartiennent aussi à la communauté) mais anonymisées, votes retirés
   await Idea.updateMany({ authorId: userId }, { $set: { authorId: DELETED_ID, authorName: DELETED_LABEL } });
   await Idea.updateMany(
     { $or: [{ upvotes: userId }, { downvotes: userId }] },
     { $pull: { upvotes: userId, downvotes: userId } }
   );
+
+  // Commentaires publics : conservés (ils font partie de la discussion) mais anonymisés, sans badge « Équipe »
+  await IdeaComment.updateMany(
+    { authorId: userId },
+    { $set: { authorId: DELETED_ID, authorName: DELETED_LABEL, authorRole: "user" } }
+  );
+
+  // 3bis-a. Espace de travail du staff : notes, historique et réponses signés par ce membre sont conservés, signature anonymisée
+  const anonymousStaff = { userId: DELETED_ID, name: DELETED_LABEL };
+  await Idea.updateMany(
+    { "internalNotes.by.userId": userId },
+    { $set: { "internalNotes.$[n].by": anonymousStaff } },
+    { arrayFilters: [{ "n.by.userId": userId }] }
+  );
+  await Idea.updateMany(
+    { "history.by.userId": userId },
+    { $set: { "history.$[h].by": anonymousStaff } },
+    { arrayFilters: [{ "h.by.userId": userId }] }
+  );
+  await Idea.updateMany({ "officialResponse.by.userId": userId }, { $set: { "officialResponse.by": anonymousStaff } });
 
   // 3bis. Historique d'écoute détaillé : supprimé avec le reste des données personnelles
   await TrackHistory.deleteMany({ user: userId });

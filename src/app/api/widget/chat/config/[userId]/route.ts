@@ -1,12 +1,14 @@
 import { NextResponse, NextRequest } from "next/server";
 import mongoose from "mongoose";
 import { findUserByWidgetRef } from "@/lib/widget-token";
+import { noteWidgetSeen } from "@/lib/widget-seen";
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 const DEFAULT_CHAT_SETTINGS = {
   theme: "glass",
+  fontFamily: "font-sans",
   fontSize: "14",
   showBadges: true,
   hideBots: false,
@@ -56,6 +58,9 @@ export async function GET(
         { status: 404 }
       );
     }
+
+    // Suivi d'installation : le widget annonce un vrai chargement avec ?w=1 (ni le mode test ni l'aperçu du dashboard).
+    if (req.nextUrl.searchParams.get("w") === "1") await noteWidgetSeen(user, "chat");
 
     const merged = {
       ...DEFAULT_CHAT_SETTINGS,

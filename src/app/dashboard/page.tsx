@@ -1,35 +1,46 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
-  CheckCircle2, Music, Activity, MessageSquare, MessageSquareText, Palette, Lightbulb, History, RefreshCw,
+  CheckCircle2, Music, Activity, MessageSquare, MessageSquareText, Palette, Lightbulb, History, RefreshCw, Copy, ExternalLink,
 } from "lucide-react";
-import { PageHeader, StatCard, SourceCard, QuickActionLink } from "@/components/dashboard/DashboardUI";
+import { PageHeader, StatCard, SourceCard, QuickActionLink, DashboardLoading, DashboardLoadError } from "@/components/dashboard/DashboardUI";
 import { useToast, ToastDisplay } from "@/components/dashboard/useToast";
 import { useWidgetToken } from "@/components/dashboard/useWidgetToken";
 import ConfirmDialog from "@/components/dashboard/ConfirmDialog";
+import SetupWizard from "@/components/dashboard/SetupWizard";
 
 export default function DashboardOverview() {
   const { data: session } = useSession();
   const twitchLogin = (session?.user as any)?.name?.toLowerCase();
 
   const [isConnected, setIsConnected] = useState(false);
+  // L'état Spotify et les liens (jeton) viennent du serveur : on affiche un chargement plutôt que "Non configuré" en dur.
+  const [profileState, setProfileState] = useState<"loading" | "ready" | "error">("loading");
   const [copied, setCopied] = useState(false);
   const [copiedChat, setCopiedChat] = useState(false);
+  const [copiedTest, setCopiedTest] = useState<string | null>(null);
   const { toast, showToast } = useToast();
   const [showRegenerateModal, setShowRegenerateModal] = useState(false);
-  const { token: widgetToken, legacyActive, regenerating, regenerate } = useWidgetToken(!!session);
+  const { token: widgetToken, legacyActive, regenerating, regenerate, loading: tokenLoading } = useWidgetToken(!!session);
+
+  const loadProfile = useCallback(async () => {
+    setProfileState("loading");
+    try {
+      const res = await fetch("/api/user/profile");
+      if (!res.ok) throw new Error(String(res.status));
+      const data = await res.json();
+      setIsConnected(!!data.hasSpotifyToken);
+      setProfileState("ready");
+    } catch {
+      setProfileState("error");
+    }
+  }, []);
 
   useEffect(() => {
-    if (!session) return;
-    fetch("/api/user/profile")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (data) setIsConnected(!!data.hasSpotifyToken);
-      })
-      .catch(() => {});
-  }, [session]);
+    if (session) loadProfile();
+  }, [session, loadProfile]);
 
   const widgetUrl = typeof window !== "undefined" && widgetToken
     ? `${window.location.origin}/widget/${widgetToken}`
@@ -38,6 +49,12 @@ export default function DashboardOverview() {
   const chatWidgetUrl = typeof window !== "undefined" && widgetToken
     ? `${window.location.origin}/widget/chat/${widgetToken}`
     : "";
+
+  // Mode test : mêmes URLs que OBS + ?test=1 (données factices, vrais réglages).
+  const testLinks = [
+    { id: "music", label: "Widget Musique", url: widgetUrl ? `${widgetUrl}?test=1` : "" },
+    { id: "chat", label: "Widget Chat", url: chatWidgetUrl ? `${chatWidgetUrl}?test=1` : "" },
+  ];
 
   const handleRegenerate = async () => {
     const ok = await regenerate();
@@ -49,10 +66,15 @@ export default function DashboardOverview() {
   };
 
   if (!session) return null;
+  if (profileState === "loading" || tokenLoading) return <DashboardLoading eyebrow="Centre de contrôle" title="Accueil" />;
+  if (profileState === "error") return <DashboardLoadError eyebrow="Centre de contrôle" title="Accueil" onRetry={loadProfile} />;
 
   return (
     <div className="space-y-10">
       <PageHeader eyebrow="Centre de contrôle" title="Accueil" />
+
+      {/* S'affiche seulement s'il reste une étape d'installation ; invisible pour un compte déjà en service. */}
+      <SetupWizard widgetUrl={widgetUrl} chatWidgetUrl={chatWidgetUrl} />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         <StatCard
@@ -104,6 +126,49 @@ export default function DashboardOverview() {
               setTimeout(() => setCopiedChat(false), 2000);
             }}
           />
+        </div>
+      </div>
+
+      <div>
+        <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-zinc-600 mb-4">Mode test</p>
+        <div className="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-950/60 p-5">
+          <p className="text-xs leading-relaxed text-zinc-400">
+            Ajoute <span className="font-mono text-zinc-200">?test=1</span> à l'URL d'un widget : il joue de fausses données
+            (musique en boucle, messages de chat factices) avec tes vrais réglages, sans Spotify ni live. Aucune statistique n'est
+            enregistrée. Un badge « Mode test » s'affiche : utilise ces liens dans une source OBS de test, pas pour le direct.
+          </p>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            {testLinks.map(({ id, label, url }) => (
+              <div key={id} className="flex items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-black/30 px-4 py-3">
+                <span className="text-xs font-bold text-white">{label}</span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    disabled={!url}
+                    onClick={() => {
+                      navigator.clipboard.writeText(url);
+                      setCopiedTest(id);
+                      setTimeout(() => setCopiedTest(null), 2000);
+                    }}
+                    className="flex items-center gap-1.5 rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-[11px] font-bold text-zinc-200 transition hover:border-purple-500/50 hover:text-white disabled:opacity-50"
+                  >
+                    {copiedTest === id ? <CheckCircle2 size={12} /> : <Copy size={12} />}
+                    {copiedTest === id ? "Copié" : "Copier"}
+                  </button>
+                  <a
+                    href={url || undefined}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-disabled={!url}
+                    className={`flex items-center gap-1.5 rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-[11px] font-bold text-zinc-200 transition hover:border-purple-500/50 hover:text-white ${url ? "" : "pointer-events-none opacity-50"}`}
+                  >
+                    <ExternalLink size={12} />
+                    Ouvrir
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 

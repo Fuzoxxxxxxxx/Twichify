@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   Crown, Users, Music, UserPlus, LifeBuoy, Megaphone, Activity, KeyRound, ScrollText, ShieldCheck,
   Check, Minus, Loader2, CircleCheck, CircleX, TriangleAlert, Save, RefreshCw, LayoutDashboard, Trash2,
-  Wrench, Sparkles, Siren, CalendarClock, PowerOff,
+  Wrench, Sparkles, Siren, CalendarClock, PowerOff, Lightbulb,
 } from "lucide-react";
 import {
   ALL_ROLES, ROLE_LABELS, ROLE_PERMISSIONS, PERMISSION_LABELS, PERMISSIONS, getRoleLevel, type Permission,
@@ -227,6 +227,11 @@ const AUDIT_META: Record<string, { label: string; icon: typeof Megaphone; cls: s
   "banner.update": { label: "Annonce modifiée", icon: Megaphone, cls: "bg-indigo-500/10 text-indigo-300 border-indigo-500/20" },
   "role.change": { label: "Rôle modifié", icon: KeyRound, cls: "bg-purple-500/10 text-purple-300 border-purple-500/20" },
   "user.delete": { label: "Compte supprimé", icon: Trash2, cls: "bg-rose-500/10 text-rose-300 border-rose-500/20" },
+  "incident.create": { label: "Incident publié", icon: Siren, cls: "bg-amber-500/10 text-amber-300 border-amber-500/20" },
+  "incident.update": { label: "Incident mis à jour", icon: Siren, cls: "bg-sky-500/10 text-sky-300 border-sky-500/20" },
+  "incident.delete": { label: "Incident supprimé", icon: Trash2, cls: "bg-rose-500/10 text-rose-300 border-rose-500/20" },
+  "idea.update": { label: "Idée modérée", icon: Lightbulb, cls: "bg-amber-500/10 text-amber-300 border-amber-500/20" },
+  "idea.comment.delete": { label: "Commentaire supprimé", icon: Trash2, cls: "bg-rose-500/10 text-rose-300 border-rose-500/20" },
 };
 
 const AUDIT_FILTERS = [
@@ -234,6 +239,7 @@ const AUDIT_FILTERS = [
   { id: "role.change", label: "Rôles" },
   { id: "user.delete", label: "Suppressions" },
   { id: "banner.update", label: "Annonces" },
+  { id: "idea.update", label: "Idées" },
 ];
 
 const SERVICE_STYLES: Record<ServiceStatus, { label: string; cls: string }> = {
