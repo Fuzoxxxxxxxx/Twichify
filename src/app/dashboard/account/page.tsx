@@ -110,21 +110,21 @@ function SummaryCard({
   tone?: "emerald" | "purple" | "sky" | "amber" | "zinc";
 }) {
   const toneMap = {
-    emerald: "border-emerald-500/20 bg-emerald-500/10 text-emerald-300",
-    purple: "border-purple-500/20 bg-purple-500/10 text-purple-300",
-    sky: "border-sky-500/20 bg-sky-500/10 text-sky-300",
-    amber: "border-amber-500/20 bg-amber-500/10 text-amber-300",
-    zinc: "border-zinc-800 bg-zinc-950/70 text-zinc-400",
+    emerald: "border-emerald-500/25 bg-emerald-500/10 text-emerald-300",
+    purple: "border-purple-500/25 bg-purple-500/10 text-purple-300",
+    sky: "border-sky-500/25 bg-sky-500/10 text-sky-300",
+    amber: "border-amber-500/25 bg-amber-500/10 text-amber-300",
+    zinc: "border-white/10 bg-white/[0.04] text-zinc-400",
   };
 
   return (
-    <div className="group rounded-2xl border border-zinc-800/80 bg-zinc-950/40 p-4 transition-colors duration-200 hover:border-zinc-700">
-      <div className={`mb-3 flex h-9 w-9 items-center justify-center rounded-xl border transition-transform duration-200 group-hover:scale-105 ${toneMap[tone]}`}>
+    <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+      <div className={`mb-3 flex h-9 w-9 items-center justify-center rounded-lg border ${toneMap[tone]}`}>
         {icon}
       </div>
-      <p className="text-[10px] font-extrabold uppercase tracking-wider text-zinc-500">{label}</p>
-      <p className="mt-1 font-mono text-lg font-black text-white">{value}</p>
-      {sub && <p className="mt-0.5 truncate text-[11px] text-zinc-500">{sub}</p>}
+      <p className="text-sm text-zinc-400">{label}</p>
+      <p className="mt-1 text-lg font-bold tabular-nums text-white">{value}</p>
+      {sub && <p className="mt-0.5 truncate text-xs text-zinc-400">{sub}</p>}
     </div>
   );
 }
@@ -133,7 +133,7 @@ function SummarySkeleton() {
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
       {[0, 1, 2, 3, 4, 5].map((i) => (
-        <div key={i} className="animate-pulse rounded-2xl border border-zinc-800/80 bg-zinc-950/40 p-4">
+        <div key={i} className="animate-pulse rounded-2xl border border-white/5 bg-white/[0.02] p-4">
           <div className="mb-3 h-9 w-9 rounded-xl bg-zinc-800/60" />
           <div className="h-2.5 w-16 rounded bg-zinc-800/60" />
           <div className="mt-2 h-5 w-20 rounded bg-zinc-800/60" />
@@ -391,10 +391,6 @@ export default function DashboardAccount() {
 
   return (
     <div className="relative space-y-8">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none fixed left-1/2 top-0 -z-10 h-[320px] w-[700px] -translate-x-1/2 rounded-full bg-purple-600/10 blur-[130px]"
-      />
       <style>{`
         @keyframes acc-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
         .acc-fade { animation: acc-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
@@ -404,7 +400,7 @@ export default function DashboardAccount() {
       <PageHeader eyebrow="Vie privée" title="Compte & données" />
 
       {/* IDENTITÉ */}
-      <section className="acc-fade flex flex-col items-start gap-5 rounded-[28px] border border-zinc-800/80 bg-zinc-950/40 p-6 sm:flex-row sm:items-center sm:justify-between">
+      <section className="acc-fade flex flex-col items-start gap-5 rounded-2xl border border-white/10 bg-white/[0.02] p-6 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
           {summary?.image || session.user?.image ? (
             <div className={`relative shrink-0 rounded-2xl bg-gradient-to-br p-[2px] ${roleGlow}`}>
@@ -423,14 +419,14 @@ export default function DashboardAccount() {
           )}
           <div className="min-w-0">
             <p className="truncate text-base font-bold text-white">{summary?.name || session.user?.name || "—"}</p>
-            <p className="truncate text-xs text-zinc-500">{summary?.email || session.user?.email || "—"}</p>
+            <p className="truncate text-sm text-zinc-400">{summary?.email || session.user?.email || "—"}</p>
             {(session.user as any)?.id && (
               <button
                 onClick={handleCopyId}
-                className="mt-1 inline-flex items-center gap-1 text-[10px] font-medium text-zinc-600 transition hover:text-zinc-400"
+                className="mt-1 inline-flex cursor-pointer items-center gap-1 rounded text-xs font-medium text-zinc-400 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400"
                 title="Copier mon identifiant (utile pour un ticket de support)"
               >
-                {copiedId ? <Check size={10} className="text-emerald-400" /> : <Copy size={10} />}
+                {copiedId ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
                 {copiedId ? "Copié" : "Copier mon ID"}
               </button>
             )}
@@ -439,7 +435,7 @@ export default function DashboardAccount() {
 
         <div className="flex flex-wrap items-center gap-2">
           {summary ? (
-            <span className={`rounded-full border px-3 py-1.5 text-[10px] font-black uppercase tracking-wider ${ROLE_TONE[summary.role] || ROLE_TONE.user}`}>
+            <span className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${ROLE_TONE[summary.role] || ROLE_TONE.user}`}>
               {ROLE_LABELS[summary.role] || "Utilisateur"}
             </span>
           ) : loadingSummary ? (
@@ -449,20 +445,20 @@ export default function DashboardAccount() {
             <>
               <span
                 title={summary.spotifyConnected ? undefined : "Connecte Spotify pour que ce widget affiche ta musique."}
-                className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider ${
+                className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium ${
                   summary.spotifyConnected
-                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
-                    : "border-zinc-800 bg-zinc-900/60 text-zinc-500"
+                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
+                    : "border-white/10 text-zinc-400"
                 }`}
               >
                 <Music size={11} /> {summary.spotifyConnected ? "Widget musique actif" : "Widget musique inactif"}
               </span>
               <span
                 title={summary.name ? undefined : "Aucun pseudo Twitch associé : reconnecte-toi via Twitch."}
-                className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider ${
+                className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium ${
                   summary.name
-                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
-                    : "border-zinc-800 bg-zinc-900/60 text-zinc-500"
+                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
+                    : "border-white/10 text-zinc-400"
                 }`}
               >
                 <MessageSquare size={11} /> {summary.name ? "Widget chat actif" : "Widget chat inactif"}
@@ -474,18 +470,18 @@ export default function DashboardAccount() {
 
       {/* RÉSUMÉ */}
       <section className="acc-fade space-y-4" style={{ animationDelay: "60ms" }}>
-        <h2 className="text-[10px] font-extrabold uppercase tracking-[0.25em] text-zinc-500">
+        <h2 className="font-display text-lg font-bold tracking-tight text-white">
           Ce que Twichify conserve sur toi
         </h2>
 
         {loadingSummary ? (
           <SummarySkeleton />
         ) : loadError ? (
-          <div className="flex flex-col items-start gap-3 rounded-2xl border border-zinc-800/80 bg-zinc-950/40 p-5 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs text-zinc-500">Impossible de charger ce résumé pour le moment.</p>
+          <div className="flex flex-col items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.02] p-5 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-zinc-400">Impossible de charger ce résumé pour le moment.</p>
             <button
               onClick={loadSummary}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-700 bg-zinc-900/80 px-3 py-1.5 text-[11px] font-bold text-zinc-300 transition hover:bg-zinc-800"
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-white/15 px-4 py-2 text-sm font-medium text-zinc-200 transition-colors hover:border-white/30 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400"
             >
               <RotateCw size={12} /> Réessayer
             </button>
@@ -527,16 +523,16 @@ export default function DashboardAccount() {
               label="CGU acceptées"
               value={formatDate(summary.acceptedTermsAt)}
             />
-            <div className="group flex flex-col justify-between rounded-2xl border border-zinc-800/80 bg-zinc-950/40 p-4 transition-colors duration-200 hover:border-zinc-700">
-              <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-950/70 text-zinc-400 transition-transform duration-200 group-hover:scale-105">
+            <div className="flex flex-col justify-between rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+              <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-zinc-400">
                 <RotateCcw size={15} />
               </div>
               <div>
-                <p className="text-[10px] font-extrabold uppercase tracking-wider text-zinc-500">Stats d'écoute</p>
+                <p className="text-sm text-zinc-400">Stats d'écoute</p>
                 <button
                   onClick={handleResetStats}
                   disabled={resettingStats || summary.listening.totalTracks === 0}
-                  className="mt-1.5 text-[13px] font-bold text-purple-400 transition hover:text-purple-300 disabled:cursor-not-allowed disabled:text-zinc-600"
+                  className="mt-1 cursor-pointer rounded text-base font-semibold text-purple-300 transition-colors hover:text-purple-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400 disabled:cursor-not-allowed disabled:text-zinc-500"
                 >
                   {resettingStats ? "Réinitialisation..." : "Réinitialiser"}
                 </button>
@@ -544,33 +540,33 @@ export default function DashboardAccount() {
             </div>
           </div>
         ) : (
-          <p className="text-xs text-zinc-500">Résumé indisponible pour le moment.</p>
+          <p className="text-sm text-zinc-400">Résumé indisponible pour le moment.</p>
         )}
       </section>
 
       {/* SÉCURITÉ & RÉGLAGES */}
       <section className="acc-fade space-y-4" style={{ animationDelay: "120ms" }}>
-        <h2 className="text-[10px] font-extrabold uppercase tracking-[0.25em] text-zinc-500">Sécurité & réglages</h2>
+        <h2 className="font-display text-lg font-bold tracking-tight text-white">Sécurité & réglages</h2>
 
         {/* Sessions actives */}
-        <div className="rounded-[28px] border border-zinc-800/80 bg-zinc-950/40 p-6">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-sky-500/20 bg-sky-500/10 text-sky-300">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-sky-500/25 bg-sky-500/10 text-sky-300">
                 <Monitor size={18} />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-white">Sessions actives</h3>
-                <p className="text-xs text-zinc-500">Les appareils actuellement connectés à ton compte.</p>
+                <h3 className="text-base font-semibold text-white">Sessions actives</h3>
+                <p className="text-sm text-zinc-400">Les appareils actuellement connectés à ton compte.</p>
               </div>
             </div>
             {sessions && sessions.filter((s) => !s.isCurrent).length > 0 && (
               <button
                 onClick={handleRevokeSessions}
                 disabled={revokingSessions}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-sky-500/30 bg-sky-500/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-sky-300 transition hover:bg-sky-500/20 disabled:opacity-50"
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-sky-500/30 bg-sky-500/10 px-4 py-2 text-sm font-semibold text-sky-200 transition-colors hover:bg-sky-500/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300 disabled:opacity-50"
               >
-                <LogOut size={12} />
+                <LogOut size={13} />
                 {revokingSessions ? "Déconnexion..." : "Déconnecter les autres"}
               </button>
             )}
@@ -579,7 +575,7 @@ export default function DashboardAccount() {
           {loadingSessions ? (
             <div className="space-y-2">
               {[0, 1].map((i) => (
-                <div key={i} className="h-12 animate-pulse rounded-xl bg-zinc-900/60" />
+                <div key={i} className="h-12 animate-pulse rounded-xl bg-white/[0.04]" />
               ))}
             </div>
           ) : sessions && sessions.length > 0 ? (
@@ -587,18 +583,18 @@ export default function DashboardAccount() {
               {sessions.map((s) => (
                 <li
                   key={s.id}
-                  className={`flex items-center justify-between gap-3 rounded-xl border p-3 text-xs ${
-                    s.isCurrent ? "border-emerald-500/20 bg-emerald-500/5" : "border-zinc-800/80 bg-zinc-900/30"
+                  className={`flex items-center justify-between gap-3 rounded-xl border p-3.5 text-sm ${
+                    s.isCurrent ? "border-emerald-500/25 bg-emerald-500/[0.06]" : "border-white/10 bg-white/[0.02]"
                   }`}
                 >
                   <div className="flex min-w-0 items-center gap-2.5">
-                    <Monitor size={14} className={s.isCurrent ? "text-emerald-400" : "text-zinc-500"} />
+                    <Monitor size={15} className={s.isCurrent ? "text-emerald-400" : "text-zinc-500"} />
                     <div className="min-w-0">
                       <p className="font-semibold text-zinc-200">
                         {describeUserAgent(s.userAgent)}
-                        {s.isCurrent && <span className="ml-1.5 font-normal text-zinc-500">(cet appareil)</span>}
+                        {s.isCurrent && <span className="ml-1.5 font-normal text-zinc-400">(cet appareil)</span>}
                       </p>
-                      <p className="truncate text-[10px] text-zinc-500">
+                      <p className="truncate text-xs text-zinc-400">
                         {formatLastSeen(s.lastSeenAt) ??
                           `Expire le ${new Date(s.expires).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" })}`}
                       </p>
@@ -606,14 +602,14 @@ export default function DashboardAccount() {
                   </div>
 
                   {s.isCurrent ? (
-                    <span className="shrink-0 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-emerald-300">
+                    <span className="shrink-0 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-200">
                       Actuelle
                     </span>
                   ) : (
                     <button
                       onClick={() => handleRevokeOneSession(s.id)}
                       disabled={revokingSessionId === s.id}
-                      className="shrink-0 text-[10px] font-bold text-zinc-500 transition hover:text-rose-400 disabled:opacity-50"
+                      className="shrink-0 cursor-pointer rounded px-2 py-1 text-sm font-medium text-zinc-400 transition-colors hover:text-rose-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-300 disabled:opacity-50"
                     >
                       {revokingSessionId === s.id ? "..." : "Déconnecter"}
                     </button>
@@ -622,38 +618,38 @@ export default function DashboardAccount() {
               ))}
             </ul>
           ) : (
-            <p className="text-xs text-zinc-500">Aucune session active trouvée.</p>
+            <p className="text-sm text-zinc-400">Aucune session active trouvée.</p>
           )}
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="flex flex-col justify-between gap-4 rounded-[28px] border border-zinc-800/80 bg-zinc-950/40 p-6">
+        <div className="flex flex-col justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.02] p-6">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-500/20 bg-amber-500/10 text-amber-300">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-amber-500/25 bg-amber-500/10 text-amber-300">
               <RefreshCcw size={18} />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-white">Réglages des widgets</h3>
-              <p className="text-xs text-zinc-500">Remet musique, chat et bot à leurs valeurs par défaut.</p>
+              <h3 className="text-base font-semibold text-white">Réglages des widgets</h3>
+              <p className="text-sm text-zinc-400">Remet musique, chat et bot à leurs valeurs par défaut.</p>
             </div>
           </div>
           <button
             onClick={() => setShowResetWidgetsModal(true)}
-            className="self-start rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-[11px] font-black uppercase tracking-widest text-amber-300 transition hover:bg-amber-500/20"
+            className="cursor-pointer self-start rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm font-semibold text-amber-200 transition-colors hover:bg-amber-500/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300"
           >
             Réinitialiser
           </button>
         </div>
 
         {/* Diagnostic de configuration */}
-        <div className="flex flex-col gap-4 rounded-[28px] border border-zinc-800/80 bg-zinc-950/40 p-6">
+        <div className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-white/[0.02] p-6">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-300">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-emerald-500/25 bg-emerald-500/10 text-emerald-300">
               <Activity size={18} />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-white">Diagnostic de configuration</h3>
-              <p className="text-xs text-zinc-500">Vérifie Twitch, Spotify et tes widgets en direct.</p>
+              <h3 className="text-base font-semibold text-white">Diagnostic de configuration</h3>
+              <p className="text-sm text-zinc-400">Vérifie Twitch, Spotify et tes widgets en direct.</p>
             </div>
           </div>
 
@@ -661,39 +657,39 @@ export default function DashboardAccount() {
             <button
               onClick={handleRunDiagnostics}
               disabled={runningDiag}
-              className="self-start rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-[11px] font-black uppercase tracking-widest text-emerald-300 transition hover:bg-emerald-500/20 disabled:opacity-50"
+              className="cursor-pointer self-start rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5 text-sm font-semibold text-emerald-200 transition-colors hover:bg-emerald-500/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-300 disabled:opacity-50"
             >
               {runningDiag ? "Vérification..." : "Lancer le diagnostic"}
             </button>
           ) : (
             <div className="space-y-3">
-              <ul className="space-y-1.5">
+              <ul className="space-y-2">
                 {diagChecks.map((c) => {
                   const Icon = c.status === "ok" ? CheckCircle2 : c.status === "warning" ? AlertCircle : XCircle;
                   const color =
                     c.status === "ok" ? "text-emerald-400" : c.status === "warning" ? "text-amber-400" : "text-rose-400";
                   return (
-                    <li key={c.id} className="flex items-start gap-2 text-xs">
-                      <Icon size={14} className={`mt-0.5 shrink-0 ${color}`} />
+                    <li key={c.id} className="flex items-start gap-2 text-sm">
+                      <Icon size={15} className={`mt-0.5 shrink-0 ${color}`} />
                       <div className="min-w-0">
                         <p className="font-semibold text-zinc-200">{c.label}</p>
-                        <p className="text-[11px] leading-snug text-zinc-500">{c.detail}</p>
+                        <p className="text-sm leading-snug text-zinc-400">{c.detail}</p>
                       </div>
                     </li>
                   );
                 })}
               </ul>
-              <div className="flex items-center justify-between gap-3 border-t border-zinc-800/80 pt-3">
-                <p className="text-[10px] text-zinc-600">
+              <div className="flex items-center justify-between gap-3 border-t border-white/10 pt-3">
+                <p className="text-xs text-zinc-400">
                   {diagRanAt &&
                     `Vérifié à ${new Date(diagRanAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`}
                 </p>
                 <button
                   onClick={handleRunDiagnostics}
                   disabled={runningDiag}
-                  className="inline-flex items-center gap-1.5 text-[10px] font-bold text-zinc-400 transition hover:text-emerald-400 disabled:opacity-50"
+                  className="inline-flex cursor-pointer items-center gap-1.5 rounded text-sm font-medium text-zinc-300 transition-colors hover:text-emerald-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-300 disabled:opacity-50"
                 >
-                  <RotateCw size={11} className={runningDiag ? "animate-spin" : ""} />
+                  <RotateCw size={13} className={runningDiag ? "animate-spin" : ""} />
                   {runningDiag ? "Vérification..." : "Relancer"}
                 </button>
               </div>
@@ -705,22 +701,22 @@ export default function DashboardAccount() {
 
       <div className="acc-fade grid grid-cols-1 xl:grid-cols-2 gap-8 items-start" style={{ animationDelay: "180ms" }}>
         {/* EXPORT */}
-        <section className="rounded-[32px] border border-zinc-800 bg-zinc-950/60 p-8 shadow-2xl shadow-black/30 space-y-6">
+        <section className="space-y-6 rounded-2xl border border-white/10 bg-white/[0.02] p-6 sm:p-8">
           <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-purple-500/20 bg-purple-500/10 text-purple-300">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-purple-500/25 bg-purple-500/10 text-purple-300">
               <ShieldCheck size={22} />
             </div>
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-purple-400">Droit d'accès</p>
-              <h2 className="text-xl font-black tracking-tight text-white">Exporter mes données</h2>
+              <p className="text-sm text-zinc-400">Droit d'accès</p>
+              <h2 className="font-display text-xl font-bold tracking-tight text-white">Exporter mes données</h2>
             </div>
           </div>
 
-          <p className="text-sm leading-relaxed text-zinc-400">
+          <p className="text-base leading-relaxed text-zinc-400">
             Télécharge une copie de tout ce que Twichify conserve sur toi, dans un fichier JSON lisible et réutilisable.
           </p>
 
-          <ul className="space-y-2 text-xs text-zinc-400">
+          <ul className="space-y-2.5 text-sm text-zinc-300">
             {[
               "Ton profil Twitch : pseudo, email, avatar, rôle, date d'acceptation des CGU",
               "Les réglages de tes widgets (musique, chat, bot, canvas)",
@@ -737,22 +733,22 @@ export default function DashboardAccount() {
             ))}
           </ul>
 
-          <p className="rounded-2xl border border-zinc-800 bg-black/30 p-4 text-[11px] leading-relaxed text-zinc-500">
+          <p className="rounded-xl border border-white/10 bg-black/30 p-4 text-sm leading-relaxed text-zinc-400">
             Les secrets ne sont jamais exportés : ton Client Secret Spotify, ton refresh token et tes jetons Twitch restent chiffrés côté serveur et ne quittent pas la base.
           </p>
 
           <button
             onClick={handleExport}
             disabled={exporting}
-            className="flex w-full items-center justify-center gap-2 rounded-[24px] bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-4 text-[11px] font-black uppercase tracking-[0.25em] text-white transition hover:brightness-110 disabled:opacity-60"
+            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-purple-600 px-6 py-3.5 text-base font-semibold text-white transition-colors hover:bg-purple-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400 disabled:opacity-60"
           >
             <Download size={16} />
             {exporting ? "Génération..." : "Télécharger mes données"}
           </button>
 
-          <p className="text-center text-[10px] text-zinc-600">
+          <p className="text-center text-sm text-zinc-400">
             Consulte aussi notre{" "}
-            <Link href="/privacy" className="text-zinc-400 underline hover:text-purple-400">
+            <Link href="/privacy" className="text-zinc-200 underline underline-offset-4 hover:text-purple-300">
               politique de confidentialité
             </Link>
             .
@@ -760,24 +756,24 @@ export default function DashboardAccount() {
         </section>
 
         {/* SUPPRESSION */}
-        <section className="rounded-[32px] border border-rose-500/30 bg-rose-950/10 p-8 shadow-2xl shadow-black/30 space-y-6">
+        <section className="space-y-6 rounded-2xl border border-rose-500/30 bg-rose-500/[0.04] p-6 sm:p-8">
           <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-rose-500/30 bg-rose-500/10 text-rose-300">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-300">
               <Trash2 size={22} />
             </div>
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-rose-400">Droit à l'effacement</p>
-              <h2 className="text-xl font-black tracking-tight text-white">Supprimer mon compte</h2>
+              <p className="text-sm text-zinc-400">Droit à l'effacement</p>
+              <h2 className="font-display text-xl font-bold tracking-tight text-white">Supprimer mon compte</h2>
             </div>
           </div>
 
-          <div className="flex items-start gap-3 rounded-2xl border border-rose-500/20 bg-rose-500/5 p-4 text-xs leading-relaxed text-rose-200">
-            <AlertTriangle size={16} className="mt-0.5 shrink-0 text-rose-400" />
+          <div className="flex items-start gap-3 rounded-xl border border-rose-500/25 bg-rose-500/[0.08] p-4 text-sm leading-relaxed text-rose-100">
+            <AlertTriangle size={16} className="mt-0.5 shrink-0 text-rose-300" />
             <span>Cette action est immédiate et définitive. Elle ne peut pas être annulée.</span>
           </div>
 
-          <div className="space-y-3 text-xs leading-relaxed text-zinc-400">
-            <p className="font-bold uppercase tracking-[0.15em] text-zinc-500">Ce qui est supprimé</p>
+          <div className="space-y-3 text-sm leading-relaxed text-zinc-400">
+            <p className="font-semibold text-zinc-200">Ce qui est supprimé</p>
             <ul className="list-disc space-y-1 pl-5">
               <li>Ton compte, ta connexion Twitch (jeton révoqué) et toutes tes sessions</li>
               <li>Tes clés et jetons Spotify, tes réglages de widgets et tes statistiques d'écoute</li>
@@ -785,13 +781,13 @@ export default function DashboardAccount() {
               <li>Tes statistiques de chat (sessions enregistrées), si tu les avais activées</li>
               <li>Tes tickets de support</li>
             </ul>
-            <p className="pt-2 font-bold uppercase tracking-[0.15em] text-zinc-500">Ce qui est conservé</p>
+            <p className="pt-2 font-semibold text-zinc-200">Ce qui est conservé</p>
             <ul className="list-disc space-y-1 pl-5">
               <li>Tes idées de la boîte à idées, anonymisées (« Utilisateur supprimé »), sans tes votes</li>
             </ul>
-            <p className="pt-2 flex items-start gap-2.5 rounded-xl border border-zinc-800/80 bg-zinc-900/30 p-3">
+            <p className="flex items-start gap-2.5 rounded-xl border border-white/10 bg-white/[0.03] p-3 pt-3">
               <Link2Off size={14} className="mt-0.5 shrink-0 text-zinc-500" />
-              <span className="text-[11px] leading-relaxed text-zinc-500">
+              <span className="text-sm leading-relaxed text-zinc-400">
                 Pense aussi à retirer l'accès de ton application Spotify si tu ne l'utilises plus, sur{" "}
                 <a
                   href="https://www.spotify.com/account/apps"
@@ -808,22 +804,23 @@ export default function DashboardAccount() {
           </div>
 
           <div className="space-y-3 border-t border-rose-500/20 pt-6">
-            <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500">
+            <label htmlFor="delete-confirm" className="text-sm font-medium text-zinc-200">
               Tape <span className="font-mono text-rose-300">{CONFIRM_WORD}</span> pour confirmer
             </label>
             <input
+              id="delete-confirm"
               type="text"
               value={confirmText}
               onChange={(e) => setConfirmText(e.target.value)}
               placeholder={CONFIRM_WORD}
               autoComplete="off"
               spellCheck={false}
-              className="w-full rounded-2xl border border-zinc-700 bg-zinc-950/80 p-4 font-mono text-xs tracking-widest text-white outline-none placeholder-zinc-700 focus:border-rose-500/60"
+              className="w-full rounded-lg border border-white/15 bg-white/[0.02] p-4 font-mono text-sm tracking-widest text-white outline-none placeholder-zinc-600 transition-colors focus:border-rose-500/60"
             />
             <button
               onClick={handleDelete}
               disabled={!canDelete}
-              className="flex w-full items-center justify-center gap-2 rounded-[24px] bg-rose-600 px-6 py-4 text-[11px] font-black uppercase tracking-[0.25em] text-white transition hover:bg-rose-500 disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-rose-600 px-6 py-3.5 text-base font-semibold text-white transition-colors hover:bg-rose-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-300 disabled:cursor-not-allowed disabled:opacity-40"
             >
               <Trash2 size={16} />
               Supprimer définitivement mon compte
@@ -845,24 +842,24 @@ export default function DashboardAccount() {
             aria-modal="true"
             aria-labelledby="delete-modal-title"
             onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-sm rounded-[28px] border border-rose-500/30 bg-zinc-950 p-7 shadow-2xl shadow-rose-950/30"
+            className="relative w-full max-w-sm rounded-2xl border border-rose-500/30 bg-zinc-950 p-7 shadow-2xl shadow-black/50"
           >
             <button
               onClick={() => !deleting && setShowDeleteModal(false)}
               aria-label="Annuler"
-              className="absolute top-5 right-5 text-zinc-500 transition hover:text-white"
+              className="absolute top-4 right-4 cursor-pointer rounded-lg p-2 text-zinc-400 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400"
             >
               <X size={18} />
             </button>
 
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-rose-500/30 bg-rose-500/10 text-rose-400">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-400">
               <AlertTriangle size={22} />
             </div>
 
-            <h2 id="delete-modal-title" className="text-lg font-black text-white">
+            <h2 id="delete-modal-title" className="font-display text-xl font-bold text-white">
               Dernière confirmation
             </h2>
-            <p className="mt-2 text-xs leading-relaxed text-zinc-400">
+            <p className="mt-2 text-sm leading-relaxed text-zinc-400">
               Ton compte, tes widgets, tes statistiques et tes tickets vont être supprimés définitivement. Cette action est irréversible.
             </p>
 
@@ -871,7 +868,7 @@ export default function DashboardAccount() {
                 ref={deleteCancelRef}
                 onClick={() => setShowDeleteModal(false)}
                 disabled={deleting}
-                className="flex-1 rounded-2xl border border-zinc-700 bg-zinc-900/80 py-3 text-[11px] font-black uppercase tracking-widest text-zinc-300 transition hover:bg-zinc-800 disabled:opacity-50"
+                className="flex-1 cursor-pointer rounded-xl border border-white/15 py-3 text-sm font-semibold text-zinc-200 transition-colors hover:border-white/30 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400 disabled:opacity-50"
               >
                 Annuler
               </button>
@@ -879,7 +876,7 @@ export default function DashboardAccount() {
                 ref={deleteConfirmRef}
                 onClick={confirmDelete}
                 disabled={deleting}
-                className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-rose-600 py-3 text-[11px] font-black uppercase tracking-widest text-white transition hover:bg-rose-500 disabled:opacity-60"
+                className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl bg-rose-600 py-3 text-sm font-semibold text-white transition-colors hover:bg-rose-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-300 disabled:opacity-60"
               >
                 {deleting ? "Suppression..." : "Confirmer"}
               </button>
@@ -899,24 +896,24 @@ export default function DashboardAccount() {
             aria-modal="true"
             aria-labelledby="reset-widgets-title"
             onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-sm rounded-[28px] border border-amber-500/30 bg-zinc-950 p-7 shadow-2xl shadow-amber-950/20"
+            className="relative w-full max-w-sm rounded-2xl border border-amber-500/30 bg-zinc-950 p-7 shadow-2xl shadow-black/50"
           >
             <button
               onClick={() => !resettingWidgets && setShowResetWidgetsModal(false)}
               aria-label="Annuler"
-              className="absolute top-5 right-5 text-zinc-500 transition hover:text-white"
+              className="absolute top-4 right-4 cursor-pointer rounded-lg p-2 text-zinc-400 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400"
             >
               <X size={18} />
             </button>
 
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-amber-500/30 bg-amber-500/10 text-amber-400">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-400">
               <ShieldAlert size={22} />
             </div>
 
-            <h2 id="reset-widgets-title" className="text-lg font-black text-white">
+            <h2 id="reset-widgets-title" className="font-display text-xl font-bold text-white">
               Réinitialiser les widgets ?
             </h2>
-            <p className="mt-2 text-xs leading-relaxed text-zinc-400">
+            <p className="mt-2 text-sm leading-relaxed text-zinc-400">
               Les couleurs, la mise en page, les filtres du chat et le message du bot reviennent à leurs valeurs par défaut. Tes statistiques d'écoute et ton compte ne sont pas touchés.
             </p>
 
@@ -924,7 +921,7 @@ export default function DashboardAccount() {
               <button
                 onClick={() => setShowResetWidgetsModal(false)}
                 disabled={resettingWidgets}
-                className="flex-1 rounded-2xl border border-zinc-700 bg-zinc-900/80 py-3 text-[11px] font-black uppercase tracking-widest text-zinc-300 transition hover:bg-zinc-800 disabled:opacity-50"
+                className="flex-1 cursor-pointer rounded-xl border border-white/15 py-3 text-sm font-semibold text-zinc-200 transition-colors hover:border-white/30 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400 disabled:opacity-50"
               >
                 Annuler
               </button>
@@ -932,7 +929,7 @@ export default function DashboardAccount() {
                 ref={resetConfirmRef}
                 onClick={handleResetWidgets}
                 disabled={resettingWidgets}
-                className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-amber-500 py-3 text-[11px] font-black uppercase tracking-widest text-black transition hover:bg-amber-400 disabled:opacity-60"
+                className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl bg-amber-500 py-3 text-sm font-semibold text-black transition-colors hover:bg-amber-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300 disabled:opacity-60"
               >
                 {resettingWidgets ? "Réinitialisation..." : "Confirmer"}
               </button>

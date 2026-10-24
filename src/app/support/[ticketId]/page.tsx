@@ -4,21 +4,11 @@ import { useState, useEffect, useRef, KeyboardEvent as ReactKeyboardEvent } from
 import { useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { 
-  ArrowLeft, 
-  Send, 
-  Music, 
-  ShieldCheck, 
-  User as UserIcon, 
-  Lock, 
-  HelpCircle,
-  MessageSquare,
-  Clock,
-  Loader2
-} from "lucide-react";
+import { ArrowLeft, Send, ShieldCheck, User as UserIcon, Lock, HelpCircle, Clock, Loader2 } from "lucide-react";
 import TicketStatusBadge from "@/components/TicketStatusBadge";
 import LinkifiedText from "@/components/LinkifiedText";
-import SiteHeader from "@/components/SiteHeader";
+import PublicShell from "@/components/site/PublicShell";
+import PageIntro from "@/components/site/PageIntro";
 
 interface Message {
   authorId: string;
@@ -44,6 +34,8 @@ interface Ticket {
   userId: string;
   typing?: TypingState | null;
 }
+
+const FOCUS = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400";
 
 // Intervalle de rafraîchissement automatique (polling) en ms
 const POLL_INTERVAL_MS = 3000;
@@ -110,8 +102,7 @@ export default function TicketThreadPage() {
     fetch(`/api/support/tickets/${ticketId}/typing`, { method: "POST" }).catch(() => {});
   };
 
-  const otherIsTyping =
-    ticket?.typing && ticket.typing.userId !== currentUserId ? ticket.typing : null;
+  const otherIsTyping = ticket?.typing && ticket.typing.userId !== currentUserId ? ticket.typing : null;
 
   const handleReply = async () => {
     if (!reply.trim()) return;
@@ -154,225 +145,171 @@ export default function TicketThreadPage() {
 
   if (status === "loading" || loading) {
     return (
-      <main className="min-h-screen bg-black text-white flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-6 h-6 text-purple-500 animate-spin" />
-          <p className="text-xs text-zinc-500 font-medium">Chargement du ticket...</p>
+      <PublicShell width="max-w-2xl">
+        <div className="flex flex-col items-center gap-3 py-24" aria-busy="true">
+          <Loader2 className="h-6 w-6 animate-spin text-purple-400" />
+          <p className="text-sm text-zinc-400">Chargement du ticket...</p>
         </div>
-      </main>
+      </PublicShell>
     );
   }
 
   if (status === "unauthenticated" || !session) {
     return (
-      <main className="min-h-screen bg-black text-white flex items-center justify-center px-6 text-center">
-        <div className="max-w-md rounded-2xl border border-zinc-800/80 bg-zinc-950/60 p-8 backdrop-blur-xl">
-          <HelpCircle className="mx-auto text-purple-400 mb-3" size={32} />
-          <h2 className="text-base font-bold text-white mb-2">Connexion requise</h2>
-          <p className="text-zinc-400 text-xs mb-6">
-            Vous devez être connecté à votre compte pour consulter ce ticket.
-          </p>
+      <PublicShell width="max-w-md">
+        <div className="mt-10 rounded-2xl border border-white/10 bg-white/[0.02] p-8 text-center">
+          <HelpCircle className="mx-auto mb-3 text-purple-300" size={32} />
+          <h1 className="mb-2 font-display text-2xl font-bold text-white">Connexion requise</h1>
+          <p className="mb-6 text-sm text-zinc-400">Vous devez être connecté à votre compte pour consulter ce ticket.</p>
           <Link
             href="/login"
-            className="inline-flex items-center justify-center w-full bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 bg-[length:200%_auto] hover:bg-right px-5 py-2.5 rounded-xl font-bold text-xs text-white shadow-lg shadow-purple-600/20 hover:scale-[1.02] active:scale-95 transition-all"
+            className={`inline-flex w-full items-center justify-center rounded-xl bg-purple-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-purple-500 ${FOCUS}`}
           >
             Se connecter
           </Link>
         </div>
-      </main>
+      </PublicShell>
     );
   }
 
   if (!ticket) {
     return (
-      <main className="min-h-screen bg-black text-white flex items-center justify-center px-6 text-center">
-        <div className="max-w-md rounded-2xl border border-zinc-800/80 bg-zinc-950/60 p-8 backdrop-blur-xl">
-          <HelpCircle className="mx-auto text-zinc-600 mb-3" size={32} />
-          <h2 className="text-base font-bold text-white mb-2">Ticket introuvable</h2>
-          <p className="text-zinc-400 text-xs mb-6">
+      <PublicShell width="max-w-md">
+        <div className="mt-10 rounded-2xl border border-white/10 bg-white/[0.02] p-8 text-center">
+          <HelpCircle className="mx-auto mb-3 text-zinc-500" size={32} />
+          <h1 className="mb-2 font-display text-2xl font-bold text-white">Ticket introuvable</h1>
+          <p className="mb-6 text-sm text-zinc-400">
             Ce ticket n'existe pas ou vous n'avez pas l'autorisation d'y accéder.
           </p>
           <Link
             href="/support/my-tickets"
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-zinc-900 border border-zinc-800 px-5 py-2.5 text-xs font-semibold text-zinc-200 hover:text-white hover:border-zinc-700 transition-all"
+            className={`inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 px-5 py-3 text-sm font-semibold text-zinc-200 transition-colors hover:border-white/30 hover:text-white ${FOCUS}`}
           >
             <ArrowLeft size={14} />
-            <span>Voir mes tickets</span>
+            Voir mes tickets
           </Link>
         </div>
-      </main>
+      </PublicShell>
     );
   }
 
   const isClosed = ticket.status === "ferme" || ticket.status === "resolu";
 
   return (
-    <main className="min-h-screen bg-black text-white font-sans selection:bg-purple-500/30 relative flex flex-col justify-between overflow-x-clip">
-      {/* Halo de fond */}
-      <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[1100px] h-[520px] bg-gradient-to-tr from-purple-600/25 via-indigo-500/15 to-emerald-500/15 blur-[170px] pointer-events-none -z-10" />
+    <PublicShell width="max-w-2xl">
+      <PageIntro
+        title={ticket.subject}
+        backHref="/support/my-tickets"
+        backLabel="Mes tickets"
+        action={<TicketStatusBadge status={ticket.status} />}
+      >
+        Ticket #{ticket._id.slice(-6)}, catégorie {ticket.category}
+      </PageIntro>
 
-      {/* Grille de fond */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f1f2e15_1px,transparent_1px),linear-gradient(to_bottom,#1f1f2e15_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] -z-10" />
+      {/* LISTE DES MESSAGES */}
+      <ul className="mt-8 space-y-4" aria-label="Messages du ticket">
+        {ticket.messages.map((msg, i) => {
+          if (msg.authorRole === "system") {
+            return (
+              <li key={i} className="my-2 flex justify-center">
+                <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-zinc-400">{msg.content}</span>
+              </li>
+            );
+          }
 
-      <div>
-        {/* HEADER UNIFORMISÉ */}
-        <SiteHeader />
+          const isStaff = msg.authorRole !== "user";
 
-        {/* FIL DE DISCUSSION */}
-        <div className="max-w-2xl mx-auto px-6 pt-8 pb-16 flex flex-col min-h-[calc(100vh-140px)]">
-          
-          <Link 
-            href="/support/my-tickets" 
-            className="inline-flex items-center gap-2 text-xs font-semibold text-zinc-400 hover:text-purple-400 transition-colors mb-6 group w-fit"
-          >
-            <ArrowLeft size={14} className="transition-transform group-hover:-translate-x-1" />
-            <span>Mes tickets</span>
-          </Link>
-
-          {/* EN-TÊTE DU TICKET */}
-          <div className="rounded-2xl border border-zinc-800/80 bg-zinc-950/60 p-5 sm:p-6 backdrop-blur-xl mb-6 shadow-lg">
-            <div className="flex items-center justify-between gap-4 mb-3">
-              <div className="flex items-center gap-2 text-zinc-400 text-xs font-medium">
-                <MessageSquare size={14} className="text-purple-400" />
-                <span>Ticket #{ticket._id.slice(-6)}</span>
-                <span className="text-zinc-600">•</span>
-                <span className="capitalize text-zinc-400">Catégorie: {ticket.category}</span>
-              </div>
-              <TicketStatusBadge status={ticket.status} />
-            </div>
-
-            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white break-words">
-              {ticket.subject}
-            </h1>
-          </div>
-
-          {/* LISTE DES MESSAGES */}
-          <div className="flex-1 space-y-4 mb-6">
-            {ticket.messages.map((msg, i) => {
-              if (msg.authorRole === "system") {
-                return (
-                  <div key={i} className="flex justify-center my-2">
-                    <span className="text-[10px] text-zinc-500 bg-zinc-900/40 border border-zinc-800/60 rounded-full px-3 py-1">
-                      {msg.content}
-                    </span>
-                  </div>
-                );
-              }
-
-              const isStaff = msg.authorRole !== "user";
-
-              return (
-                <div 
-                  key={i} 
-                  className={`flex ${isStaff ? "justify-start" : "justify-end"}`}
-                >
-                  <div
-                    className={`max-w-[85%] sm:max-w-[80%] rounded-2xl p-4 transition-all ${
-                      isStaff
-                        ? "bg-gradient-to-br from-purple-950/40 to-indigo-950/30 border border-purple-500/30 text-purple-100 shadow-sm"
-                        : "bg-zinc-950/80 border border-zinc-800/80 text-zinc-200 backdrop-blur-md"
-                    }`}
+          return (
+            <li key={i} className={`flex ${isStaff ? "justify-start" : "justify-end"}`}>
+              <div
+                className={`max-w-[88%] rounded-2xl border p-4 sm:max-w-[82%] ${
+                  isStaff ? "border-purple-500/30 bg-purple-500/[0.08]" : "border-white/10 bg-white/[0.03]"
+                }`}
+              >
+                <div className="mb-2 flex items-center gap-2 border-b border-white/10 pb-2">
+                  <span
+                    className={`flex items-center gap-1.5 text-sm font-semibold ${isStaff ? "text-purple-200" : "text-zinc-200"}`}
                   >
-                    <div className="flex items-center gap-2 mb-2 pb-2 border-b border-white/5">
-                      <span className={`text-xs font-bold flex items-center gap-1.5 ${isStaff ? "text-purple-300" : "text-zinc-300"}`}>
-                        {isStaff ? (
-                          <ShieldCheck size={13} className="text-purple-400" />
-                        ) : (
-                          <UserIcon size={12} className="text-zinc-400" />
-                        )}
-                        {msg.authorName}
-                      </span>
+                    {isStaff ? (
+                      <ShieldCheck size={14} className="text-purple-300" />
+                    ) : (
+                      <UserIcon size={13} className="text-zinc-400" />
+                    )}
+                    {msg.authorName}
+                  </span>
 
-                      {isStaff && (
-                        <span className="text-[9px] font-extrabold uppercase tracking-widest bg-purple-500/20 border border-purple-500/30 text-purple-300 px-1.5 py-0.5 rounded-md">
-                          Staff
-                        </span>
-                      )}
-                    </div>
-
-                    <p className="text-xs sm:text-sm text-zinc-200 leading-relaxed whitespace-pre-wrap">
-                      <LinkifiedText text={msg.content} />
-                    </p>
-
-                    <div className="flex items-center gap-1 text-[10px] text-zinc-500 mt-3 pt-1">
-                      <Clock size={11} className="shrink-0" />
-                      <span>{new Date(msg.createdAt).toLocaleString("fr-FR")}</span>
-                    </div>
-                  </div>
+                  {isStaff && (
+                    <span className="rounded-md border border-purple-500/30 bg-purple-500/15 px-1.5 py-0.5 text-xs font-semibold text-purple-200">
+                      Staff
+                    </span>
+                  )}
                 </div>
-              );
-            })}
-            <div ref={bottomRef} />
-          </div>
 
-          {/* INDICATEUR « EN TRAIN D'ÉCRIRE » */}
-          {otherIsTyping && !isClosed && (
-            <div className="flex items-center gap-2 mb-3 px-1 text-xs font-medium text-zinc-500">
-              <span className="flex gap-0.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-bounce [animation-delay:-0.3s]" />
-                <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-bounce [animation-delay:-0.15s]" />
-                <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-bounce" />
-              </span>
-              <span>
-                <span className="text-purple-300 font-semibold">{otherIsTyping.userName}</span> est en train d'écrire...
-              </span>
-            </div>
-          )}
+                <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-zinc-200">
+                  <LinkifiedText text={msg.content} />
+                </p>
 
-          {/* ZONE DE RÉPONSE / ÉTAT FERMÉ */}
-          {isClosed ? (
-            <div className="rounded-2xl border border-zinc-800/80 bg-zinc-950/60 p-4 text-center backdrop-blur-xl">
-              <div className="flex items-center justify-center gap-2 text-zinc-400 text-xs font-semibold">
-                <Lock size={14} className="text-zinc-500" />
-                <span>Ce ticket a été {ticket.status === "resolu" ? "résolu" : "fermé"}.</span>
+                <p className="mt-3 flex items-center gap-1.5 text-xs text-zinc-400">
+                  <Clock size={12} className="shrink-0" />
+                  {new Date(msg.createdAt).toLocaleString("fr-FR")}
+                </p>
               </div>
-              <p className="text-[11px] text-zinc-500 mt-1">
-                Si votre problème persiste, veuillez ouvrir une nouvelle demande d'assistance.
-              </p>
-            </div>
-          ) : (
-            <div className="rounded-2xl border border-zinc-800/80 bg-zinc-950/80 p-3 sm:p-4 backdrop-blur-xl shadow-lg">
-              <div className="flex gap-2">
-                <textarea
-                  value={reply}
-                  onChange={(e) => setReply(e.target.value)}
-                  onKeyDown={handleReplyKeyDown}
-                  onKeyUp={handleReplyKeyUp}
-                  placeholder="Écrire votre réponse... (Entrée pour envoyer, Maj+Entrée pour aller à la ligne)"
-                  rows={3}
-                  className="flex-1 rounded-xl border border-zinc-800/80 bg-zinc-900/40 px-3.5 py-2.5 text-xs sm:text-sm text-white placeholder-zinc-500 outline-none focus:border-purple-500/60 focus:ring-1 focus:ring-purple-500/50 transition-all resize-none shadow-inner"
-                />
-                <button
-                  onClick={handleReply}
-                  disabled={sending || !reply.trim()}
-                  className="flex items-center justify-center self-end rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 bg-[length:200%_auto] hover:bg-right px-4 py-3 text-white transition-all duration-300 disabled:opacity-40 disabled:hover:bg-left hover:scale-[1.02] active:scale-95 shadow-md shadow-purple-600/20 shrink-0"
-                  title="Envoyer la réponse"
-                >
-                  {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-                </button>
-              </div>
-            </div>
-          )}
+            </li>
+          );
+        })}
+        <div ref={bottomRef} />
+      </ul>
 
+      {/* INDICATEUR « EN TRAIN D'ÉCRIRE » */}
+      {otherIsTyping && !isClosed && (
+        <div role="status" className="mt-4 flex items-center gap-2 px-1 text-sm text-zinc-400">
+          <span className="flex gap-0.5" aria-hidden="true">
+            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-purple-400 [animation-delay:-0.3s]" />
+            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-purple-400 [animation-delay:-0.15s]" />
+            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-purple-400" />
+          </span>
+          <span>
+            <span className="font-semibold text-purple-200">{otherIsTyping.userName}</span> est en train d'écrire...
+          </span>
         </div>
+      )}
+
+      {/* ZONE DE RÉPONSE / ÉTAT FERMÉ */}
+      <div className="mt-6">
+        {isClosed ? (
+          <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 text-center">
+            <p className="flex items-center justify-center gap-2 text-sm font-semibold text-zinc-300">
+              <Lock size={15} className="text-zinc-500" />
+              Ce ticket a été {ticket.status === "resolu" ? "résolu" : "fermé"}.
+            </p>
+            <p className="mt-1 text-sm text-zinc-400">
+              Si votre problème persiste, veuillez ouvrir une nouvelle demande d'assistance.
+            </p>
+          </div>
+        ) : (
+          <div className="flex gap-3">
+            <textarea
+              value={reply}
+              onChange={(e) => setReply(e.target.value)}
+              onKeyDown={handleReplyKeyDown}
+              onKeyUp={handleReplyKeyUp}
+              aria-label="Votre réponse"
+              placeholder="Écrire votre réponse... (Entrée pour envoyer, Maj+Entrée pour aller à la ligne)"
+              rows={3}
+              className="flex-1 resize-none rounded-lg border border-white/10 bg-white/[0.02] px-4 py-3 text-base text-white placeholder-zinc-500 outline-none transition-colors focus:border-purple-500/60"
+            />
+            <button
+              onClick={handleReply}
+              disabled={sending || !reply.trim()}
+              aria-label="Envoyer la réponse"
+              title="Envoyer la réponse"
+              className={`flex shrink-0 cursor-pointer items-center justify-center self-end rounded-xl bg-purple-600 px-4 py-3.5 text-white transition-colors hover:bg-purple-500 disabled:opacity-40 ${FOCUS}`}
+            >
+              {sending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+            </button>
+          </div>
+        )}
       </div>
-
-      {/* FOOTER UNIFORMISÉ */}
-      <footer className="w-full border-t border-zinc-900/80 bg-black/40 backdrop-blur-md z-20 mt-auto">
-        <div className="max-w-5xl mx-auto px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-zinc-500">
-          <div className="flex items-center gap-1.5">
-            <span className="font-extrabold text-zinc-300">Twichify</span>
-            <span>— © 2026 Tous droits réservés.</span>
-          </div>
-
-          <div className="flex items-center gap-4 font-medium">
-            <Link href="/" className="hover:text-purple-400 transition-colors">Accueil</Link>
-            <Link href="/help" className="hover:text-purple-400 transition-colors">Aide</Link>
-            <Link href="/privacy" className="hover:text-purple-400 transition-colors">Confidentialité & CGU</Link>
-            <Link href="/mentions-legales" className="hover:text-purple-400 transition-colors">Mentions légales</Link>
-          </div>
-        </div>
-      </footer>
-    </main>
+    </PublicShell>
   );
 }

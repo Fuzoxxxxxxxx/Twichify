@@ -21,6 +21,8 @@ type Step = {
   link?: { href: string; label: string };
 };
 
+const FOCUS = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400";
+
 const STEPS: Step[] = [
   {
     icon: PartyPopper,
@@ -94,6 +96,16 @@ export default function WelcomeModal({ isOpen, onFinish }: WelcomeModalProps) {
     nextButtonRef.current?.focus();
   }, [step, isOpen]);
 
+  // Échap = « Passer » : le guide reste accessible depuis le Centre d'aide.
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onFinish();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isOpen, onFinish]);
+
   if (!isOpen) return null;
 
   const isLast = step === STEPS.length - 1;
@@ -114,93 +126,88 @@ export default function WelcomeModal({ isOpen, onFinish }: WelcomeModalProps) {
       role="dialog"
       aria-modal="true"
       aria-labelledby="welcome-modal-title"
-      className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm"
     >
       <div className="relative w-full max-w-md animate-in fade-in zoom-in-95 duration-150">
-        <div className="relative rounded-3xl bg-gradient-to-b from-purple-500/20 via-zinc-800/40 to-zinc-900/80 p-[1px] shadow-2xl shadow-purple-950/50">
-          <div className="relative overflow-hidden rounded-[23px] bg-zinc-950/95 p-6 sm:p-8">
-            <div className="pointer-events-none absolute top-0 left-1/2 h-24 w-3/4 -translate-x-1/2 rounded-full bg-purple-600/10 blur-2xl" />
+        <div className="rounded-2xl border border-white/10 bg-zinc-950 p-6 shadow-2xl shadow-black/60 sm:p-8">
+          {/* Haut : repère de progression et sortie */}
+          <div className="mb-6 flex items-center justify-between">
+            <p className="text-sm tabular-nums text-zinc-400">
+              {step + 1} sur {STEPS.length}
+            </p>
+            {!isLast && (
+              <button
+                onClick={onFinish}
+                className={`cursor-pointer rounded px-1 text-sm font-medium text-zinc-400 transition-colors hover:text-white ${FOCUS}`}
+              >
+                Passer
+              </button>
+            )}
+          </div>
 
-            <div className="relative">
-              {/* Skip */}
-              {!isLast && (
-                <button
-                  onClick={onFinish}
-                  className="absolute -top-1 right-0 text-[10px] font-bold uppercase tracking-widest text-zinc-500 transition-colors hover:text-zinc-300 cursor-pointer"
-                >
-                  Passer
-                </button>
-              )}
+          <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-purple-300">
+            <Icon size={22} aria-hidden="true" />
+          </div>
 
-              {/* Icône + badge d'étape */}
-              <div className="mb-6 flex items-center justify-between">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-purple-500/20 bg-purple-500/10 text-purple-400 shadow-sm">
-                  <Icon size={24} />
-                </div>
-                <span className="inline-flex items-center rounded-full border border-purple-500/20 bg-purple-500/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-purple-300">
-                  {current.eyebrow}
-                </span>
-              </div>
+          <p className="text-sm font-medium text-purple-300">{current.eyebrow}</p>
+          <h2 id="welcome-modal-title" className="mb-3 mt-1 font-display text-2xl font-extrabold tracking-tight text-white">
+            {current.title}
+          </h2>
+          <p className="mb-5 text-[15px] leading-relaxed text-zinc-400">{current.description}</p>
 
-              <h2 id="welcome-modal-title" className="mb-2 text-xl font-bold tracking-tight text-white">
-                {current.title}
-              </h2>
-              <p className="mb-4 text-xs leading-relaxed text-zinc-400">{current.description}</p>
+          {current.bullets && (
+            <ul className="mb-5 space-y-2">
+              {current.bullets.map((b) => (
+                <li key={b} className="flex items-start gap-2.5 text-sm leading-relaxed text-zinc-300">
+                  <Check size={15} className="mt-0.5 shrink-0 text-purple-300" aria-hidden="true" />
+                  {b}
+                </li>
+              ))}
+            </ul>
+          )}
 
-              {current.bullets && (
-                <ul className="mb-4 space-y-1.5">
-                  {current.bullets.map((b) => (
-                    <li key={b} className="flex items-start gap-2 text-xs text-zinc-300">
-                      <Check size={13} className="mt-0.5 shrink-0 text-purple-400" />
-                      {b}
-                    </li>
-                  ))}
-                </ul>
-              )}
+          {current.link && (
+            <Link
+              href={current.link.href}
+              onClick={onFinish}
+              className={`group mb-6 flex items-center justify-between rounded-xl border border-white/10 px-4 py-3 text-sm font-medium text-zinc-200 transition-colors hover:border-purple-500/40 hover:text-white ${FOCUS}`}
+            >
+              <span>{current.link.label}</span>
+              <ExternalLink size={14} aria-hidden="true" className="text-zinc-500 transition-colors group-hover:text-purple-300" />
+            </Link>
+          )}
 
-              {current.link && (
-                <Link
-                  href={current.link.href}
-                  onClick={onFinish}
-                  className="mb-6 flex items-center justify-between rounded-xl border border-zinc-800/80 bg-zinc-900/40 px-4 py-3 text-xs font-medium text-zinc-300 transition-all hover:border-purple-500/40 hover:bg-purple-500/5 hover:text-white group"
-                >
-                  <span>{current.link.label}</span>
-                  <ExternalLink size={13} className="text-zinc-600 transition-colors group-hover:text-purple-400" />
-                </Link>
-              )}
+          {/* Progression */}
+          <div className="mb-6 flex items-center justify-center gap-1.5" aria-hidden="true">
+            {STEPS.map((_, i) => (
+              <span
+                key={i}
+                className={`h-1.5 rounded-full transition-all ${
+                  i === step ? "w-6 bg-purple-400" : i < step ? "w-1.5 bg-purple-500/50" : "w-1.5 bg-zinc-700"
+                }`}
+              />
+            ))}
+          </div>
 
-              {/* Progression */}
-              <div className="mb-6 flex items-center justify-center gap-1.5">
-                {STEPS.map((_, i) => (
-                  <span
-                    key={i}
-                    className={`h-1.5 rounded-full transition-all ${
-                      i === step ? "w-6 bg-purple-500" : i < step ? "w-1.5 bg-purple-500/50" : "w-1.5 bg-zinc-700"
-                    }`}
-                  />
-                ))}
-              </div>
-
-              {/* Navigation */}
-              <div className="flex items-center gap-2.5">
-                {!isFirst && (
-                  <button
-                    onClick={() => setStep((s) => Math.max(s - 1, 0))}
-                    className="flex items-center justify-center gap-1.5 rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-3.5 text-xs font-bold text-zinc-300 transition-all hover:border-zinc-700 hover:text-white cursor-pointer"
-                  >
-                    <ArrowLeft size={14} />
-                  </button>
-                )}
-                <button
-                  ref={nextButtonRef}
-                  onClick={goNext}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-purple-600 px-5 py-3.5 text-xs font-bold text-white shadow-lg shadow-purple-600/25 transition-all hover:bg-purple-500 hover:shadow-purple-600/35 active:bg-purple-700 cursor-pointer"
-                >
-                  <span>{isLast ? "Commencer" : "Suivant"}</span>
-                  <ArrowRight size={14} />
-                </button>
-              </div>
-            </div>
+          {/* Navigation */}
+          <div className="flex items-center gap-3">
+            {!isFirst && (
+              <button
+                onClick={() => setStep((s) => Math.max(s - 1, 0))}
+                aria-label="Étape précédente"
+                className={`flex cursor-pointer items-center justify-center rounded-xl border border-white/15 px-4 py-3.5 text-zinc-300 transition-colors hover:border-white/30 hover:text-white ${FOCUS}`}
+              >
+                <ArrowLeft size={16} />
+              </button>
+            )}
+            <button
+              ref={nextButtonRef}
+              onClick={goNext}
+              className={`flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl bg-purple-600 px-5 py-3.5 text-base font-semibold text-white transition-colors hover:bg-purple-500 active:bg-purple-700 ${FOCUS}`}
+            >
+              <span>{isLast ? "Commencer" : "Suivant"}</span>
+              <ArrowRight size={16} />
+            </button>
           </div>
         </div>
       </div>

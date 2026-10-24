@@ -34,10 +34,10 @@ type Tone = "violet" | "emerald" | "cyan" | "amber";
 
 // Styles d'un bouton interrupteur selon sa couleur (mêmes codes couleur que la page du widget chat).
 const TONE_CLASSES: Record<Tone, { on: string; icon: string }> = {
-  violet: { on: "border-violet-500/50 bg-violet-500/10 shadow-[0_0_15px_rgba(139,92,246,0.15)]", icon: "text-violet-400" },
-  emerald: { on: "border-emerald-500/50 bg-emerald-500/10 shadow-[0_0_15px_rgba(16,185,129,0.15)]", icon: "text-emerald-400" },
-  cyan: { on: "border-cyan-500/50 bg-cyan-500/10 shadow-[0_0_15px_rgba(34,211,238,0.15)]", icon: "text-cyan-400" },
-  amber: { on: "border-amber-500/50 bg-amber-500/10 shadow-[0_0_15px_rgba(245,158,11,0.15)]", icon: "text-amber-400" },
+  violet: { on: "border-violet-500/50 bg-violet-500/10", icon: "text-violet-400" },
+  emerald: { on: "border-emerald-500/50 bg-emerald-500/10", icon: "text-emerald-400" },
+  cyan: { on: "border-cyan-500/50 bg-cyan-500/10", icon: "text-cyan-400" },
+  amber: { on: "border-amber-500/50 bg-amber-500/10", icon: "text-amber-400" },
 };
 
 function ToggleButton({
@@ -54,8 +54,9 @@ function ToggleButton({
     <button
       type="button"
       onClick={onClick}
-      className={`flex items-center justify-between rounded-2xl border p-4 text-[10px] font-black uppercase tracking-widest transition-all duration-200 ${
-        active ? `${t.on} text-white` : "border-white/5 bg-black/20 text-zinc-500 hover:bg-black/40 hover:text-zinc-300"
+      aria-pressed={active}
+      className={`flex items-center justify-between rounded-xl border p-4 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 ${
+        active ? `${t.on} text-white` : "border-white/10 text-zinc-400 hover:border-white/20 hover:text-white"
       }`}
     >
       <span className="flex items-center gap-2.5">{icon} {label}</span>
@@ -66,9 +67,9 @@ function ToggleButton({
 
 function SectionLabel({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
   return (
-    <label className="text-[11px] font-bold uppercase tracking-widest text-zinc-500 flex items-center gap-2">
+    <h3 className="flex items-center gap-2 text-sm font-semibold text-zinc-200">
       <span className="text-violet-400">{icon}</span> {children}
-    </label>
+    </h3>
   );
 }
 
@@ -352,15 +353,15 @@ export default function DashboardDesign() {
         action={
           <div className="flex flex-wrap items-center justify-end gap-4">
             {isDirty && (
-              <span className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-amber-400">
-                <span className="h-2 w-2 animate-pulse rounded-full bg-amber-400" />
+              <span className="flex items-center gap-2 text-sm font-medium text-amber-300">
+                <span className="h-2 w-2 rounded-full bg-amber-400" />
                 Modifications non enregistrées
               </span>
             )}
             <button
               onClick={saveDesign}
               disabled={loading}
-              className="relative flex items-center justify-center gap-2 rounded-2xl bg-white text-black hover:bg-zinc-200 px-6 py-3 text-xs font-black uppercase tracking-[0.1em] shadow-[0_0_20px_rgba(255,255,255,0.2)] transition-all disabled:opacity-50"
+              className="relative flex items-center justify-center gap-2 rounded-lg bg-purple-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-purple-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400 disabled:opacity-50"
             >
               <Save size={16} />
               {loading ? "Sauvegarde..." : "Sauvegarder"}
@@ -374,8 +375,8 @@ export default function DashboardDesign() {
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-10 items-start">
         {/* ───────── Panneau de configuration ───────── */}
-        <div className="rounded-3xl border border-white/5 bg-zinc-900/40 p-8 shadow-2xl backdrop-blur-sm space-y-8">
-          <div className="flex items-center gap-1.5 rounded-2xl border border-white/5 bg-black/30 p-1.5 flex-wrap">
+        <div className="space-y-8 rounded-2xl border border-white/10 bg-white/[0.02] p-6 sm:p-8">
+          <div role="group" aria-label="Catégories de réglages" className="flex flex-wrap items-center gap-1 rounded-xl border border-white/10 p-1">
             {([
               { id: "apparence", label: "Apparence", icon: Palette },
               { id: "elements", label: "Éléments", icon: Layout },
@@ -385,10 +386,11 @@ export default function DashboardDesign() {
               <button
                 key={id}
                 onClick={() => setTab(id)}
-                className={`flex-1 flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-[10px] font-black uppercase tracking-widest transition-all ${
+                aria-pressed={tab === id}
+                className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 ${
                   tab === id
-                    ? "bg-violet-600 text-white shadow-lg shadow-violet-600/30"
-                    : "text-zinc-500 hover:text-zinc-300 hover:bg-white/5"
+                    ? "bg-white/[0.08] text-white"
+                    : "text-zinc-400 hover:bg-white/[0.04] hover:text-white"
                 }`}
               >
                 <Icon size={13} />
@@ -409,10 +411,10 @@ export default function DashboardDesign() {
                         key={preset.id}
                         onClick={() => applyPreset(preset.config)}
                         title={preset.desc}
-                        className={`rounded-full px-4 py-2 text-[10px] font-bold uppercase tracking-widest border transition-all ${
+                        className={`rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
                           isActive
-                            ? "border-violet-500 bg-violet-500/15 text-violet-300"
-                            : "border-white/10 bg-black/20 text-zinc-400 hover:bg-white/5 hover:text-zinc-200"
+                            ? "border-violet-500/60 bg-violet-500/15 text-violet-200"
+                            : "border-white/10 text-zinc-400 hover:border-white/20 hover:text-white"
                         }`}
                       >
                         {preset.label}
@@ -432,14 +434,15 @@ export default function DashboardDesign() {
                     <button
                       key={opt.id}
                       onClick={() => setLayout(opt.id)}
-                      className={`flex flex-col items-start p-4 rounded-2xl border transition-all duration-200 text-left hover:scale-[1.02] active:scale-[0.98] ${
+                      aria-pressed={layout === opt.id}
+                      className={`flex flex-col items-start rounded-xl border p-4 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 ${
                         layout === opt.id
-                          ? "border-violet-500 bg-violet-500/10 shadow-[0_0_20px_rgba(139,92,246,0.15)]"
-                          : "border-white/5 bg-black/20 hover:bg-white/5"
+                          ? "border-violet-500/60 bg-violet-500/10"
+                          : "border-white/10 hover:border-white/20 hover:bg-white/[0.03]"
                       }`}
                     >
-                      <span className={`text-[12px] font-bold ${layout === opt.id ? "text-violet-400" : "text-zinc-300"}`}>{opt.label}</span>
-                      <span className="text-[10px] text-zinc-500">{opt.desc}</span>
+                      <span className={`text-sm font-semibold ${layout === opt.id ? "text-violet-300" : "text-zinc-200"}`}>{opt.label}</span>
+                      <span className="text-xs text-zinc-400">{opt.desc}</span>
                     </button>
                   ))}
                 </div>
@@ -452,10 +455,10 @@ export default function DashboardDesign() {
                     <button
                       key={cat}
                       onClick={() => setFontCategory(cat)}
-                      className={`rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-all ${
+                      className={`rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors ${
                         fontCategory === cat
-                          ? "border-violet-500 bg-violet-500/15 text-violet-300"
-                          : "border-white/10 bg-black/20 text-zinc-500 hover:bg-white/5 hover:text-zinc-300"
+                          ? "border-violet-500/60 bg-violet-500/15 text-violet-200"
+                          : "border-white/10 text-zinc-400 hover:border-white/20 hover:text-white"
                       }`}
                     >
                       {FONT_CATEGORY_LABELS[cat]}
@@ -470,10 +473,11 @@ export default function DashboardDesign() {
                       <button
                         key={f.id}
                         onClick={() => setFontFamily(f.id)}
-                        className={`flex flex-col items-start gap-1 rounded-2xl border p-4 text-left transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] ${
+                        aria-pressed={selected}
+                        className={`flex flex-col items-start gap-1 rounded-xl border p-4 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 ${
                           selected
-                            ? "border-violet-500 bg-violet-500/10 shadow-[0_0_20px_rgba(139,92,246,0.15)]"
-                            : "border-white/5 bg-black/20 hover:bg-white/5"
+                            ? "border-violet-500/60 bg-violet-500/10"
+                            : "border-white/10 hover:border-white/20 hover:bg-white/[0.03]"
                         }`}
                       >
                         <span
@@ -482,28 +486,29 @@ export default function DashboardDesign() {
                         >
                           Blinding Lights
                         </span>
-                        <span className="flex w-full items-center justify-between text-[10px] text-zinc-500">
+                        <span className="flex w-full items-center justify-between text-xs text-zinc-400">
                           <span>{f.label}</span>
-                          <span className="uppercase tracking-widest text-zinc-600">{f.family ? "Google" : "Système"}</span>
+                          <span className="text-zinc-500">{f.family ? "Google" : "Système"}</span>
                         </span>
                       </button>
                     );
                   })}
                 </div>
-                <p className="text-[10px] text-zinc-600">
+                <p className="text-xs text-zinc-400">
                   {ALL_FONTS.length} polices. Les polices Google sont chargées par OBS à l'affichage du widget (connexion internet requise).
                 </p>
               </div>
 
-              <div className="flex items-center justify-between rounded-2xl border border-white/5 bg-black/20 p-4">
+              <div className="flex items-center justify-between rounded-xl border border-white/10 p-4">
                 <div>
-                  <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">Couleur d'accent</p>
-                  <p className="mt-1 text-[10px] text-zinc-600">Barre de progression, néon, égaliseur</p>
+                  <p className="text-sm font-semibold text-zinc-200">Couleur d'accent</p>
+                  <p className="mt-1 text-xs text-zinc-400">Barre de progression, néon, égaliseur</p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="font-mono text-[10px] text-zinc-300">{accentColor}</span>
+                  <span className="font-mono text-xs text-zinc-300">{accentColor}</span>
                   <input
                     type="color"
+                    aria-label="Couleur d'accent"
                     value={accentColor}
                     onChange={(e) => setAccentColor(e.target.value)}
                     className="h-10 w-10 rounded-xl border-2 border-zinc-700 bg-transparent p-0 cursor-pointer"
@@ -544,31 +549,33 @@ export default function DashboardDesign() {
                     <button
                       key={opt.id}
                       onClick={() => { setAnimationStyle(opt.id); playEntry(); }}
-                      className={`flex flex-col items-start p-4 rounded-2xl border transition-all duration-200 text-left hover:scale-[1.02] active:scale-[0.98] ${
+                      aria-pressed={animationStyle === opt.id}
+                      className={`flex flex-col items-start rounded-xl border p-4 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 ${
                         animationStyle === opt.id
-                          ? "border-violet-500 bg-violet-500/10 shadow-[0_0_20px_rgba(139,92,246,0.15)]"
-                          : "border-white/5 bg-black/20 hover:bg-white/5"
+                          ? "border-violet-500/60 bg-violet-500/10"
+                          : "border-white/10 hover:border-white/20 hover:bg-white/[0.03]"
                       }`}
                     >
-                      <span className={`text-[12px] font-bold ${animationStyle === opt.id ? "text-violet-400" : "text-zinc-300"}`}>{opt.label}</span>
-                      <span className="text-[10px] text-zinc-500">{opt.desc}</span>
+                      <span className={`text-sm font-semibold ${animationStyle === opt.id ? "text-violet-300" : "text-zinc-200"}`}>{opt.label}</span>
+                      <span className="text-xs text-zinc-400">{opt.desc}</span>
                     </button>
                   ))}
                 </div>
-                <p className="text-[10px] text-zinc-600">La sortie reprend le style choisi, en sens inverse.</p>
+                <p className="text-xs text-zinc-400">La sortie reprend le style choisi, en sens inverse.</p>
               </div>
 
               <div className="space-y-4">
                 <SectionLabel icon={<Timer size={14} />}>Vitesse</SectionLabel>
-                <div className="flex items-center gap-1.5 rounded-2xl border border-white/5 bg-black/30 p-1.5">
+                <div role="group" aria-label="Vitesse de l'animation" className="flex items-center gap-1 rounded-xl border border-white/10 p-1">
                   {SPEED_OPTIONS.map((opt) => (
                     <button
                       key={opt.id}
                       onClick={() => setAnimationSpeed(opt.id)}
-                      className={`flex-1 rounded-xl px-3 py-2.5 text-[10px] font-black uppercase tracking-widest transition-all ${
+                      aria-pressed={animationSpeed === opt.id}
+                      className={`flex-1 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 ${
                         animationSpeed === opt.id
-                          ? "bg-violet-600 text-white shadow-lg shadow-violet-600/30"
-                          : "text-zinc-500 hover:text-zinc-300 hover:bg-white/5"
+                          ? "bg-white/[0.08] text-white"
+                          : "text-zinc-400 hover:bg-white/[0.04] hover:text-white"
                       }`}
                     >
                       {opt.label}
@@ -593,7 +600,7 @@ export default function DashboardDesign() {
                   tone="amber"
                 />
               </div>
-              <p className="text-[10px] text-zinc-600 -mt-6">
+              <p className="-mt-6 text-xs text-zinc-400">
                 « Anim. changement » adoucit le titre et la pochette à chaque nouveau morceau. « Néon pulsant » demande l'effet néon.
               </p>
             </div>
@@ -604,7 +611,7 @@ export default function DashboardDesign() {
               <div className="space-y-4">
                 <SectionLabel icon={<Timer size={14} />}>Masquage automatique</SectionLabel>
                 <ToggleButton active={autoHide} onClick={() => setAutoHide(!autoHide)} icon={<Timer size={16} />} label="Masquage auto" tone="emerald" />
-                <p className="text-[10px] text-zinc-600">
+                <p className="text-xs text-zinc-400">
                   Le widget ne s'affiche que quelques secondes à chaque nouveau morceau, puis se retire avec l'animation de sortie.
                 </p>
                 {autoHide && (
@@ -614,7 +621,7 @@ export default function DashboardDesign() {
 
               <div className="space-y-4 border-t border-white/5 pt-6">
                 <SectionLabel icon={<Play size={14} />}>Tester sans être en live</SectionLabel>
-                <p className="text-[11px] text-zinc-600 -mt-2">
+                <p className="-mt-2 text-sm text-zinc-400">
                   Le mode test ajoute <span className="font-mono text-zinc-300">?test=1</span> à l'URL du widget : il joue de fausses données
                   en boucle (titre très long, changements de morceau, pauses) avec tes réglages enregistrés. Pense à sauvegarder avant.
                 </p>
@@ -623,7 +630,7 @@ export default function DashboardDesign() {
                     href={`/widget/${widgetToken}?test=1`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-zinc-300 transition hover:border-violet-500/50 hover:text-white"
+                    className="inline-flex items-center gap-2 rounded-lg border border-white/15 px-4 py-3 text-sm font-medium text-zinc-200 transition-colors hover:border-violet-500/50 hover:text-white"
                   >
                     <Eye size={14} /> Ouvrir le widget en mode test
                   </a>
@@ -634,26 +641,25 @@ export default function DashboardDesign() {
         </div>
 
         {/* ───────── Aperçu ───────── */}
-        <div className="relative flex flex-col border border-white/10 rounded-3xl bg-zinc-950/80 min-h-[500px] sticky top-28 overflow-hidden shadow-2xl backdrop-blur-xl">
-          <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 mix-blend-overlay pointer-events-none" />
+        <div className="relative flex flex-col border border-white/10 rounded-2xl bg-zinc-950/80 min-h-[500px] sticky top-28 overflow-hidden">
 
           <div className="relative z-30 flex flex-wrap items-center justify-between gap-3 px-6 pt-6">
-            <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Aperçu OBS · {animationLabel}
+            <p className="flex items-center gap-2 text-sm text-zinc-400">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              Aperçu OBS, animation {animationLabel}
             </p>
             <div className="flex items-center gap-4">
               <button
                 type="button"
                 onClick={playEntry}
-                className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-500 hover:text-violet-400 transition-colors"
+                className="flex items-center gap-1.5 text-sm font-medium text-zinc-400 transition-colors hover:text-violet-300"
               >
                 <Play size={12} /> Entrée
               </button>
               <button
                 type="button"
                 onClick={playExit}
-                className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-500 hover:text-violet-400 transition-colors"
+                className="flex items-center gap-1.5 text-sm font-medium text-zinc-400 transition-colors hover:text-violet-300"
               >
                 <EyeOff size={12} /> Sortie
               </button>
@@ -663,7 +669,7 @@ export default function DashboardDesign() {
                   target="_blank"
                   rel="noopener noreferrer"
                   title="Ouvre le vrai widget avec des données factices (enregistre d'abord ta configuration)"
-                  className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-500 hover:text-emerald-400 transition-colors"
+                  className="flex items-center gap-1.5 text-sm font-medium text-zinc-400 transition-colors hover:text-emerald-300"
                 >
                   <Eye size={12} /> Vrai widget
                 </a>
@@ -795,8 +801,8 @@ export default function DashboardDesign() {
             </div>
           </div>
 
-          <p className="relative z-20 pb-4 text-center text-[9px] font-black uppercase tracking-[0.3em] text-zinc-700">
-            Zone OBS 475x125 pixels
+          <p className="relative z-20 pb-4 text-center text-xs text-zinc-500">
+            Zone OBS de 475 × 125 pixels
           </p>
         </div>
       </div>

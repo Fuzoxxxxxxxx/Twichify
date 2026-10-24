@@ -9,7 +9,7 @@ const statusMeta: Record<string, { label: string; dot: string; text: string; bg:
 export default function IdeaStatusBadge({ status }: { status: string }) {
   const meta = statusMeta[status] || statusMeta.en_etude;
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${meta.bg} ${meta.border} ${meta.text}`}>
+    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${meta.bg} ${meta.border} ${meta.text}`}>
       <span className={`h-1.5 w-1.5 rounded-full ${meta.dot}`} />
       {meta.label}
     </span>

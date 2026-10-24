@@ -31,14 +31,7 @@ const TONES = {
 } as const;
 type Tone = keyof typeof TONES;
 
-// Halo coloré dans le coin des cartes de chiffres, et couleur de la courbe associée.
-const GLOWS: Record<Tone, string> = {
-  purple: "bg-purple-500/25",
-  emerald: "bg-emerald-500/25",
-  amber: "bg-amber-500/25",
-  sky: "bg-sky-500/25",
-  rose: "bg-rose-500/25",
-};
+// Couleur de la bordure du pictogramme des cartes de chiffres, et couleur de la courbe associée.
 const SPARK_COLORS: Record<Tone, string> = {
   purple: "#a855f7",
   emerald: "#10b981",
@@ -172,27 +165,22 @@ function KpiCard({
   spark?: number[];
 }) {
   return (
-    <div
-      className={`twichify-rise group relative overflow-hidden rounded-[24px] border ${TONES[tone]} p-5 shadow-xl shadow-black/20 transition duration-300 hover:-translate-y-0.5 hover:shadow-2xl`}
-    >
-      <div className={`pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full blur-2xl transition-opacity duration-300 group-hover:opacity-100 ${GLOWS[tone]} opacity-60`} />
-      <div className="relative">
-        <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-950/70">{icon}</div>
-        <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-zinc-500">{label}</p>
-        <p className="mt-2 text-2xl font-black tracking-tighter text-white">{value}</p>
-        {sub && <p className="mt-1 text-[11px] leading-snug text-zinc-500">{sub}</p>}
-        {spark && <Sparkline values={spark} color={SPARK_COLORS[tone]} />}
-      </div>
+    <div className="twichify-rise rounded-2xl border border-white/10 bg-white/[0.02] p-5">
+      <div className={`mb-4 flex h-9 w-9 items-center justify-center rounded-lg border ${TONES[tone]}`}>{icon}</div>
+      <p className="text-sm text-zinc-400">{label}</p>
+      <p className="mt-1 text-2xl font-bold tabular-nums tracking-tight text-white">{value}</p>
+      {sub && <p className="mt-1 text-xs leading-snug text-zinc-400">{sub}</p>}
+      {spark && <Sparkline values={spark} color={SPARK_COLORS[tone]} />}
     </div>
   );
 }
 
 function Panel({ title, icon, right, children }: { title: string; icon: React.ReactNode; right?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="twichify-rise rounded-[28px] border border-zinc-800/80 bg-gradient-to-b from-zinc-900/50 to-zinc-950/60 p-6 shadow-2xl shadow-black/30">
+    <div className="twichify-rise rounded-2xl border border-white/10 bg-white/[0.02] p-6">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <p className="flex items-center gap-2.5 text-xs font-bold text-white">
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-950/70">{icon}</span>
+        <p className="flex items-center gap-2.5 text-base font-semibold text-white">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04]">{icon}</span>
           {title}
         </p>
         {right}
@@ -846,7 +834,7 @@ export default function DashboardTwitch() {
           return (
             <>
               {/* ── Carte du streamer ── */}
-              <div className="relative overflow-hidden rounded-[32px] border border-zinc-800 bg-zinc-950/60 shadow-2xl shadow-black/30">
+              <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/60">
                 {/* Bannière : image « hors ligne » de la chaîne (la bannière de profil n'est pas dans l'API officielle) */}
                 <div className="relative h-44 overflow-hidden bg-gradient-to-r from-purple-800/50 via-indigo-700/30 to-emerald-600/20 sm:h-60">
                   {stats.channel.banner ? (
@@ -1028,8 +1016,8 @@ export default function DashboardTwitch() {
                         value: live.isLive ? nf.format(live.viewers) : vs.count ? nf.format(vs.avgViews) : "—",
                       },
                     ].map((s) => (
-                      <div key={s.label} className="rounded-2xl border border-zinc-800 bg-gradient-to-br from-zinc-900/70 to-zinc-950/40 px-4 py-3 transition hover:border-zinc-700">
-                        <p className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.2em] text-zinc-500">
+                      <div key={s.label} className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
+                        <p className="flex items-center gap-1.5 text-xs text-zinc-400">
                           {s.icon} {s.label}
                         </p>
                         <p className="mt-1 text-lg font-black tracking-tight text-white">{s.value}</p>
@@ -1040,15 +1028,16 @@ export default function DashboardTwitch() {
               </div>
 
               {/* ── Onglets ── */}
-              <div className="twichify-scroll sticky top-2 z-20 flex w-full gap-1.5 overflow-x-auto rounded-2xl border border-zinc-800 bg-zinc-950/80 p-1.5 shadow-xl shadow-black/40 backdrop-blur-xl sm:w-fit">
+              <div className="twichify-scroll sticky top-2 z-20 flex w-full gap-1 overflow-x-auto rounded-xl border border-white/10 bg-zinc-950/85 p-1 backdrop-blur-xl sm:w-fit">
                 {TABS.map((t) => (
                   <button
                     key={t.id}
                     onClick={() => changeTab(t.id)}
-                    className={`flex shrink-0 cursor-pointer items-center gap-2 rounded-xl px-4 py-2 text-[11px] font-bold uppercase tracking-wider transition ${
+                    aria-current={tab === t.id ? "true" : undefined}
+                    className={`flex shrink-0 cursor-pointer items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400 ${
                       tab === t.id
-                        ? "border border-purple-500/40 bg-gradient-to-r from-purple-600/30 to-indigo-600/20 text-white shadow-inner shadow-purple-500/10"
-                        : "border border-transparent text-zinc-500 hover:bg-white/[0.03] hover:text-zinc-300"
+                        ? "bg-white/[0.08] text-white"
+                        : "text-zinc-400 hover:bg-white/[0.04] hover:text-white"
                     }`}
                   >
                     {t.icon}

@@ -9,11 +9,11 @@ import {
   X, 
   HelpCircle, 
   Edit2, 
-  Filter, 
   AlertTriangle, 
   Loader2, 
   Search 
 } from "lucide-react";
+import { PageHeader } from "@/components/dashboard/DashboardUI";
 import { hasPermission, PERMISSIONS } from "@/lib/roles";
 import { useDialog } from "@/components/DialogProvider";
 import {
@@ -160,11 +160,11 @@ export default function AdminFaqPage() {
 
   if (error) {
     return (
-      <div className="max-w-md mx-auto text-center rounded-2xl border border-red-500/20 bg-zinc-950/80 p-8 backdrop-blur-xl mt-10">
+      <div role="alert" className="mx-auto mt-10 max-w-md rounded-2xl border border-red-500/25 bg-white/[0.02] p-8 text-center">
         <AlertTriangle className="mx-auto text-red-400 mb-3" size={32} />
-        <h2 className="text-lg font-bold mb-2">Accès Refusé</h2>
-        <p className="text-zinc-400 text-xs">
-          Cette section est exclusivement réservée au staff.
+        <h2 className="mb-2 text-lg font-bold">Accès refusé</h2>
+        <p className="text-sm text-zinc-400">
+          Cette section est réservée au staff.
         </p>
       </div>
     );
@@ -183,10 +183,10 @@ export default function AdminFaqPage() {
   // de 403 : la permission doit être vérifiée ici pour ne pas exposer l'édition de la FAQ.
   if (!canManageFaq) {
     return (
-      <div className="max-w-md mx-auto text-center rounded-2xl border border-red-500/20 bg-zinc-950/80 p-8 backdrop-blur-xl mt-10">
+      <div role="alert" className="mx-auto mt-10 max-w-md rounded-2xl border border-red-500/25 bg-white/[0.02] p-8 text-center">
         <AlertTriangle className="mx-auto text-red-400 mb-3" size={32} />
-        <h2 className="text-lg font-bold mb-2">Accès Refusé</h2>
-        <p className="text-zinc-400 text-xs">
+        <h2 className="mb-2 text-lg font-bold">Accès refusé</h2>
+        <p className="text-sm text-zinc-400">
           Ton rôle ne dispose pas de la permission de gestion de la FAQ.
         </p>
       </div>
@@ -195,125 +195,124 @@ export default function AdminFaqPage() {
 
   return (
     <div className="space-y-8">
-      {/* ENTÊTE */}
-      <div className="flex items-end justify-between gap-4">
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-purple-400 mb-2">
-            Support
-          </p>
-          <h1 className="text-3xl sm:text-4xl font-black tracking-tighter text-white">
-            FAQ
-          </h1>
-        </div>
-
-        <button
-          onClick={startCreate}
-          className="inline-flex items-center gap-2 rounded-xl bg-purple-600 hover:bg-purple-500 px-4 py-2.5 text-xs font-bold text-white transition-all shrink-0"
-        >
-          <Plus size={15} />
-          <span>Nouvel article</span>
-        </button>
-      </div>
+      <PageHeader
+        eyebrow="Support"
+        title="FAQ"
+        action={
+          <button
+            onClick={startCreate}
+            className="inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-lg bg-purple-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-purple-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400"
+          >
+            <Plus size={16} />
+            <span>Nouvel article</span>
+          </button>
+        }
+      />
 
       {/* RECHERCHE */}
       <div className="relative">
-        <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
+        <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
         <input
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Rechercher une question ou réponse..."
-          className="w-full rounded-xl border border-zinc-800/80 bg-zinc-950/60 pl-9 pr-4 py-2.5 text-xs text-white placeholder-zinc-500 outline-none focus:border-purple-500/50 backdrop-blur-xl transition-colors"
+          aria-label="Rechercher dans la FAQ"
+          className="w-full rounded-lg border border-white/10 bg-white/[0.02] py-3 pl-10 pr-4 text-sm text-white placeholder-zinc-500 outline-none transition-colors focus:border-purple-500/60"
         />
       </div>
 
       {/* FILTRES PAR CATÉGORIE */}
-      <div className="flex items-center gap-1.5 flex-wrap">
-        <Filter size={13} className="text-zinc-600 mr-1" />
+      <div role="group" aria-label="Filtrer par catégorie" className="flex flex-wrap items-center gap-2">
         {categories.map((cat) => (
           <button
             key={cat}
             onClick={() => setFilter(cat)}
-            className={`rounded-full px-4 py-2 text-[11px] font-bold uppercase tracking-widest border transition-all ${
+            aria-pressed={filter === cat}
+            className={`cursor-pointer rounded-full border px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400 ${
               filter === cat
-                ? "border-purple-500 bg-purple-500/15 text-purple-300"
-                : "border-zinc-800 bg-zinc-950/60 text-zinc-500 hover:text-zinc-300"
+                ? "border-purple-500/50 bg-purple-500/15 text-purple-200"
+                : "border-white/10 text-zinc-400 hover:border-white/20 hover:text-white"
             }`}
           >
             {cat === "tous" ? "Tous" : faqCategoryLabel(cat)}{" "}
-            {counts[cat] !== undefined && <span className="opacity-60">({counts[cat] || 0})</span>}
+            {counts[cat] !== undefined && <span className="tabular-nums opacity-70">{counts[cat] || 0}</span>}
           </button>
         ))}
       </div>
 
       {/* FORMULAIRE CRÉATION / ÉDITION */}
       {(creating || editingId) && (
-        <div className="rounded-2xl border border-purple-500/30 bg-zinc-950/80 p-5 sm:p-6 backdrop-blur-xl space-y-5">
-          <div className="flex items-center justify-between border-b border-zinc-800/80 pb-3">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-purple-400">
+        <div className="space-y-5 rounded-2xl border border-purple-500/30 bg-white/[0.02] p-5 sm:p-6">
+          <div className="flex items-center justify-between border-b border-white/10 pb-3">
+            <p className="text-base font-semibold text-white">
               {editingId ? "Modifier l'article" : "Créer un nouvel article"}
             </p>
-            <button 
-              onClick={resetForm} 
-              className="p-1 text-zinc-500 hover:text-white transition-colors"
+            <button
+              onClick={resetForm}
+              aria-label="Fermer le formulaire"
+              className="cursor-pointer rounded p-2 text-zinc-400 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400"
             >
               <X size={16} />
             </button>
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+            <p id="faq-category-label" className="text-sm font-medium text-zinc-200">
               Catégorie
-            </label>
-            <div className="flex flex-wrap gap-2">
+            </p>
+            <div role="group" aria-labelledby="faq-category-label" className="flex flex-wrap gap-2">
               {categories.filter((c) => c !== "tous").map((cat) => (
                 <button
                   key={cat}
                   type="button"
                   onClick={() => setForm((f) => ({ ...f, category: cat }))}
-                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold border transition-all ${
+                  aria-pressed={form.category === cat}
+                  className={`cursor-pointer rounded-lg border px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400 ${
                     form.category === cat
-                      ? "border-purple-500 bg-purple-500/20 text-purple-300"
-                      : "border-zinc-800 bg-zinc-900/40 text-zinc-400 hover:text-white"
+                      ? "border-purple-500/60 bg-purple-500/20 text-purple-100"
+                      : "border-white/10 text-zinc-400 hover:border-white/20 hover:text-white"
                   }`}
                 >
                   {faqCategoryLabel(cat)}
                 </button>
               ))}
             </div>
-            <p className="text-[11px] text-zinc-500">{faqCategoryDescription(form.category)}</p>
+            <p className="text-sm text-zinc-400">{faqCategoryDescription(form.category)}</p>
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+            <label htmlFor="faq-question" className="text-sm font-medium text-zinc-200">
               Question
             </label>
             <input
+              id="faq-question"
               type="text"
               value={form.question}
               onChange={(e) => setForm((f) => ({ ...f, question: e.target.value }))}
               placeholder="Saisissez la question..."
-              className="w-full rounded-xl border border-zinc-800/80 bg-zinc-900/40 px-4 py-2.5 text-xs text-white placeholder-zinc-500 outline-none focus:border-purple-500/50 transition-colors"
+              className="w-full rounded-lg border border-white/10 bg-white/[0.02] px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none transition-colors focus:border-purple-500/60"
             />
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+            <label htmlFor="faq-answer" className="text-sm font-medium text-zinc-200">
               Réponse
             </label>
             <textarea
+              id="faq-answer"
               value={form.answer}
               onChange={(e) => setForm((f) => ({ ...f, answer: e.target.value }))}
               placeholder="Saisissez la réponse..."
               rows={4}
-              className="w-full rounded-xl border border-zinc-800/80 bg-zinc-900/40 px-4 py-2.5 text-xs text-white placeholder-zinc-500 outline-none focus:border-purple-500/50 transition-colors resize-none"
+              className="w-full resize-none rounded-lg border border-white/10 bg-white/[0.02] px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none transition-colors focus:border-purple-500/60"
             />
           </div>
 
           <button
             onClick={handleSave}
             disabled={saving || !form.question.trim() || !form.answer.trim()}
-            className="w-full flex items-center justify-center gap-2 rounded-xl bg-purple-600 hover:bg-purple-500 px-4 py-2.5 text-xs font-bold text-white transition-all disabled:opacity-50"
+            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-purple-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-purple-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400 disabled:opacity-50"
           >
             {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
             <span>Enregistrer l'article</span>
@@ -323,53 +322,53 @@ export default function AdminFaqPage() {
 
       {/* LISTE DES ARTICLES */}
       {loading ? (
-        <div className="py-16 text-center border border-zinc-800/80 bg-zinc-950/60 rounded-2xl backdrop-blur-xl">
-          <Loader2 className="w-5 h-5 text-purple-500 animate-spin mx-auto mb-2" />
-          <p className="text-zinc-500 text-xs">Chargement des articles FAQ...</p>
+        <div className="rounded-2xl border border-white/10 bg-white/[0.02] py-16 text-center" aria-busy="true">
+          <Loader2 className="w-5 h-5 text-purple-400 animate-spin mx-auto mb-2" />
+          <p className="text-sm text-zinc-400">Chargement des articles FAQ...</p>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-16 rounded-[24px] border border-zinc-800/80 bg-zinc-950/40">
-          <HelpCircle size={28} className="mx-auto text-zinc-700 mb-3" />
-          <p className="text-sm text-zinc-500">Aucun article dans cette catégorie.</p>
+        <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.02] py-16 text-center">
+          <HelpCircle size={28} className="mx-auto mb-3 text-zinc-600" />
+          <p className="text-sm text-zinc-300">Aucun article dans cette catégorie.</p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <ul className="space-y-3">
           {filtered.map((article) => (
-            <div
+            <li
               key={article._id}
-              className="flex items-start justify-between gap-4 rounded-2xl border border-zinc-800/80 bg-zinc-950/60 p-5 hover:border-purple-500/40 transition-all backdrop-blur-xl"
+              className="flex items-start justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.02] p-5 transition-colors hover:border-white/20"
             >
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <span className="text-[10px] text-purple-400/80 font-mono uppercase bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded-md">
-                    {faqCategoryLabel(article.category)}
-                  </span>
-                </div>
-                <p className="text-sm font-bold text-white mb-1">{article.question}</p>
-                <p className="text-[11px] text-zinc-400 line-clamp-2 leading-relaxed">
+                <span className="mb-2 inline-block rounded-md border border-purple-500/30 bg-purple-500/10 px-2 py-0.5 text-xs font-medium text-purple-200">
+                  {faqCategoryLabel(article.category)}
+                </span>
+                <p className="mb-1 text-base font-semibold text-white">{article.question}</p>
+                <p className="line-clamp-2 text-sm leading-relaxed text-zinc-400">
                   {article.answer}
                 </p>
               </div>
 
-              <div className="flex items-center gap-1.5 shrink-0 pt-0.5">
+              <div className="flex shrink-0 items-center gap-2 pt-0.5">
                 <button
                   onClick={() => startEdit(article)}
-                  className="p-2 rounded-xl border border-zinc-800 bg-zinc-900/50 text-zinc-400 hover:text-white hover:border-zinc-700 transition-colors"
+                  className="cursor-pointer rounded-lg border border-white/10 p-2.5 text-zinc-400 transition-colors hover:border-white/25 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400"
                   title="Modifier"
+                  aria-label={`Modifier : ${article.question}`}
                 >
                   <Edit2 size={14} />
                 </button>
                 <button
                   onClick={() => handleDelete(article._id)}
-                  className="p-2 rounded-xl border border-red-500/20 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors"
+                  className="cursor-pointer rounded-lg border border-red-500/25 bg-red-500/10 p-2.5 text-red-300 transition-colors hover:bg-red-500/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-300"
                   title="Supprimer"
+                  aria-label={`Supprimer : ${article.question}`}
                 >
                   <Trash2 size={14} />
                 </button>
               </div>
-            </div>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
     </div>
   );

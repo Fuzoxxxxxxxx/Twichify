@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import {
   Lightbulb,
-  Filter,
   AlertTriangle,
   Loader2,
   Search,
@@ -24,6 +23,7 @@ import {
   MessageSquare,
 } from "lucide-react";
 import IdeaStatusBadge from "@/components/IdeaStatusBadge";
+import { PageHeader } from "@/components/dashboard/DashboardUI";
 import ReplyTemplatePicker from "@/components/ReplyTemplatePicker";
 import { useDialog } from "@/components/DialogProvider";
 import { IDEA_TEMPLATES, type ReplyTemplate } from "@/lib/reply-templates";
@@ -112,8 +112,10 @@ const describeEvent = (e: HistoryEvent) =>
     ? "Réponse publiée ou modifiée"
     : "Réponse retirée";
 
+const FOCUS = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400";
+
 const inputCls =
-  "w-full rounded-xl border border-zinc-800/80 bg-zinc-900/40 px-4 py-2.5 text-xs text-white placeholder-zinc-500 outline-none focus:border-purple-500/50 transition-colors";
+  "w-full rounded-lg border border-white/10 bg-white/[0.02] px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none transition-colors focus:border-purple-500/60";
 
 /* --------------------------------- Carte --------------------------------- */
 
@@ -261,36 +263,36 @@ function IdeaCard({
   const overLimit = responseDraft.trim().length > IDEA_RESPONSE_MAX;
 
   return (
-    <div className="rounded-2xl border border-zinc-800/80 bg-zinc-950/60 p-5 hover:border-purple-500/40 transition-all backdrop-blur-xl">
+    <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 transition-colors hover:border-white/20">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-            <span className="text-[10px] text-purple-400/80 font-mono uppercase bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded-md">
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <span className="rounded-md border border-purple-500/30 bg-purple-500/10 px-2 py-0.5 text-xs font-medium text-purple-200">
               {CATEGORY_LABELS[idea.category] || idea.category}
             </span>
             <IdeaStatusBadge status={idea.status} />
             {!hasReply(idea) && (
-              <span className="text-[10px] font-bold uppercase tracking-wide text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md">
+              <span className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-200">
                 Sans réponse
               </span>
             )}
             {notes.length > 0 && (
-              <span className="flex items-center gap-1 text-[10px] font-mono text-zinc-500" title="Notes internes">
-                <StickyNote size={10} />
+              <span className="flex items-center gap-1 text-xs text-zinc-400" title="Notes internes">
+                <StickyNote size={12} />
                 {notes.length}
               </span>
             )}
-            <span className="flex items-center gap-1 text-[10px] font-mono text-zinc-500">
-              <ArrowUp size={10} className="text-emerald-500" />
+            <span className="flex items-center gap-1 text-xs tabular-nums text-zinc-400" title="Votes pour et contre">
+              <ArrowUp size={12} className="text-emerald-400" />
               {idea.upvotes.length}
-              <ArrowDown size={10} className="text-red-500 ml-1" />
+              <ArrowDown size={12} className="ml-1 text-red-400" />
               {idea.downvotes.length}
             </span>
           </div>
-          <p className="text-sm font-bold text-white mb-1">{idea.title}</p>
-          <p className={`text-[11px] text-zinc-400 leading-relaxed ${editing ? "" : "line-clamp-2"}`}>{idea.description}</p>
-          <p className="text-[10px] text-zinc-600 mt-2">
-            Par <span className="text-zinc-400 font-semibold">{idea.authorName}</span> ·{" "}
+          <p className="mb-1 text-base font-semibold text-white">{idea.title}</p>
+          <p className={`text-sm leading-relaxed text-zinc-400 ${editing ? "" : "line-clamp-2"}`}>{idea.description}</p>
+          <p className="mt-2 text-xs text-zinc-400">
+            Par <span className="font-semibold text-zinc-300">{idea.authorName}</span> ·{" "}
             {new Date(idea.createdAt).toLocaleDateString("fr-FR")}
           </p>
         </div>
@@ -299,16 +301,18 @@ function IdeaCard({
           {editing ? (
             <button
               onClick={cancel}
-              className="p-2 rounded-xl border border-zinc-800 bg-zinc-900/50 text-zinc-400 hover:text-white hover:border-zinc-700 transition-colors"
+              className={`cursor-pointer rounded-lg border border-white/10 p-2.5 text-zinc-400 transition-colors hover:border-white/25 hover:text-white ${FOCUS}`}
               title="Fermer"
+              aria-label="Fermer"
             >
               <X size={14} />
             </button>
           ) : (
             <button
               onClick={onEdit}
-              className="p-2 rounded-xl border border-zinc-800 bg-zinc-900/50 text-zinc-400 hover:text-white hover:border-zinc-700 transition-colors"
+              className={`cursor-pointer rounded-lg border border-white/10 p-2.5 text-zinc-400 transition-colors hover:border-white/25 hover:text-white ${FOCUS}`}
               title="Gérer"
+              aria-label={`Gérer l'idée : ${idea.title}`}
             >
               <Edit2 size={14} />
             </button>
@@ -318,35 +322,36 @@ function IdeaCard({
 
       {/* Réponse officielle actuelle (hors édition) */}
       {!editing && hasReply(idea) && (
-        <div className="mt-3 rounded-xl border border-purple-500/20 bg-purple-500/5 p-3">
-          <p className="mb-1 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-purple-400">
-            <MessageSquare size={11} />
+        <div className="mt-3 rounded-xl border border-purple-500/30 bg-purple-500/[0.06] p-3.5">
+          <p className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-purple-200">
+            <MessageSquare size={12} />
             Réponse officielle
-            <span className="font-normal normal-case tracking-normal text-zinc-500">
+            <span className="font-normal text-zinc-400">
               · {idea.officialResponse?.by?.name ? `${idea.officialResponse.by.name}, ` : ""}
               {fmt(idea.officialResponse?.updatedAt)}
             </span>
           </p>
-          <p className="line-clamp-3 whitespace-pre-line text-xs leading-relaxed text-zinc-300">{currentResponse}</p>
+          <p className="line-clamp-3 whitespace-pre-line text-sm leading-relaxed text-zinc-300">{currentResponse}</p>
         </div>
       )}
 
       {/* PANNEAU D'ÉDITION */}
       {editing && (
-        <div className="mt-4 pt-4 border-t border-zinc-800/80 space-y-4">
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Statut</label>
-            <div className="flex flex-wrap gap-1.5">
+        <div className="mt-4 space-y-4 border-t border-white/10 pt-4">
+          <div className="space-y-2">
+            <p id={`status-label-${idea._id}`} className="text-sm font-medium text-zinc-200">Statut</p>
+            <div role="group" aria-labelledby={`status-label-${idea._id}`} className="flex flex-wrap gap-2">
               {statusFilters
                 .filter((s) => s.id !== "tous")
                 .map((s) => (
                   <button
                     key={s.id}
                     onClick={() => setStatusDraft(s.id)}
-                    className={`rounded-lg px-3 py-1.5 text-[11px] font-bold border transition-all ${
+                    aria-pressed={statusDraft === s.id}
+                    className={`cursor-pointer rounded-lg border px-3.5 py-2 text-sm font-medium transition-colors ${FOCUS} ${
                       statusDraft === s.id
-                        ? "border-purple-500 bg-purple-500/20 text-purple-300"
-                        : "border-zinc-800 bg-zinc-950/60 text-zinc-500 hover:text-zinc-300"
+                        ? "border-purple-500/60 bg-purple-500/20 text-purple-100"
+                        : "border-white/10 text-zinc-400 hover:border-white/20 hover:text-white"
                     }`}
                   >
                     {s.label}
@@ -355,12 +360,13 @@ function IdeaCard({
             </div>
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
-              Réponse officielle <span className="font-normal normal-case tracking-normal text-zinc-600">(publique)</span>
+          <div className="space-y-2">
+            <label htmlFor={`response-${idea._id}`} className="text-sm font-medium text-zinc-200">
+              Réponse officielle <span className="font-normal text-zinc-400">(publique)</span>
             </label>
             <ReplyTemplatePicker templates={IDEA_TEMPLATES} onPick={applyTemplate} />
             <textarea
+              id={`response-${idea._id}`}
               value={responseDraft}
               onChange={(e) => setResponseDraft(e.target.value)}
               onKeyDown={(e) => {
@@ -373,17 +379,17 @@ function IdeaCard({
               rows={4}
               className={`${inputCls} resize-y`}
             />
-            <div className="flex items-center justify-between text-[10px] text-zinc-600">
+            <div className="flex items-center justify-between text-xs text-zinc-400">
               <span>Ctrl + Entrée pour enregistrer</span>
-              <span className={overLimit ? "font-bold text-rose-400" : ""}>
+              <span className={overLimit ? "font-semibold text-rose-400" : "tabular-nums"}>
                 {responseDraft.trim().length}/{IDEA_RESPONSE_MAX}
               </span>
             </div>
 
             {responseDraft.trim() && (
-              <div className="rounded-xl border border-purple-500/25 bg-purple-500/5 p-3">
-                <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-purple-400">Aperçu public</p>
-                <p className="whitespace-pre-line text-xs leading-relaxed text-zinc-200">{responseDraft.trim()}</p>
+              <div className="rounded-xl border border-purple-500/30 bg-purple-500/[0.06] p-3.5">
+                <p className="mb-1 text-xs font-semibold text-purple-200">Aperçu public</p>
+                <p className="whitespace-pre-line text-sm leading-relaxed text-zinc-200">{responseDraft.trim()}</p>
               </div>
             )}
           </div>
@@ -392,14 +398,14 @@ function IdeaCard({
             <button
               onClick={save}
               disabled={!dirty || saving || overLimit}
-              className="flex items-center justify-center gap-2 rounded-xl bg-purple-600 hover:bg-purple-500 px-4 py-2.5 text-xs font-bold text-white transition-all disabled:opacity-50"
+              className={`flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-purple-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-purple-500 disabled:opacity-50 ${FOCUS}`}
             >
               {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
               Enregistrer
             </button>
             <button
               onClick={cancel}
-              className="rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-2.5 text-xs font-bold text-zinc-400 transition-colors hover:text-white"
+              className={`cursor-pointer rounded-lg border border-white/15 px-4 py-2.5 text-sm font-medium text-zinc-300 transition-colors hover:border-white/30 hover:text-white ${FOCUS}`}
             >
               Annuler
             </button>
@@ -407,7 +413,7 @@ function IdeaCard({
               <button
                 onClick={removeResponse}
                 disabled={saving}
-                className="ml-auto inline-flex items-center gap-1.5 rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2.5 text-xs font-bold text-red-400 transition-colors hover:bg-red-500/20 disabled:opacity-50"
+                className="ml-auto inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-red-500/25 bg-red-500/10 px-3.5 py-2.5 text-sm font-medium text-red-300 transition-colors hover:bg-red-500/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-300 disabled:opacity-50"
               >
                 <Trash2 size={13} />
                 Retirer la réponse
@@ -416,34 +422,33 @@ function IdeaCard({
           </div>
 
           {/* Notes internes */}
-          <div className="space-y-2 border-t border-zinc-800/80 pt-4">
-            <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-500">
-              <Lock size={11} />
+          <div className="space-y-2 border-t border-white/10 pt-4">
+            <p className="flex items-center gap-1.5 text-sm font-medium text-zinc-200">
+              <Lock size={13} />
               Notes internes
-              <span className="font-normal normal-case tracking-normal text-zinc-600">
-                · visibles du staff uniquement
-              </span>
+              <span className="font-normal text-zinc-400">visibles du staff uniquement</span>
             </p>
 
             {notes.length > 0 && (
-              <ul className="space-y-1.5">
+              <ul className="space-y-2">
                 {notes.map((n) => (
                   <li
                     key={n._id}
-                    className="flex items-start justify-between gap-3 rounded-lg border border-zinc-800/80 bg-zinc-900/40 px-3 py-2"
+                    className="flex items-start justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2.5"
                   >
                     <div className="min-w-0">
-                      <p className="whitespace-pre-line text-xs leading-relaxed text-zinc-300">{n.text}</p>
-                      <p className="mt-0.5 font-mono text-[10px] text-zinc-600">
+                      <p className="whitespace-pre-line text-sm leading-relaxed text-zinc-300">{n.text}</p>
+                      <p className="mt-1 text-xs text-zinc-400">
                         {n.by?.name ?? "Staff"} · {fmt(n.createdAt)}
                       </p>
                     </div>
                     <button
                       onClick={() => deleteNote(n._id)}
-                      className="shrink-0 p-1 text-zinc-600 transition-colors hover:text-red-400"
+                      className="shrink-0 rounded p-2 text-zinc-400 transition-colors hover:text-red-400"
                       title="Supprimer la note"
+                      aria-label="Supprimer la note"
                     >
-                      <Trash2 size={12} />
+                      <Trash2 size={14} />
                     </button>
                   </li>
                 ))}
@@ -463,13 +468,15 @@ function IdeaCard({
                   }
                 }}
                 placeholder="Ajouter une note pour l'équipe (dépendance, décision, suite à donner)..."
+                aria-label="Ajouter une note interne"
                 className={inputCls}
               />
               <button
                 onClick={addNote}
                 disabled={!noteDraft.trim() || noteBusy}
-                className="shrink-0 rounded-xl border border-zinc-800 bg-zinc-900/50 px-3 text-zinc-300 transition-colors hover:text-white disabled:opacity-40"
+                className={`shrink-0 cursor-pointer rounded-lg border border-white/15 px-3.5 text-zinc-300 transition-colors hover:border-white/30 hover:text-white disabled:opacity-40 ${FOCUS}`}
                 title="Ajouter la note"
+                aria-label="Ajouter la note"
               >
                 {noteBusy ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
               </button>
@@ -478,22 +485,22 @@ function IdeaCard({
 
           {/* Historique */}
           {history.length > 0 && (
-            <div className="border-t border-zinc-800/80 pt-3">
+            <div className="border-t border-white/10 pt-3">
               <button
                 onClick={() => setShowHistory((v) => !v)}
                 aria-expanded={showHistory}
-                className="inline-flex items-center gap-1.5 text-[11px] font-bold text-zinc-500 transition-colors hover:text-purple-400"
+                className={`inline-flex cursor-pointer items-center gap-1.5 rounded text-sm font-medium text-zinc-400 transition-colors hover:text-purple-300 ${FOCUS}`}
               >
-                <History size={12} />
+                <History size={14} />
                 {showHistory ? "Masquer" : "Voir"} l&apos;historique ({history.length})
               </button>
               {showHistory && (
-                <ol className="mt-2 space-y-1.5 border-l border-zinc-800 pl-4">
+                <ol className="mt-2 space-y-2 border-l border-white/10 pl-4">
                   {history.map((e, i) => (
                     <li key={i} className="relative">
-                      <span className="absolute -left-[21px] top-1.5 h-2 w-2 rounded-full bg-zinc-600 ring-4 ring-zinc-950" />
-                      <p className="text-xs text-zinc-300">{describeEvent(e)}</p>
-                      <p className="font-mono text-[10px] text-zinc-600">
+                      <span className="absolute -left-[21px] top-1.5 h-2 w-2 rounded-full bg-zinc-600 ring-4 ring-black" />
+                      <p className="text-sm text-zinc-300">{describeEvent(e)}</p>
+                      <p className="text-xs text-zinc-400">
                         {e.by?.name ?? "Staff"} · {fmt(e.at)}
                       </p>
                     </li>
@@ -602,10 +609,10 @@ export default function AdminIdeasPage() {
 
   if (denied) {
     return (
-      <div className="max-w-md mx-auto text-center rounded-2xl border border-red-500/20 bg-zinc-950/80 p-8 backdrop-blur-xl mt-10">
+      <div role="alert" className="mx-auto mt-10 max-w-md rounded-2xl border border-red-500/25 bg-white/[0.02] p-8 text-center">
         <AlertTriangle className="mx-auto text-red-400 mb-3" size={32} />
-        <h2 className="text-lg font-bold mb-2">Accès Refusé</h2>
-        <p className="text-zinc-400 text-xs">
+        <h2 className="mb-2 text-lg font-bold">Accès refusé</h2>
+        <p className="text-sm text-zinc-400">
           Ton rôle ne dispose pas de la permission de gestion de la boîte à idées.
         </p>
       </div>
@@ -614,74 +621,74 @@ export default function AdminIdeasPage() {
 
   if (error) {
     return (
-      <div className="max-w-md mx-auto text-center rounded-2xl border border-red-500/20 bg-zinc-950/80 p-8 backdrop-blur-xl mt-10">
+      <div role="alert" className="mx-auto mt-10 max-w-md rounded-2xl border border-red-500/25 bg-white/[0.02] p-8 text-center">
         <AlertTriangle className="mx-auto text-red-400 mb-3" size={32} />
-        <h2 className="text-lg font-bold mb-2">Chargement impossible</h2>
-        <p className="text-zinc-400 text-xs">Impossible de récupérer les idées. Réessaie dans un instant.</p>
+        <h2 className="mb-2 text-lg font-bold">Chargement impossible</h2>
+        <p className="text-sm text-zinc-400">Impossible de récupérer les idées. Réessaie dans un instant.</p>
       </div>
     );
   }
 
   const pill = (active: boolean, accent: "purple" | "cyan" = "purple") =>
-    `rounded-full px-4 py-2 text-[11px] font-bold uppercase tracking-widest border transition-all ${
+    `cursor-pointer rounded-full border px-4 py-2 text-sm font-medium transition-colors ${FOCUS} ${
       active
         ? accent === "purple"
-          ? "border-purple-500 bg-purple-500/15 text-purple-300"
-          : "border-cyan-500 bg-cyan-500/15 text-cyan-300"
-        : "border-zinc-800 bg-zinc-950/60 text-zinc-500 hover:text-zinc-300"
+          ? "border-purple-500/50 bg-purple-500/15 text-purple-200"
+          : "border-cyan-500/50 bg-cyan-500/15 text-cyan-200"
+        : "border-white/10 text-zinc-400 hover:border-white/20 hover:text-white"
     }`;
 
   const sortBtn = (id: Sort, label: string, Icon: typeof Clock) => (
     <button
       onClick={() => setSort(id)}
-      className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-widest transition-all ${
-        sort === id ? "bg-purple-500/20 text-purple-300" : "text-zinc-500 hover:text-zinc-300"
+      aria-pressed={sort === id}
+      className={`flex cursor-pointer items-center gap-1.5 rounded-md px-3.5 py-2 text-sm font-medium transition-colors ${FOCUS} ${
+        sort === id ? "bg-white/[0.08] text-white" : "text-zinc-400 hover:text-white"
       }`}
     >
-      <Icon size={12} />
+      <Icon size={14} />
       {label}
     </button>
   );
 
   return (
     <div className="space-y-8">
-      {/* ENTÊTE */}
-      <div className="flex items-end justify-between gap-4 flex-wrap">
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-purple-400 mb-2">Communauté</p>
-          <h1 className="text-3xl sm:text-4xl font-black tracking-tighter text-white">Idées</h1>
-        </div>
-
-        <Link
-          href="/ideas"
-          className="inline-flex items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-2.5 text-xs font-bold text-zinc-300 hover:text-white hover:border-purple-500/40 transition-all shrink-0"
-        >
-          <ExternalLink size={13} />
-          Voir la page publique
-        </Link>
-      </div>
+      <PageHeader
+        eyebrow="Communauté"
+        title="Idées"
+        action={
+          <Link
+            href="/ideas"
+            className={`inline-flex shrink-0 items-center gap-2 rounded-lg border border-white/15 px-4 py-3 text-sm font-semibold text-zinc-200 transition-colors hover:border-white/30 hover:text-white ${FOCUS}`}
+          >
+            <ExternalLink size={14} />
+            Voir la page publique
+          </Link>
+        }
+      />
 
       {/* FILE DE TRAITEMENT */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {QUEUES.map((q) => (
           <button
             key={q.id}
             onClick={() => setQueue(queue === q.id ? "all" : q.id)}
             title={q.hint}
-            className={`rounded-2xl border p-4 text-left transition-all backdrop-blur-xl ${
+            aria-pressed={queue === q.id}
+            className={`cursor-pointer rounded-2xl border p-4 text-left transition-colors ${FOCUS} ${
               queue === q.id
                 ? "border-purple-500/50 bg-purple-500/10"
-                : "border-zinc-800/80 bg-zinc-950/60 hover:border-zinc-700"
+                : "border-white/10 bg-white/[0.02] hover:border-white/20"
             }`}
           >
             <p
-              className={`font-mono text-2xl font-black ${
-                q.id === "todo" && queueCounts.todo > 0 ? "text-amber-400" : "text-white"
+              className={`font-display text-3xl font-extrabold tabular-nums ${
+                q.id === "todo" && queueCounts.todo > 0 ? "text-amber-300" : "text-white"
               }`}
             >
               {loading ? "–" : queueCounts[q.id]}
             </p>
-            <p className="mt-0.5 text-[11px] text-zinc-500">{q.label}</p>
+            <p className="mt-1 text-sm text-zinc-400">{q.label}</p>
           </button>
         ))}
       </div>
@@ -689,17 +696,18 @@ export default function AdminIdeasPage() {
       {/* RECHERCHE + TRI */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Rechercher par titre, description ou auteur..."
-            className="w-full rounded-xl border border-zinc-800/80 bg-zinc-950/60 pl-9 pr-4 py-2.5 text-xs text-white placeholder-zinc-500 outline-none focus:border-purple-500/50 backdrop-blur-xl transition-colors"
+            aria-label="Rechercher une idée"
+            className="w-full rounded-lg border border-white/10 bg-white/[0.02] py-3 pl-10 pr-4 text-sm text-white placeholder-zinc-500 outline-none transition-colors focus:border-purple-500/60"
           />
         </div>
 
-        <div className="flex items-center rounded-xl border border-zinc-800/80 bg-zinc-950/60 p-1 shrink-0">
+        <div role="group" aria-label="Trier les idées" className="flex shrink-0 items-center rounded-lg border border-white/10 p-1">
           {sortBtn("recent", "Récentes", Clock)}
           {sortBtn("oldest", "Anciennes", History)}
           {sortBtn("popular", "Populaires", Flame)}
@@ -707,24 +715,20 @@ export default function AdminIdeasPage() {
       </div>
 
       {/* FILTRES STATUT */}
-      <div className="flex items-center gap-1.5 flex-wrap">
-        <Filter size={13} className="text-zinc-600 mr-1" />
+      <div role="group" aria-label="Filtrer par statut" className="flex flex-wrap items-center gap-2">
         {statusFilters.map(({ id, label }) => (
-          <button key={id} onClick={() => setFilter(id)} className={pill(filter === id)}>
-            {label} {counts[id] !== undefined && <span className="opacity-60">({counts[id] || 0})</span>}
+          <button key={id} onClick={() => setFilter(id)} aria-pressed={filter === id} className={pill(filter === id)}>
+            {label} {counts[id] !== undefined && <span className="tabular-nums opacity-70">{counts[id] || 0}</span>}
           </button>
         ))}
       </div>
 
       {/* FILTRES CATÉGORIE */}
-      <div className="flex items-center gap-1.5 flex-wrap -mt-4">
+      <div role="group" aria-label="Filtrer par catégorie" className="-mt-4 flex flex-wrap items-center gap-2">
         <button
           onClick={() => setCategoryFilter("tous")}
-          className={`rounded-full px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-all ${
-            categoryFilter === "tous"
-              ? "border-cyan-500 bg-cyan-500/15 text-cyan-300"
-              : "border-zinc-800 bg-zinc-950/60 text-zinc-500 hover:text-zinc-300"
-          }`}
+          aria-pressed={categoryFilter === "tous"}
+          className={pill(categoryFilter === "tous", "cyan")}
         >
           Toutes catégories
         </button>
@@ -732,11 +736,8 @@ export default function AdminIdeasPage() {
           <button
             key={id}
             onClick={() => setCategoryFilter(id)}
-            className={`rounded-full px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-all ${
-              categoryFilter === id
-                ? "border-cyan-500 bg-cyan-500/15 text-cyan-300"
-                : "border-zinc-800 bg-zinc-950/60 text-zinc-500 hover:text-zinc-300"
-            }`}
+            aria-pressed={categoryFilter === id}
+            className={pill(categoryFilter === id, "cyan")}
           >
             {label}
           </button>
@@ -745,14 +746,14 @@ export default function AdminIdeasPage() {
 
       {/* LISTE DES IDÉES */}
       {loading ? (
-        <div className="py-16 text-center border border-zinc-800/80 bg-zinc-950/60 rounded-2xl backdrop-blur-xl">
-          <Loader2 className="w-5 h-5 text-purple-500 animate-spin mx-auto mb-2" />
-          <p className="text-zinc-500 text-xs">Chargement des idées...</p>
+        <div className="rounded-2xl border border-white/10 bg-white/[0.02] py-16 text-center" aria-busy="true">
+          <Loader2 className="w-5 h-5 text-purple-400 animate-spin mx-auto mb-2" />
+          <p className="text-sm text-zinc-400">Chargement des idées...</p>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-16 rounded-[24px] border border-zinc-800/80 bg-zinc-950/40">
-          <Lightbulb size={28} className="mx-auto text-zinc-700 mb-3" />
-          <p className="text-sm text-zinc-500">
+        <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.02] py-16 text-center">
+          <Lightbulb size={28} className="mx-auto mb-3 text-zinc-600" />
+          <p className="text-sm text-zinc-300">
             {queue === "todo" ? "Rien à traiter : toutes les idées à l'étude ont une réponse." : "Aucune idée pour ces filtres."}
           </p>
         </div>

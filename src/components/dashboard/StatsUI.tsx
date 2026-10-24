@@ -5,7 +5,7 @@ import { TrendingUp, TrendingDown, Disc3 } from "lucide-react";
 
 /**
  * Composants partagés par les pages de statistiques (cartes de chiffres, panneaux, mini-courbes, pochettes).
- * Même style que la page Twitch : halo coloré, apparition douce, effet au survol.
+ * Même style que la page Twitch : cartes sobres, bordure fine, pas de halo ni d'ombre lourde.
  */
 
 export const TONES = {
@@ -16,14 +16,6 @@ export const TONES = {
   rose: "border-rose-500/20 bg-rose-500/5",
 } as const;
 export type Tone = keyof typeof TONES;
-
-const GLOWS: Record<Tone, string> = {
-  purple: "bg-purple-500/25",
-  emerald: "bg-emerald-500/25",
-  amber: "bg-amber-500/25",
-  sky: "bg-sky-500/25",
-  rose: "bg-rose-500/25",
-};
 
 export const SPARK_COLORS: Record<Tone, string> = {
   purple: "#a855f7",
@@ -91,27 +83,22 @@ export function KpiCard({
   spark?: number[];
 }) {
   return (
-    <div
-      className={`twichify-rise group relative overflow-hidden rounded-[24px] border ${TONES[tone]} p-5 shadow-xl shadow-black/20 transition duration-300 hover:-translate-y-0.5 hover:shadow-2xl`}
-    >
-      <div className={`pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full opacity-60 blur-2xl transition-opacity duration-300 group-hover:opacity-100 ${GLOWS[tone]}`} />
-      <div className="relative">
-        <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-950/70">{icon}</div>
-        <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-zinc-500">{label}</p>
-        <p className="mt-2 text-2xl font-black tracking-tighter text-white">{value}</p>
-        {sub && <div className="mt-1 text-[11px] leading-snug text-zinc-500">{sub}</div>}
-        {spark && <Sparkline values={spark} color={SPARK_COLORS[tone]} />}
-      </div>
+    <div className="twichify-rise rounded-2xl border border-white/10 bg-white/[0.02] p-5">
+      <div className={`mb-4 flex h-9 w-9 items-center justify-center rounded-lg border ${TONES[tone]}`}>{icon}</div>
+      <p className="text-sm text-zinc-400">{label}</p>
+      <p className="mt-1 text-2xl font-bold tabular-nums tracking-tight text-white">{value}</p>
+      {sub && <div className="mt-1 text-xs leading-snug text-zinc-400">{sub}</div>}
+      {spark && <Sparkline values={spark} color={SPARK_COLORS[tone]} />}
     </div>
   );
 }
 
 export function Panel({ title, icon, right, children }: { title: string; icon: React.ReactNode; right?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="twichify-rise rounded-[28px] border border-zinc-800/80 bg-gradient-to-b from-zinc-900/50 to-zinc-950/60 p-6 shadow-2xl shadow-black/30">
+    <div className="twichify-rise rounded-2xl border border-white/10 bg-white/[0.02] p-6">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <p className="flex items-center gap-2.5 text-xs font-bold text-white">
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-950/70">{icon}</span>
+        <p className="flex items-center gap-2.5 text-base font-semibold text-white">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04]">{icon}</span>
           {title}
         </p>
         {right}
@@ -123,10 +110,10 @@ export function Panel({ title, icon, right, children }: { title: string; icon: R
 
 export function EmptyState({ icon, text, hint }: { icon: React.ReactNode; text: string; hint?: string }) {
   return (
-    <div className="rounded-2xl border border-dashed border-zinc-800 bg-zinc-950/40 p-10 text-center">
-      <div className="mx-auto mb-3 flex w-fit text-zinc-700">{icon}</div>
-      <p className="text-sm text-zinc-500">{text}</p>
-      {hint && <p className="mt-1 text-xs text-zinc-600">{hint}</p>}
+    <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.02] p-10 text-center">
+      <div className="mx-auto mb-3 flex w-fit text-zinc-600">{icon}</div>
+      <p className="text-sm text-zinc-300">{text}</p>
+      {hint && <p className="mt-1 text-sm text-zinc-400">{hint}</p>}
     </div>
   );
 }

@@ -98,7 +98,7 @@ export default function DashboardOverview() {
       </div>
 
       <div>
-        <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-zinc-600 mb-4">Sources OBS</p>
+        <h2 className="mb-4 font-display text-lg font-bold tracking-tight text-white">Sources OBS</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <SourceCard
             icon={copied ? <CheckCircle2 size={24} /> : <Music size={24} />}
@@ -130,8 +130,8 @@ export default function DashboardOverview() {
       </div>
 
       <div>
-        <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-zinc-600 mb-4">Mode test</p>
-        <div className="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-950/60 p-5">
+        <h2 className="mb-4 font-display text-lg font-bold tracking-tight text-white">Mode test</h2>
+        <div className="space-y-4 rounded-2xl border border-white/10 bg-white/[0.02] p-5">
           <p className="text-xs leading-relaxed text-zinc-400">
             Ajoute <span className="font-mono text-zinc-200">?test=1</span> à l'URL d'un widget : il joue de fausses données
             (musique en boucle, messages de chat factices) avec tes vrais réglages, sans Spotify ni live. Aucune statistique n'est
@@ -173,9 +173,9 @@ export default function DashboardOverview() {
       </div>
 
       <div>
-        <div className="flex flex-col gap-4 rounded-2xl border border-zinc-800 bg-zinc-950/60 p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-white/[0.02] p-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm font-bold text-white">Sécurité des liens</p>
+            <p className="text-sm font-semibold text-white">Sécurité des liens</p>
             <p className="mt-1 text-xs leading-relaxed text-zinc-400">
               {legacyActive
                 ? "Ton ancien lien (basé sur l'identifiant du compte) fonctionne encore. Régénère les liens pour le désactiver."
@@ -194,7 +194,7 @@ export default function DashboardOverview() {
       </div>
 
       <div>
-        <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-zinc-600 mb-4">Accès rapide</p>
+        <h2 className="mb-4 font-display text-lg font-bold tracking-tight text-white">Accès rapide</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <QuickActionLink
             icon={<Palette className="text-purple-400" />}
@@ -212,7 +212,7 @@ export default function DashboardOverview() {
       </div>
 
       <div>
-        <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-zinc-600 mb-4">Communauté</p>
+        <h2 className="mb-4 font-display text-lg font-bold tracking-tight text-white">Communauté</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <QuickActionLink
             icon={<Lightbulb className="text-amber-400" />}

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { X, Sparkles, Wrench, Bug, ArrowRight, PartyPopper, ChevronDown } from "lucide-react";
+import { X, Sparkles, Wrench, Bug, PartyPopper, ChevronDown } from "lucide-react";
 import { CHANGELOG, LATEST_VERSION, ChangeType, ChangelogEntry, getMajorVersion } from "@/lib/changelog";
 
 const STORAGE_KEY = "twichify_seen_changelog_version";
@@ -12,10 +12,12 @@ const STORAGE_KEY = "twichify_seen_changelog_version";
 // La pop-up « une version » n'affiche que la dernière version.
 const latest = CHANGELOG[0];
 
-const TYPE_META: Record<ChangeType, { label: string; color: string; bar: string; icon: any }> = {
-  new: { label: "Nouveau", color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/30", bar: "border-l-emerald-500", icon: Sparkles },
-  improved: { label: "Amélioré", color: "text-blue-400 bg-blue-500/10 border-blue-500/30", bar: "border-l-blue-500", icon: Wrench },
-  fixed: { label: "Corrigé", color: "text-amber-400 bg-amber-500/10 border-amber-500/30", bar: "border-l-amber-500", icon: Bug },
+const FOCUS = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400";
+
+const TYPE_META: Record<ChangeType, { label: string; color: string; icon: any }> = {
+  new: { label: "Nouveau", color: "text-emerald-300 bg-emerald-500/10 border-emerald-500/30", icon: Sparkles },
+  improved: { label: "Amélioré", color: "text-blue-300 bg-blue-500/10 border-blue-500/30", icon: Wrench },
+  fixed: { label: "Corrigé", color: "text-amber-300 bg-amber-500/10 border-amber-500/30", icon: Bug },
 };
 
 const SUMMARY_LABEL: Record<ChangeType, { singular: string; plural: string }> = {
@@ -32,10 +34,10 @@ function countChanges(entries: ChangelogEntry[]) {
 
 function ChangeBadges({ counts }: { counts: Record<ChangeType, number> }) {
   return (
-    <div className="mt-4 flex flex-wrap gap-1.5">
+    <div className="mt-4 flex flex-wrap gap-2">
       {(Object.keys(counts) as ChangeType[]).map((t) =>
         counts[t] > 0 ? (
-          <span key={t} className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-bold ${TYPE_META[t].color}`}>
+          <span key={t} className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${TYPE_META[t].color}`}>
             {counts[t]} {counts[t] > 1 ? SUMMARY_LABEL[t].plural : SUMMARY_LABEL[t].singular}
           </span>
         ) : null
@@ -53,14 +55,14 @@ function ChangeList({ changes, animate }: { changes: ChangelogEntry["changes"]; 
         return (
           <li
             key={i}
-            style={animate ? { animationDelay: `${Math.min(150 + i * 70, 700)}ms` } : undefined}
-            className={`${animate ? "cl-item" : ""} flex items-start gap-2.5 rounded-xl border border-zinc-800/60 border-l-[3px] ${meta.bar} bg-zinc-900/40 p-3`}
+            style={animate ? { animationDelay: `${Math.min(100 + i * 60, 600)}ms` } : undefined}
+            className={`${animate ? "cl-item" : ""} flex items-start gap-3 rounded-xl border border-white/10 bg-white/[0.02] p-3.5`}
           >
-            <span className={`mt-0.5 flex shrink-0 items-center gap-1 rounded-md border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide ${meta.color}`}>
-              <Icon size={10} />
+            <span className={`mt-0.5 flex w-[92px] shrink-0 items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium ${meta.color}`}>
+              <Icon size={12} aria-hidden="true" />
               {meta.label}
             </span>
-            <p className="text-[13px] leading-relaxed text-zinc-300">{c.text}</p>
+            <p className="text-sm leading-relaxed text-zinc-300">{c.text}</p>
           </li>
         );
       })}
@@ -73,24 +75,30 @@ function VersionGroup({ entry, defaultOpen }: { entry: ChangelogEntry; defaultOp
   const [open, setOpen] = useState(!!defaultOpen);
   const counts = countChanges([entry]);
   return (
-    <div className="overflow-hidden rounded-2xl border border-zinc-800/60 bg-zinc-900/30">
+    <div className="overflow-hidden rounded-xl border border-white/10">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-white/[0.03]"
+        aria-expanded={open}
+        className={`flex w-full cursor-pointer items-center justify-between gap-3 px-4 py-3.5 text-left transition-colors hover:bg-white/[0.03] ${FOCUS}`}
       >
         <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] font-black text-zinc-300">v{entry.version}</span>
-            <p className="truncate text-xs font-bold text-white">{entry.title}</p>
+          <div className="flex items-center gap-2.5">
+            <span className="rounded-full border border-white/10 px-2.5 py-0.5 text-xs font-semibold tabular-nums text-zinc-300">
+              v{entry.version}
+            </span>
+            <p className="truncate text-sm font-semibold text-white">{entry.title}</p>
           </div>
-          <p className="mt-1 text-[10px] text-zinc-500">
-            {Object.entries(counts).filter(([, n]) => n > 0).map(([t, n]) => `${n} ${n > 1 ? SUMMARY_LABEL[t as ChangeType].plural : SUMMARY_LABEL[t as ChangeType].singular}`).join(" · ")}
+          <p className="mt-1 text-xs text-zinc-400">
+            {Object.entries(counts)
+              .filter(([, n]) => n > 0)
+              .map(([t, n]) => `${n} ${n > 1 ? SUMMARY_LABEL[t as ChangeType].plural : SUMMARY_LABEL[t as ChangeType].singular}`)
+              .join(" · ")}
           </p>
         </div>
-        <ChevronDown size={15} className={`shrink-0 text-zinc-500 transition-transform ${open ? "rotate-180" : ""}`} />
+        <ChevronDown size={16} aria-hidden="true" className={`shrink-0 text-zinc-500 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       {open && (
-        <div className="border-t border-zinc-800/60 px-4 py-3">
+        <div className="border-t border-white/10 px-4 py-3">
           <ChangeList changes={entry.changes} />
         </div>
       )}
@@ -242,84 +250,88 @@ export default function ChangelogModal() {
   if (!open || isWidgetPage) return null;
 
   const sharedStyles = `
-    @keyframes cl-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-    @keyframes cl-glow { 0%, 100% { opacity: 0.35; transform: scale(1); } 50% { opacity: 0.7; transform: scale(1.15); } }
-    .cl-item { animation: cl-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
-    .cl-glow { animation: cl-glow 3s ease-in-out infinite; }
-    @media (prefers-reduced-motion: reduce) { .cl-item, .cl-glow { animation: none; } }
+    @keyframes cl-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+    .cl-item { animation: cl-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both; }
+    @media (prefers-reduced-motion: reduce) { .cl-item { animation: none; } }
   `;
+
+  // Cadre commun des deux variantes (version normale, grosse mise à jour).
+  const overlayClass = `fixed inset-0 z-[100] flex items-end justify-center bg-black/70 p-4 backdrop-blur-sm transition-opacity duration-200 sm:items-center ${
+    visible ? "opacity-100" : "opacity-0"
+  }`;
+  const panelClass = (maxWidth: string, border: string) =>
+    `relative flex max-h-[85vh] w-full ${maxWidth} flex-col overflow-hidden rounded-2xl border ${border} bg-zinc-950 shadow-2xl shadow-black/60 transition-all duration-300 ease-out ${
+      visible ? "translate-y-0 scale-100 opacity-100" : "translate-y-4 scale-95 opacity-0"
+    }`;
+  const closeButton = (
+    <button
+      onClick={close}
+      aria-label="Fermer"
+      className={`absolute right-4 top-4 cursor-pointer rounded-lg p-2 text-zinc-400 transition-colors hover:bg-white/5 hover:text-white ${FOCUS}`}
+    >
+      <X size={18} />
+    </button>
+  );
+  const fadeEdges = (
+    <>
+      <div className={`pointer-events-none absolute inset-x-0 top-0 z-10 h-8 bg-gradient-to-b from-zinc-950 to-transparent transition-opacity duration-200 ${fade.top ? "opacity-100" : "opacity-0"}`} />
+      <div className={`pointer-events-none absolute inset-x-0 bottom-0 z-10 h-10 bg-gradient-to-t from-zinc-950 to-transparent transition-opacity duration-200 ${fade.bottom ? "opacity-100" : "opacity-0"}`} />
+    </>
+  );
 
   // ── GROSSE MISE À JOUR : récap de tout le cycle manqué (2.0 → 3.0, etc.) ──
   if (bigRelease) {
     const counts = countChanges(bigRelease.entries);
     return (
-      <div
-        className={`fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 bg-black/75 backdrop-blur-sm transition-opacity duration-200 ${visible ? "opacity-100" : "opacity-0"}`}
-        onClick={close}
-      >
+      <div className={overlayClass} onClick={close}>
         <div
           role="dialog"
           aria-modal="true"
           aria-labelledby="changelog-title"
           onClick={(e) => e.stopPropagation()}
-          className={`relative flex w-full max-w-xl max-h-[88vh] flex-col overflow-hidden rounded-[28px] border border-amber-400/30 bg-zinc-950/95 backdrop-blur-xl shadow-2xl shadow-amber-900/30 transition-all duration-300 ease-out ${
-            visible ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-4 scale-95"
-          }`}
+          className={panelClass("max-w-xl", "border-amber-400/30")}
         >
           <style>{sharedStyles}</style>
 
-          <div className="pointer-events-none absolute top-0 right-0 h-72 w-72 rounded-full bg-amber-500/20 blur-[110px]" />
-          <div className="pointer-events-none absolute bottom-0 left-0 h-56 w-56 rounded-full bg-purple-600/20 blur-[110px]" />
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-amber-500/10 to-transparent" />
+          <div className="relative shrink-0 px-6 pb-5 pt-7 sm:px-8">
+            {closeButton}
 
-          <div className="relative shrink-0 px-7 pt-8 pb-5 sm:px-8">
-            <button onClick={close} aria-label="Fermer" className="absolute top-5 right-5 rounded-lg p-1.5 text-zinc-500 transition-colors hover:bg-white/5 hover:text-white">
-              <X size={18} />
-            </button>
-
-            <div className="flex items-start gap-4">
-              <div className="relative shrink-0">
-                <div className="cl-glow absolute inset-0 rounded-2xl bg-amber-400/50 blur-xl" />
-                <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl border border-amber-300/40 bg-gradient-to-br from-amber-400/30 to-orange-500/20 text-amber-200">
-                  <PartyPopper size={24} />
-                </div>
-              </div>
-
-              <div className="min-w-0 pr-8">
-                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-400">Grosse mise à jour</p>
-                <h2 id="changelog-title" className="mt-1 text-2xl font-black leading-tight text-white">
-                  Twichify passe en version {bigRelease.toMajor}.0
-                </h2>
-                <p className="mt-1.5 text-xs text-zinc-400">
-                  Voici tout ce qui a changé depuis la version {bigRelease.fromMajor}.0 que tu connaissais.
-                </p>
-              </div>
-            </div>
+            <p className="flex items-center gap-2 text-sm font-medium text-amber-300">
+              <PartyPopper size={16} aria-hidden="true" />
+              Grosse mise à jour
+            </p>
+            <h2 id="changelog-title" className="mt-2 pr-10 font-display text-2xl font-extrabold leading-tight tracking-tight text-white">
+              Twichify passe en version {bigRelease.toMajor}.0
+            </h2>
+            <p className="mt-2 text-sm text-zinc-400">
+              Voici tout ce qui a changé depuis la version {bigRelease.fromMajor}.0 que tu connaissais.
+            </p>
 
             <ChangeBadges counts={counts} />
           </div>
 
           <div className="relative flex min-h-0 flex-1 flex-col">
-            <div ref={scrollRef} onScroll={updateFade} className="min-h-0 flex-1 space-y-2.5 overflow-y-auto px-7 pt-1 pb-3 sm:px-8">
+            <div ref={scrollRef} onScroll={updateFade} className="min-h-0 flex-1 space-y-2.5 overflow-y-auto px-6 pb-3 pt-1 sm:px-8">
               {bigRelease.entries.map((entry, i) => (
                 <VersionGroup key={entry.version} entry={entry} defaultOpen={i === 0} />
               ))}
             </div>
-
-            <div className={`pointer-events-none absolute inset-x-0 top-0 z-10 h-8 bg-gradient-to-b from-zinc-950 to-transparent transition-opacity duration-200 ${fade.top ? "opacity-100" : "opacity-0"}`} />
-            <div className={`pointer-events-none absolute inset-x-0 bottom-0 z-10 h-10 bg-gradient-to-t from-zinc-950 to-transparent transition-opacity duration-200 ${fade.bottom ? "opacity-100" : "opacity-0"}`} />
+            {fadeEdges}
           </div>
 
-          <div className="relative mt-2 flex shrink-0 items-center justify-between gap-3 border-t border-zinc-800/80 bg-zinc-900/40 px-7 py-5 sm:px-8">
-            <Link href="/changelog" onClick={close} className="inline-flex items-center gap-1.5 text-xs font-bold text-zinc-400 transition-colors hover:text-amber-400">
+          <div className="relative mt-2 flex shrink-0 items-center justify-between gap-3 border-t border-white/10 px-6 py-4 sm:px-8">
+            <Link
+              href="/changelog"
+              onClick={close}
+              className={`rounded text-sm font-medium text-zinc-400 underline-offset-4 transition-colors hover:text-amber-300 hover:underline ${FOCUS}`}
+            >
               Voir tout l'historique
-              <ArrowRight size={12} />
             </Link>
 
             <button
               ref={confirmRef}
               onClick={close}
-              className="rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-2.5 text-xs font-black uppercase tracking-widest text-black shadow-lg shadow-amber-600/20 outline-none transition-all hover:brightness-110 focus-visible:ring-2 focus-visible:ring-amber-300/60"
+              className="cursor-pointer rounded-xl bg-amber-500 px-6 py-2.5 text-sm font-semibold text-black outline-none transition-colors hover:bg-amber-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300"
             >
               Découvrir
             </button>
@@ -334,58 +346,32 @@ export default function ChangelogModal() {
   const counts = countChanges([latest]);
 
   return (
-    <div
-      className={`fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 bg-black/70 backdrop-blur-sm transition-opacity duration-200 ${
-        visible ? "opacity-100" : "opacity-0"
-      }`}
-      onClick={close}
-    >
+    <div className={overlayClass} onClick={close}>
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="changelog-title"
         onClick={(e) => e.stopPropagation()}
-        className={`relative flex w-full max-w-lg max-h-[85vh] flex-col overflow-hidden rounded-[28px] border border-purple-500/30 bg-zinc-950/95 backdrop-blur-xl shadow-2xl shadow-purple-900/40 transition-all duration-300 ease-out ${
-          visible ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-4 scale-95"
-        }`}
+        className={panelClass("max-w-lg", "border-white/10")}
       >
         <style>{sharedStyles}</style>
 
-        {/* Ambiance : halos + voile dégradé en haut */}
-        <div className="pointer-events-none absolute top-0 right-0 h-64 w-64 rounded-full bg-purple-600/20 blur-[100px]" />
-        <div className="pointer-events-none absolute bottom-0 left-0 h-48 w-48 rounded-full bg-emerald-600/10 blur-[100px]" />
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-44 bg-gradient-to-b from-purple-500/10 to-transparent" />
-
         {/* EN-TÊTE (fixe) */}
-        <div className="relative shrink-0 px-7 pt-8 pb-5 sm:px-8">
-          <button
-            onClick={close}
-            aria-label="Fermer"
-            className="absolute top-5 right-5 rounded-lg p-1.5 text-zinc-500 transition-colors hover:bg-white/5 hover:text-white"
-          >
-            <X size={18} />
-          </button>
+        <div className="relative shrink-0 px-6 pb-5 pt-7 sm:px-8">
+          {closeButton}
 
-          <div className="flex items-start gap-4">
-            <div className="relative shrink-0">
-              <div className="cl-glow absolute inset-0 rounded-2xl bg-purple-500/50 blur-xl" />
-              <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl border border-purple-400/30 bg-gradient-to-br from-purple-500/30 to-indigo-500/20 text-purple-200">
-                <Sparkles size={24} />
-              </div>
-            </div>
-
-            <div className="min-w-0 pr-8">
-              <p className="text-[10px] font-black uppercase tracking-[0.25em] text-purple-400">Quoi de neuf</p>
-              <h2 id="changelog-title" className="mt-1 text-2xl font-black leading-tight text-white">
-                {latest.title}
-              </h2>
-              <div className="mt-2.5 flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center rounded-full bg-gradient-to-r from-purple-500 to-indigo-500 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-white shadow-lg shadow-purple-600/30">
-                  v{latest.version}
-                </span>
-                <span className="text-[11px] text-zinc-500">{latest.date}</span>
-              </div>
-            </div>
+          <p className="flex items-center gap-2 text-sm font-medium text-purple-300">
+            <Sparkles size={16} aria-hidden="true" />
+            Quoi de neuf
+          </p>
+          <h2 id="changelog-title" className="mt-2 pr-10 font-display text-2xl font-extrabold leading-tight tracking-tight text-white">
+            {latest.title}
+          </h2>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <span className="inline-flex items-center rounded-full border border-purple-500/40 bg-purple-500/10 px-2.5 py-1 text-xs font-semibold tabular-nums text-purple-200">
+              v{latest.version}
+            </span>
+            <span className="text-sm text-zinc-400">{latest.date}</span>
           </div>
 
           {changes.length > 1 && <ChangeBadges counts={counts} />}
@@ -393,44 +379,28 @@ export default function ChangelogModal() {
 
         {/* CONTENU (scrollable) */}
         <div className="relative flex min-h-0 flex-1 flex-col">
-          <div
-            ref={scrollRef}
-            onScroll={updateFade}
-            className="min-h-0 flex-1 overflow-y-auto px-7 pt-1 pb-3 sm:px-8"
-          >
+          <div ref={scrollRef} onScroll={updateFade} className="min-h-0 flex-1 overflow-y-auto px-6 pb-3 pt-1 sm:px-8">
             <ChangeList changes={changes} animate />
           </div>
-
-          {/* Dégradés de fondu : indiquent qu'il y a plus de contenu */}
-          <div
-            className={`pointer-events-none absolute inset-x-0 top-0 z-10 h-8 bg-gradient-to-b from-zinc-950 to-transparent transition-opacity duration-200 ${
-              fade.top ? "opacity-100" : "opacity-0"
-            }`}
-          />
-          <div
-            className={`pointer-events-none absolute inset-x-0 bottom-0 z-10 h-10 bg-gradient-to-t from-zinc-950 to-transparent transition-opacity duration-200 ${
-              fade.bottom ? "opacity-100" : "opacity-0"
-            }`}
-          />
+          {fadeEdges}
         </div>
 
         {/* PIED (fixe) */}
-        <div className="relative mt-2 flex shrink-0 items-center justify-between gap-3 border-t border-zinc-800/80 bg-zinc-900/40 px-7 py-5 sm:px-8">
+        <div className="relative mt-2 flex shrink-0 items-center justify-between gap-3 border-t border-white/10 px-6 py-4 sm:px-8">
           <Link
             href="/changelog"
             onClick={close}
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-zinc-400 transition-colors hover:text-purple-400"
+            className={`rounded text-sm font-medium text-zinc-400 underline-offset-4 transition-colors hover:text-purple-300 hover:underline ${FOCUS}`}
           >
             {missedCount > 0
               ? `Voir aussi les ${missedCount} version${missedCount > 1 ? "s" : ""} précédente${missedCount > 1 ? "s" : ""}`
               : "Voir tout l'historique"}
-            <ArrowRight size={12} />
           </Link>
 
           <button
             ref={confirmRef}
             onClick={close}
-            className="rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-2.5 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-purple-600/20 outline-none transition-all hover:brightness-110 focus-visible:ring-2 focus-visible:ring-purple-400/60"
+            className="cursor-pointer rounded-xl bg-purple-600 px-6 py-2.5 text-sm font-semibold text-white outline-none transition-colors hover:bg-purple-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400"
           >
             Compris
           </button>

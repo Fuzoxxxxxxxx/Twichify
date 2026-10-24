@@ -16,6 +16,9 @@ import {
   type IncidentStatus,
 } from "@/lib/incidents";
 import { useDialog } from "@/components/DialogProvider";
+import { PageHeader } from "@/components/dashboard/DashboardUI";
+
+const FOCUS = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400";
 
 interface Incident {
   _id: string;
@@ -58,14 +61,14 @@ const fmt = (iso: string) =>
   new Date(iso).toLocaleString("fr-FR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 
 const chip = (active: boolean) =>
-  `rounded-lg px-3 py-1.5 text-xs font-semibold border transition-all ${
+  `cursor-pointer rounded-lg border px-3.5 py-2 text-sm font-medium transition-colors ${FOCUS} ${
     active
-      ? "border-purple-500 bg-purple-500/20 text-purple-300"
-      : "border-zinc-800 bg-zinc-900/40 text-zinc-400 hover:text-white"
+      ? "border-purple-500/60 bg-purple-500/20 text-purple-100"
+      : "border-white/10 text-zinc-400 hover:border-white/20 hover:text-white"
   }`;
 
 const inputCls =
-  "w-full rounded-xl border border-zinc-800/80 bg-zinc-900/40 px-4 py-2.5 text-xs text-white placeholder-zinc-500 outline-none focus:border-purple-500/50 transition-colors";
+  "w-full rounded-lg border border-white/10 bg-white/[0.02] px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none transition-colors focus:border-purple-500/60";
 
 async function api(
   url: string,
@@ -89,14 +92,14 @@ async function api(
 /** Boutons de modèles de messages : remplissent le statut et le texte, l'admin complète. */
 function Templates({ onPick }: { onPick: (status: IncidentStatus, text: string) => void }) {
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mr-1">Modèles</span>
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="mr-1 text-sm text-zinc-400">Modèles</span>
       {MESSAGE_TEMPLATES.map((t) => (
         <button
           key={t.label}
           type="button"
           onClick={() => onPick(t.status, t.text)}
-          className="rounded-full border border-zinc-800 bg-zinc-950/60 px-3 py-1 text-[11px] font-semibold text-zinc-400 hover:text-white hover:border-zinc-700 transition-colors"
+          className={`cursor-pointer rounded-full border border-white/10 px-3.5 py-1.5 text-sm font-medium text-zinc-300 transition-colors hover:border-white/25 hover:text-white ${FOCUS}`}
         >
           {t.label}
         </button>
@@ -107,9 +110,9 @@ function Templates({ onPick }: { onPick: (status: IncidentStatus, text: string) 
 
 function StatusPicker({ value, onChange }: { value: IncidentStatus; onChange: (v: IncidentStatus) => void }) {
   return (
-    <div className="flex flex-wrap gap-2">
+    <div role="group" aria-label="Statut" className="flex flex-wrap gap-2">
       {INCIDENT_STATUSES.map((s) => (
-        <button key={s} type="button" onClick={() => onChange(s)} className={chip(value === s)}>
+        <button key={s} type="button" onClick={() => onChange(s)} aria-pressed={value === s} className={chip(value === s)}>
           {STATUS_LABELS[s]}
         </button>
       ))}
@@ -144,21 +147,21 @@ function IncidentCard({
 
   return (
     <div
-      className={`rounded-2xl border p-5 backdrop-blur-xl space-y-4 ${
-        resolved ? "border-zinc-800/80 bg-zinc-950/40" : "border-amber-500/25 bg-amber-950/10"
+      className={`space-y-4 rounded-2xl border p-5 ${
+        resolved ? "border-white/10 bg-white/[0.02]" : "border-amber-500/30 bg-amber-500/[0.05]"
       }`}
     >
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-sm font-bold text-white">{incident.title}</p>
-          <p className="mt-1 text-[11px] text-zinc-500">
+          <p className="text-base font-semibold text-white">{incident.title}</p>
+          <p className="mt-1 text-sm text-zinc-400">
             {incident.service} · {IMPACT_LABELS[incident.impact] ?? incident.impact} · ouvert le {fmt(incident.createdAt)}
             {incident.resolvedAt && ` · résolu le ${fmt(incident.resolvedAt)}`}
           </p>
         </div>
         <span
-          className={`shrink-0 rounded-md border px-2 py-0.5 text-[11px] font-semibold ${
-            resolved ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400" : "border-amber-500/20 bg-amber-500/10 text-amber-400"
+          className={`shrink-0 rounded-md border px-2 py-0.5 text-xs font-medium ${
+            resolved ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200" : "border-amber-500/30 bg-amber-500/10 text-amber-200"
           }`}
         >
           {STATUS_LABELS[incident.status] ?? incident.status}
@@ -166,18 +169,18 @@ function IncidentCard({
       </div>
 
       {updates.length > 0 && (
-        <ol className="space-y-2 border-l border-zinc-800 pl-4">
+        <ol className="space-y-2 border-l border-white/10 pl-4">
           {updates.map((u, i) => (
             <li key={i}>
-              <p className="whitespace-pre-line text-xs leading-relaxed text-zinc-300">{u.message}</p>
-              <p className="font-mono text-[10px] text-zinc-600">{fmt(u.createdAt)}</p>
+              <p className="whitespace-pre-line text-sm leading-relaxed text-zinc-300">{u.message}</p>
+              <p className="text-xs text-zinc-400">{fmt(u.createdAt)}</p>
             </li>
           ))}
         </ol>
       )}
 
-      <div className="space-y-3 border-t border-zinc-800/80 pt-4">
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-purple-400">
+      <div className="space-y-3 border-t border-white/10 pt-4">
+        <p className="text-sm font-medium text-zinc-200">
           {resolved ? "Rouvrir / compléter" : "Publier une mise à jour"}
         </p>
         <StatusPicker value={status} onChange={setStatus} />
@@ -192,6 +195,7 @@ function IncidentCard({
           onChange={(e) => setMessage(e.target.value)}
           maxLength={MESSAGE_MAX}
           rows={3}
+          aria-label="Message de mise à jour"
           placeholder="Message visible publiquement sur la page de statut..."
           className={`${inputCls} resize-none`}
         />
@@ -199,7 +203,7 @@ function IncidentCard({
           <button
             onClick={send}
             disabled={!canSend}
-            className="inline-flex items-center gap-2 rounded-xl bg-purple-600 hover:bg-purple-500 px-4 py-2 text-xs font-bold text-white transition-all disabled:opacity-50"
+            className={`inline-flex cursor-pointer items-center gap-2 rounded-lg bg-purple-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-purple-500 disabled:opacity-50 ${FOCUS}`}
           >
             {busy ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
             Publier
@@ -208,7 +212,7 @@ function IncidentCard({
             <button
               onClick={() => onUpdate(incident._id, { status: "resolved" })}
               disabled={busy}
-              className="inline-flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-xs font-bold text-emerald-300 hover:bg-emerald-500/20 transition-all disabled:opacity-50"
+              className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5 text-sm font-semibold text-emerald-200 transition-colors hover:bg-emerald-500/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-300 disabled:opacity-50"
             >
               <CheckCircle2 size={14} />
               Marquer résolu
@@ -218,10 +222,11 @@ function IncidentCard({
             <button
               onClick={() => onUpdate(incident._id, { banner: !incident.bannerActive })}
               disabled={busy}
-              className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-xs font-bold transition-all disabled:opacity-50 ${
+              aria-pressed={!!incident.bannerActive}
+              className={`inline-flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-semibold transition-colors disabled:opacity-50 ${FOCUS} ${
                 incident.bannerActive
-                  ? "border-purple-500/40 bg-purple-500/15 text-purple-200 hover:bg-purple-500/25"
-                  : "border-zinc-800 bg-zinc-900/40 text-zinc-300 hover:text-white"
+                  ? "border-purple-500/50 bg-purple-500/15 text-purple-100 hover:bg-purple-500/25"
+                  : "border-white/15 text-zinc-300 hover:border-white/30 hover:text-white"
               }`}
             >
               <Megaphone size={14} />
@@ -231,8 +236,9 @@ function IncidentCard({
           <button
             onClick={() => onDelete(incident._id)}
             disabled={busy}
-            className="ml-auto p-2 rounded-xl border border-red-500/20 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors disabled:opacity-50"
+            className="ml-auto cursor-pointer rounded-lg border border-red-500/25 bg-red-500/10 p-2.5 text-red-300 transition-colors hover:bg-red-500/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-300 disabled:opacity-50"
             title="Supprimer définitivement"
+            aria-label="Supprimer définitivement"
           >
             <Trash2 size={14} />
           </button>
@@ -354,47 +360,49 @@ export default function AdminStatusPage() {
 
   if (denied) {
     return (
-      <div className="max-w-md mx-auto text-center rounded-2xl border border-red-500/20 bg-zinc-950/80 p-8 backdrop-blur-xl mt-10">
+      <div role="alert" className="mx-auto mt-10 max-w-md rounded-2xl border border-red-500/25 bg-white/[0.02] p-8 text-center">
         <AlertTriangle className="mx-auto text-red-400 mb-3" size={32} />
-        <h2 className="text-lg font-bold mb-2">Accès refusé</h2>
-        <p className="text-zinc-400 text-xs">Ton rôle ne permet pas de gérer les incidents.</p>
+        <h2 className="mb-2 text-lg font-bold">Accès refusé</h2>
+        <p className="text-sm text-zinc-400">Ton rôle ne permet pas de gérer les incidents.</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-8">
-      <div className="flex items-end justify-between gap-4">
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-purple-400 mb-2">Page de statut</p>
-          <h1 className="text-3xl sm:text-4xl font-black tracking-tighter text-white">Incidents</h1>
-          <Link
-            href="/status"
-            target="_blank"
-            className="mt-2 inline-flex items-center gap-1.5 text-[11px] text-zinc-500 hover:text-purple-400 transition-colors"
-          >
-            Voir la page publique <ExternalLink size={11} />
-          </Link>
-        </div>
-        <button
-          onClick={() => {
-            setForm(EMPTY_FORM);
-            setCreating(true);
-          }}
-          className="inline-flex items-center gap-2 rounded-xl bg-purple-600 hover:bg-purple-500 px-4 py-2.5 text-xs font-bold text-white transition-all shrink-0"
-        >
-          <Plus size={15} />
-          <span>Nouvel incident</span>
-        </button>
-      </div>
+      <PageHeader
+        eyebrow="Page de statut"
+        title="Incidents"
+        action={
+          <div className="flex shrink-0 flex-wrap items-center gap-3">
+            <Link
+              href="/status"
+              target="_blank"
+              className={`inline-flex items-center gap-1.5 rounded text-sm text-zinc-400 transition-colors hover:text-purple-300 ${FOCUS}`}
+            >
+              Voir la page publique <ExternalLink size={13} />
+            </Link>
+            <button
+              onClick={() => {
+                setForm(EMPTY_FORM);
+                setCreating(true);
+              }}
+              className={`inline-flex cursor-pointer items-center gap-2 rounded-lg bg-purple-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-purple-500 ${FOCUS}`}
+            >
+              <Plus size={16} />
+              <span>Nouvel incident</span>
+            </button>
+          </div>
+        }
+      />
 
       {notice && (
         <div
           role="status"
-          className={`rounded-xl border px-4 py-3 text-xs font-semibold ${
+          className={`rounded-xl border px-4 py-3 text-sm font-medium ${
             notice.type === "ok"
-              ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
-              : "border-rose-500/30 bg-rose-500/10 text-rose-300"
+              ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
+              : "border-rose-500/30 bg-rose-500/10 text-rose-200"
           }`}
         >
           {notice.text}
@@ -406,18 +414,18 @@ export default function AdminStatusPage() {
           {uncovered.map((s) => (
             <div
               key={s.name}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-rose-500/25 bg-rose-950/20 px-5 py-4"
+              className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-rose-500/30 bg-rose-500/[0.06] px-5 py-4"
             >
               <div className="flex items-center gap-3">
-                <AlertTriangle size={18} className="text-rose-400 shrink-0" />
-                <p className="text-xs text-zinc-200">
-                  <strong className="text-white">{s.name}</strong> est{" "}
+                <AlertTriangle size={18} className="shrink-0 text-rose-300" />
+                <p className="text-sm text-zinc-200">
+                  <strong className="font-semibold text-white">{s.name}</strong> est{" "}
                   {s.status === "Down" ? "en panne" : "dégradé"} et aucun incident n&apos;est publié.
                 </p>
               </div>
               <button
                 onClick={() => startFromService(s)}
-                className="rounded-xl bg-rose-600 hover:bg-rose-500 px-4 py-2 text-xs font-bold text-white transition-all"
+                className="cursor-pointer rounded-lg bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-rose-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-300"
               >
                 Prévenir les utilisateurs
               </button>
@@ -427,19 +435,23 @@ export default function AdminStatusPage() {
       )}
 
       {creating && (
-        <div className="rounded-2xl border border-purple-500/30 bg-zinc-950/80 p-5 sm:p-6 backdrop-blur-xl space-y-5">
-          <div className="flex items-center justify-between border-b border-zinc-800/80 pb-3">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-purple-400">Nouvel incident</p>
-            <button onClick={() => setCreating(false)} className="p-1 text-zinc-500 hover:text-white transition-colors">
+        <div className="space-y-5 rounded-2xl border border-purple-500/30 bg-white/[0.02] p-5 sm:p-6">
+          <div className="flex items-center justify-between border-b border-white/10 pb-3">
+            <p className="text-base font-semibold text-white">Nouvel incident</p>
+            <button
+              onClick={() => setCreating(false)}
+              aria-label="Fermer le formulaire"
+              className={`cursor-pointer rounded p-2 text-zinc-400 transition-colors hover:text-white ${FOCUS}`}
+            >
               <X size={16} />
             </button>
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Service concerné</label>
-            <div className="flex flex-wrap gap-2">
+            <p id="inc-service-label" className="text-sm font-medium text-zinc-200">Service concerné</p>
+            <div role="group" aria-labelledby="inc-service-label" className="flex flex-wrap gap-2">
               {INCIDENT_SERVICES.map((s) => (
-                <button key={s} type="button" onClick={() => setForm((f) => ({ ...f, service: s }))} className={chip(form.service === s)}>
+                <button key={s} type="button" onClick={() => setForm((f) => ({ ...f, service: s }))} aria-pressed={form.service === s} className={chip(form.service === s)}>
                   {s}
                 </button>
               ))}
@@ -447,10 +459,10 @@ export default function AdminStatusPage() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Impact</label>
-            <div className="flex flex-wrap gap-2">
+            <p id="inc-impact-label" className="text-sm font-medium text-zinc-200">Impact</p>
+            <div role="group" aria-labelledby="inc-impact-label" className="flex flex-wrap gap-2">
               {INCIDENT_IMPACTS.map((i) => (
-                <button key={i} type="button" onClick={() => setForm((f) => ({ ...f, impact: i }))} className={chip(form.impact === i)}>
+                <button key={i} type="button" onClick={() => setForm((f) => ({ ...f, impact: i }))} aria-pressed={form.impact === i} className={chip(form.impact === i)}>
                   {IMPACT_LABELS[i]}
                 </button>
               ))}
@@ -458,13 +470,14 @@ export default function AdminStatusPage() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Statut</label>
+            <p className="text-sm font-medium text-zinc-200">Statut</p>
             <StatusPicker value={form.status} onChange={(s) => setForm((f) => ({ ...f, status: s }))} />
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Titre</label>
+            <label htmlFor="inc-title" className="text-sm font-medium text-zinc-200">Titre</label>
             <input
+              id="inc-title"
               type="text"
               value={form.title}
               maxLength={TITLE_MAX}
@@ -475,9 +488,10 @@ export default function AdminStatusPage() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Message public</label>
+            <label htmlFor="inc-message" className="text-sm font-medium text-zinc-200">Message public</label>
             <Templates onPick={(s, t) => setForm((f) => ({ ...f, status: s, message: t }))} />
             <textarea
+              id="inc-message"
               value={form.message}
               maxLength={MESSAGE_MAX}
               onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))}
@@ -485,12 +499,12 @@ export default function AdminStatusPage() {
               placeholder="Que se passe-t-il ? Qui est touché ? Quand la prochaine mise à jour ?"
               className={`${inputCls} resize-none`}
             />
-            <p className="text-right text-[10px] text-zinc-600">
+            <p className="text-right text-xs tabular-nums text-zinc-400">
               {form.message.length}/{MESSAGE_MAX}
             </p>
           </div>
 
-          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-zinc-800/80 bg-zinc-900/40 p-4">
+          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-white/10 p-4">
             <input
               type="checkbox"
               checked={form.showBanner}
@@ -498,8 +512,8 @@ export default function AdminStatusPage() {
               className="mt-0.5 h-4 w-4 accent-purple-500"
             />
             <span>
-              <span className="block text-xs font-bold text-white">Afficher aussi en bannière sur tout le site</span>
-              <span className="block text-[11px] text-zinc-500">
+              <span className="block text-sm font-semibold text-white">Afficher aussi en bannière sur tout le site</span>
+              <span className="block text-sm text-zinc-400">
                 Retirée automatiquement à la résolution. Ne remplace jamais une annonce manuelle du propriétaire.
               </span>
             </span>
@@ -508,31 +522,31 @@ export default function AdminStatusPage() {
           <button
             onClick={createIncident}
             disabled={saving || !form.title.trim() || !form.message.trim()}
-            className="w-full flex items-center justify-center gap-2 rounded-xl bg-purple-600 hover:bg-purple-500 px-4 py-2.5 text-xs font-bold text-white transition-all disabled:opacity-50"
+            className={`flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-purple-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-purple-500 disabled:opacity-50 ${FOCUS}`}
           >
             {saving ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
             <span>Publier l&apos;incident</span>
           </button>
-          <p className="text-[10px] text-zinc-600">
+          <p className="text-xs text-zinc-400">
             Visible sur /status après quelques secondes (cache de 15 s).
           </p>
         </div>
       )}
 
       {loading ? (
-        <div className="py-16 text-center border border-zinc-800/80 bg-zinc-950/60 rounded-2xl backdrop-blur-xl">
-          <Loader2 className="w-5 h-5 text-purple-500 animate-spin mx-auto" />
+        <div className="rounded-2xl border border-white/10 bg-white/[0.02] py-16 text-center" aria-busy="true">
+          <Loader2 className="mx-auto h-5 w-5 animate-spin text-purple-400" />
         </div>
       ) : (
         <>
           <section className="space-y-3">
-            <h2 className="text-xs font-extrabold uppercase tracking-wider text-amber-400">
+            <h2 className="font-display text-lg font-bold text-amber-300">
               En cours ({active.length})
             </h2>
             {active.length === 0 ? (
-              <div className="flex items-center gap-3 rounded-2xl border border-zinc-800/60 bg-zinc-950/30 p-5">
+              <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.02] p-5">
                 <CheckCircle2 size={18} className="shrink-0 text-emerald-400" />
-                <p className="text-xs font-medium text-zinc-400">Aucun incident en cours.</p>
+                <p className="text-sm font-medium text-zinc-300">Aucun incident en cours.</p>
               </div>
             ) : (
               active.map((i) => (
@@ -543,7 +557,7 @@ export default function AdminStatusPage() {
 
           {resolved.length > 0 && (
             <section className="space-y-3">
-              <h2 className="text-xs font-extrabold uppercase tracking-wider text-zinc-500">
+              <h2 className="font-display text-lg font-bold text-zinc-300">
                 Résolus (30 derniers jours)
               </h2>
               {resolved.map((i) => (

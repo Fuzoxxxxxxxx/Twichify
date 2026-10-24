@@ -7,6 +7,10 @@ import { PageHeader, InfoStep, DashboardLoading, DashboardLoadError } from "@/co
 import { useToast, ToastDisplay } from "@/components/dashboard/useToast";
 import { useDialog } from "@/components/DialogProvider";
 
+const FOCUS = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400";
+const INPUT =
+  "w-full rounded-lg border border-white/10 bg-white/[0.02] px-4 py-3 text-base text-white placeholder-zinc-500 outline-none transition-colors focus:border-purple-500/60";
+
 export default function DashboardSpotify() {
   const { data: session } = useSession();
   const { toast, showToast } = useToast();
@@ -100,111 +104,126 @@ export default function DashboardSpotify() {
     <div className="space-y-8">
       <PageHeader eyebrow="Intégrations" title="Spotify" />
 
-      <div className="rounded-[32px] border border-zinc-800 bg-zinc-950/60 p-8 shadow-2xl shadow-black/30">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <InfoStep
-            step="Étape 1"
-            title="Créer l'app"
-            text="Rendez-vous sur le Dashboard de Spotify Developer pour créer une application."
-            href="https://developer.spotify.com/dashboard"
-          />
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5">
-            <span className="inline-flex rounded-full border border-purple-500/20 bg-purple-500/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-purple-300">Étape 2</span>
-            <h3 className="mt-3 text-base font-bold text-white">Redirect URI</h3>
-            <p className="mt-2 text-sm text-zinc-400">Ajoutez exactement cette URL dans votre app Spotify :</p>
-            <div className="mt-4 flex items-center gap-2 rounded-xl border border-zinc-700 bg-black/40 p-2">
-              <code className="flex-1 truncate text-[11px] text-zinc-200">{redirectUri}</code>
-              <button
-                onClick={handleCopyRedirectUri}
-                className={`rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.15em] transition ${copiedUri ? "bg-emerald-500/20 text-emerald-300" : "bg-purple-600 text-white"}`}
-              >
-                {copiedUri ? "Copié" : "Copier"}
-              </button>
-            </div>
-          </div>
-          <InfoStep
-            step="Prérequis"
-            title="Spotify Premium"
-            text="Un compte Spotify Premium actif est nécessaire pour lire la musique en direct via l'API web."
-            href="https://developer.spotify.com/documentation/web-api"
-            tone="amber"
-          />
-        </div>
+      {/* Préparation côté Spotify : trois repères avant de saisir les identifiants */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <InfoStep
+          step="Étape 1"
+          title="Créer l'app"
+          text="Rendez-vous sur le Dashboard de Spotify Developer pour créer une application."
+          href="https://developer.spotify.com/dashboard"
+        />
 
-        <div className="rounded-[28px] border border-zinc-800 bg-black/20 p-6">
-          <div className="flex items-center gap-2 pb-4">
-            <Sliders size={16} className="text-purple-400" />
-            <h2 className="text-[10px] font-bold uppercase tracking-[0.25em] text-zinc-300">Identifiants d'accès</h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500">Client ID</label>
-              <input
-                type="text"
-                value={clientId}
-                onChange={(e) => setClientId(e.target.value)}
-                placeholder="Ex: 8a4c..."
-                className="w-full rounded-2xl border border-zinc-700 bg-zinc-950/80 p-4 text-sm text-white outline-none transition focus:border-purple-500"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500">Client Secret</label>
-              <div className="relative">
-                <input
-                  type={showClientSecret ? "text" : "password"}
-                  value={clientSecret}
-                  onChange={(e) => setClientSecret(e.target.value)}
-                  placeholder="Ex: ••••••••••••••••"
-                  className="w-full rounded-2xl border border-zinc-700 bg-zinc-950/80 p-4 pr-12 text-sm text-white outline-none transition focus:border-purple-500"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowClientSecret(!showClientSecret)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
-                >
-                  {showClientSecret ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-6 flex flex-col sm:flex-row gap-4 border-t border-zinc-800 pt-6">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
+          <span className="inline-flex rounded-full border border-purple-500/25 bg-purple-500/10 px-2.5 py-1 text-xs font-semibold text-purple-200">
+            Étape 2
+          </span>
+          <h3 className="mt-3 text-base font-semibold text-white">Redirect URI</h3>
+          <p className="mt-2 text-sm leading-relaxed text-zinc-400">Ajoutez exactement cette URL dans votre app Spotify :</p>
+          <div className="mt-4 flex items-center gap-2 rounded-lg border border-white/10 bg-black/30 p-2">
+            <code className="flex-1 truncate px-1 font-mono text-xs text-zinc-200">{redirectUri}</code>
             <button
-              onClick={saveSpotifyKeys}
-              disabled={loading}
-              className="flex items-center justify-center gap-2 rounded-2xl bg-white px-6 py-3 text-xs font-black uppercase tracking-[0.2em] text-black transition hover:bg-zinc-200 disabled:opacity-60"
+              onClick={handleCopyRedirectUri}
+              className={`shrink-0 cursor-pointer rounded-md px-3 py-1.5 text-sm font-semibold transition-colors ${FOCUS} ${
+                copiedUri ? "bg-emerald-500/20 text-emerald-200" : "bg-purple-600 text-white hover:bg-purple-500"
+              }`}
             >
-              <Save size={16} />
-              Sauvegarder
+              {copiedUri ? "Copié" : "Copier"}
             </button>
-
-            {isConnected ? (
-              <button
-                onClick={handleDisconnectSpotify}
-                disabled={loading}
-                className="flex items-center justify-center gap-2 rounded-2xl border border-red-500/30 bg-red-500/10 px-6 py-3 text-xs font-black uppercase tracking-[0.2em] text-red-300 transition hover:bg-red-500/20"
-              >
-                <Unlink size={16} />
-                Se déconnecter
-              </button>
-            ) : (
-              <button
-                onClick={async () => {
-                  const res = await fetch("/api/spotify/auth-url");
-                  const data = await res.json();
-                  if (data.url) window.location.href = data.url;
-                }}
-                className="flex items-center justify-center gap-2 rounded-2xl bg-[#1DB954] px-6 py-3 text-xs font-black uppercase tracking-[0.2em] text-black transition hover:bg-[#1ed760]"
-              >
-                <Music size={16} />
-                Associer mon compte
-              </button>
-            )}
           </div>
         </div>
+
+        <InfoStep
+          step="Prérequis"
+          title="Spotify Premium"
+          text="Un compte Spotify Premium actif est nécessaire pour lire la musique en direct via l'API web."
+          href="https://developer.spotify.com/documentation/web-api"
+          tone="amber"
+        />
       </div>
+
+      {/* Identifiants */}
+      <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 sm:p-8">
+        <h2 className="flex items-center gap-2.5 font-display text-xl font-bold text-white">
+          <Sliders size={18} className="text-purple-300" />
+          Identifiants d'accès
+        </h2>
+
+        <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
+          <div className="space-y-2">
+            <label htmlFor="spotify-client-id" className="text-sm font-medium text-zinc-200">
+              Client ID
+            </label>
+            <input
+              id="spotify-client-id"
+              type="text"
+              value={clientId}
+              onChange={(e) => setClientId(e.target.value)}
+              placeholder="Ex: 8a4c..."
+              autoComplete="off"
+              className={INPUT}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="spotify-client-secret" className="text-sm font-medium text-zinc-200">
+              Client Secret
+            </label>
+            <div className="relative">
+              <input
+                id="spotify-client-secret"
+                type={showClientSecret ? "text" : "password"}
+                value={clientSecret}
+                onChange={(e) => setClientSecret(e.target.value)}
+                placeholder="Ex: ••••••••••••••••"
+                autoComplete="off"
+                className={`${INPUT} pr-12`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowClientSecret(!showClientSecret)}
+                aria-label={showClientSecret ? "Masquer le Client Secret" : "Afficher le Client Secret"}
+                className={`absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-zinc-400 transition-colors hover:text-white ${FOCUS}`}
+              >
+                {showClientSecret ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-8 flex flex-col gap-3 border-t border-white/10 pt-6 sm:flex-row">
+          <button
+            onClick={saveSpotifyKeys}
+            disabled={loading}
+            className={`flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-purple-600 px-6 py-3.5 text-base font-semibold text-white transition-colors hover:bg-purple-500 disabled:opacity-60 ${FOCUS}`}
+          >
+            <Save size={16} />
+            Sauvegarder
+          </button>
+
+          {isConnected ? (
+            <button
+              onClick={handleDisconnectSpotify}
+              disabled={loading}
+              className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-6 py-3.5 text-base font-semibold text-red-200 transition-colors hover:bg-red-500/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-300 disabled:opacity-60"
+            >
+              <Unlink size={16} />
+              Se déconnecter
+            </button>
+          ) : (
+            <button
+              onClick={async () => {
+                const res = await fetch("/api/spotify/auth-url");
+                const data = await res.json();
+                if (data.url) window.location.href = data.url;
+              }}
+              className="flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#1DB954] px-6 py-3.5 text-base font-semibold text-black transition-colors hover:bg-[#1ed760] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1DB954]"
+            >
+              <Music size={16} />
+              Associer mon compte
+            </button>
+          )}
+        </div>
+      </section>
 
       <ToastDisplay toast={toast} />
     </div>

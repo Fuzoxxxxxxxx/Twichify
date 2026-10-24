@@ -212,7 +212,7 @@ function Heatmap({ grid }: { grid: number[][] }) {
         </div>
         {grid.map((row, d) => (
           <div key={d} className="mb-1 flex items-center gap-1">
-            <span className="w-9 shrink-0 text-[10px] font-bold uppercase tracking-wider text-zinc-600">{WEEKDAYS[d]}</span>
+            <span className="w-9 shrink-0 text-xs text-zinc-500">{WEEKDAYS[d]}</span>
             {row.map((plays, h) => (
               <div
                 key={h}
@@ -413,7 +413,7 @@ export default function DashboardStats() {
           <button
             onClick={resetListeningStats}
             disabled={resettingStats || statsLoading}
-            className="flex cursor-pointer items-center gap-2 rounded-2xl border border-red-500/20 bg-red-500/5 px-5 py-2.5 text-[11px] font-black uppercase tracking-widest text-red-300 transition hover:bg-red-500/10 disabled:opacity-50"
+            className="flex cursor-pointer items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/[0.06] px-4 py-2.5 text-sm font-semibold text-red-300 transition-colors hover:bg-red-500/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-300 disabled:opacity-50"
           >
             <RotateCcw size={14} />
             {resettingStats ? "Réinitialisation..." : "Réinitialiser"}
@@ -423,9 +423,9 @@ export default function DashboardStats() {
 
       {/* ── Dernier morceau + totaux ── */}
       {statsLoading && !listeningStats ? (
-        <div className="twichify-skeleton h-56 rounded-[32px] border border-zinc-800/60" aria-busy="true" />
+        <div className="twichify-skeleton h-56 rounded-2xl border border-white/5" aria-busy="true" />
       ) : (
-        <div className="twichify-rise relative overflow-hidden rounded-[32px] border border-zinc-800 bg-zinc-950/60 shadow-2xl shadow-black/30">
+        <div className="twichify-rise relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/60">
           {last?.albumImageUrl && (
             <img
               src={last.albumImageUrl}
@@ -441,7 +441,7 @@ export default function DashboardStats() {
               <>
                 <Cover src={last.albumImageUrl} size={112} className="!rounded-2xl shadow-2xl shadow-black/60" />
                 <div className="min-w-0 flex-1">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-purple-300">Dernier morceau joué</p>
+                  <p className="text-sm text-purple-300">Dernier morceau joué</p>
                   <p className="mt-1.5 truncate text-2xl font-black tracking-tight text-white">{last.title}</p>
                   <p className="truncate text-sm text-zinc-400">{last.artist}</p>
                   <p className="mt-1 text-[11px] text-zinc-500">{formatPlayedAt(last.playedAt, true)}</p>
@@ -460,14 +460,14 @@ export default function DashboardStats() {
             )}
 
             <div className="grid shrink-0 grid-cols-2 gap-3 sm:w-72">
-              <div className="rounded-2xl border border-zinc-800 bg-zinc-950/60 px-4 py-3">
-                <p className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.2em] text-zinc-500">
+              <div className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
+                <p className="flex items-center gap-1.5 text-xs text-zinc-400">
                   <TimerReset size={12} className="text-purple-400" /> Écoute totale
                 </p>
                 <p className="mt-1 text-lg font-black tracking-tight text-white">{formatListeningTime(listeningStats?.totalMsListened || 0)}</p>
               </div>
-              <div className="rounded-2xl border border-zinc-800 bg-zinc-950/60 px-4 py-3">
-                <p className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.2em] text-zinc-500">
+              <div className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
+                <p className="flex items-center gap-1.5 text-xs text-zinc-400">
                   <ListMusic size={12} className="text-emerald-400" /> Morceaux
                 </p>
                 <p className="mt-1 text-lg font-black tracking-tight text-white">{nf.format(listeningStats?.totalTracksPlayed || 0)}</p>
@@ -484,15 +484,16 @@ export default function DashboardStats() {
 
       {/* ── Onglets et période ── */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="twichify-scroll sticky top-2 z-20 flex w-full gap-1.5 overflow-x-auto rounded-2xl border border-zinc-800 bg-zinc-950/80 p-1.5 shadow-xl shadow-black/40 backdrop-blur-xl sm:w-fit">
+        <div className="twichify-scroll sticky top-2 z-20 flex w-full gap-1 overflow-x-auto rounded-xl border border-white/10 bg-zinc-950/85 p-1 backdrop-blur-xl sm:w-fit">
           {TABS.map((t) => (
             <button
               key={t.id}
               onClick={() => changeTab(t.id)}
-              className={`flex shrink-0 cursor-pointer items-center gap-2 rounded-xl px-4 py-2 text-[11px] font-bold uppercase tracking-wider transition ${
+              aria-current={tab === t.id ? "true" : undefined}
+              className={`flex shrink-0 cursor-pointer items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400 ${
                 tab === t.id
-                  ? "border border-purple-500/40 bg-gradient-to-r from-purple-600/30 to-indigo-600/20 text-white shadow-inner shadow-purple-500/10"
-                  : "border border-transparent text-zinc-500 hover:bg-white/[0.03] hover:text-zinc-300"
+                  ? "bg-white/[0.08] text-white"
+                  : "text-zinc-400 hover:bg-white/[0.04] hover:text-white"
               }`}
             >
               {t.icon}
@@ -501,13 +502,14 @@ export default function DashboardStats() {
           ))}
         </div>
 
-        <div className="flex w-fit gap-1.5 rounded-2xl border border-zinc-800 bg-zinc-950/60 p-1.5">
+        <div role="group" aria-label="Période" className="flex w-fit gap-1 rounded-xl border border-white/10 bg-zinc-950/60 p-1">
           {PERIODS.map((p) => (
             <button
               key={p.value}
               onClick={() => changePeriod(p.value)}
-              className={`cursor-pointer rounded-xl px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-wider transition ${
-                period === p.value ? "border border-purple-500/40 bg-purple-600/20 text-purple-300" : "border border-transparent text-zinc-500 hover:text-zinc-300"
+              aria-pressed={period === p.value}
+              className={`cursor-pointer rounded-lg px-3.5 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400 ${
+                period === p.value ? "bg-purple-600/25 text-purple-200" : "text-zinc-400 hover:bg-white/[0.04] hover:text-white"
               }`}
             >
               {p.label}
@@ -520,10 +522,10 @@ export default function DashboardStats() {
         <div className="space-y-6" aria-busy="true">
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {[0, 1, 2, 3].map((i) => (
-              <div key={i} className="twichify-skeleton h-36 rounded-[24px] border border-zinc-800/60" />
+              <div key={i} className="twichify-skeleton h-36 rounded-2xl border border-white/5" />
             ))}
           </div>
-          <div className="twichify-skeleton h-72 rounded-[28px] border border-zinc-800/60" />
+          <div className="twichify-skeleton h-72 rounded-2xl border border-white/5" />
         </div>
       ) : historyError && !h ? (
         <p className="py-8 text-center text-sm text-zinc-500">Impossible de charger l'historique pour le moment.</p>
@@ -606,13 +608,14 @@ export default function DashboardStats() {
                   title="Écoute par jour"
                   icon={<Flame size={14} className="text-amber-400" />}
                   right={
-                    <div className="flex gap-1 rounded-xl border border-zinc-800 bg-zinc-950/60 p-1">
+                    <div className="flex gap-1 rounded-lg border border-white/10 bg-zinc-950/60 p-1">
                       {(["minutes", "plays"] as const).map((m) => (
                         <button
                           key={m}
                           onClick={() => setMetric(m)}
-                          className={`cursor-pointer rounded-lg px-3 py-1 text-[10px] font-bold uppercase tracking-wider transition ${
-                            metric === m ? "bg-purple-600/20 text-purple-300" : "text-zinc-500 hover:text-zinc-300"
+                          aria-pressed={metric === m}
+                          className={`cursor-pointer rounded-md px-3 py-1 text-sm font-medium transition-colors ${
+                            metric === m ? "bg-purple-600/25 text-purple-200" : "text-zinc-400 hover:text-white"
                           }`}
                         >
                           {m === "minutes" ? "Minutes" : "Titres"}
@@ -859,7 +862,7 @@ export default function DashboardStats() {
                   <div className="mt-5 flex justify-center">
                     <button
                       onClick={() => setRecentLimit((l) => Math.min(100, l === 20 ? 50 : 100))}
-                      className="cursor-pointer rounded-xl border border-zinc-800 bg-zinc-950/60 px-5 py-2 text-[11px] font-bold uppercase tracking-wider text-zinc-300 transition hover:text-white"
+                      className="cursor-pointer rounded-lg border border-white/15 px-5 py-2 text-sm font-medium text-zinc-200 transition-colors hover:border-white/30 hover:text-white"
                     >
                       Afficher plus
                     </button>

@@ -54,10 +54,10 @@ function StepRow({
     <div className="flex gap-4">
       <div className="flex flex-col items-center">
         <div
-          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-[11px] font-black transition-all duration-500 ${
+          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-sm font-bold transition-colors duration-300 ${
             done
-              ? "border-emerald-500/60 bg-emerald-500/15 text-emerald-400 shadow-[0_0_16px_rgba(16,185,129,0.25)]"
-              : "border-white/10 bg-black/30 text-zinc-500"
+              ? "border-emerald-500/60 bg-emerald-500/15 text-emerald-300"
+              : "border-white/15 text-zinc-400"
           }`}
         >
           {done ? <Check size={16} strokeWidth={3} /> : index}
@@ -65,9 +65,9 @@ function StepRow({
         {!last && <div className={`mt-1 w-px flex-1 ${done ? "bg-emerald-500/30" : "bg-white/10"}`} />}
       </div>
       <div className={`min-w-0 flex-1 ${last ? "" : "pb-6"}`}>
-        <p className={`text-sm font-bold ${done ? "text-zinc-400" : "text-white"}`}>{title}</p>
-        {done && summary && <p className="mt-0.5 text-xs text-zinc-500">{summary}</p>}
-        {!done && <div className="mt-1.5 space-y-3 text-xs leading-relaxed text-zinc-400">{children}</div>}
+        <p className={`text-base font-semibold ${done ? "text-zinc-400" : "text-white"}`}>{title}</p>
+        {done && summary && <p className="mt-0.5 text-sm text-zinc-400">{summary}</p>}
+        {!done && <div className="mt-2 space-y-3 text-sm leading-relaxed text-zinc-400">{children}</div>}
       </div>
     </div>
   );
@@ -156,13 +156,13 @@ export default function SetupWizard({ widgetUrl, chatWidgetUrl }: { widgetUrl: s
 
   if (complete) {
     return (
-      <div className="relative flex items-center gap-4 rounded-3xl border border-emerald-500/30 bg-emerald-500/5 p-6">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-400">
+      <div role="status" className="relative flex items-center gap-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/[0.06] p-6">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-300">
           <Sparkles size={22} />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-black text-white">Installation terminée</p>
-          <p className="mt-0.5 text-xs text-zinc-400">
+          <p className="text-base font-semibold text-white">Installation terminée</p>
+          <p className="mt-0.5 text-sm text-zinc-400">
             Ton widget est bien chargé dans OBS
             {musicSeen && status.musicSeenAt ? ` (musique : ${ago(status.musicSeenAt, now)})` : ""}
             {chatSeen && status.chatSeenAt ? ` (chat : ${ago(status.chatSeenAt, now)})` : ""}. Tu peux maintenant régler le design.
@@ -170,7 +170,7 @@ export default function SetupWizard({ widgetUrl, chatWidgetUrl }: { widgetUrl: s
         </div>
         <button
           onClick={dismiss}
-          className="rounded-xl border border-white/10 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-zinc-300 transition hover:bg-white/5"
+          className="cursor-pointer rounded-lg border border-white/15 px-4 py-2 text-sm font-medium text-zinc-200 transition-colors hover:border-white/30 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400"
         >
           Masquer
         </button>
@@ -182,19 +182,19 @@ export default function SetupWizard({ widgetUrl, chatWidgetUrl }: { widgetUrl: s
     const seen = !!seenAt;
     const live = seen && now - new Date(seenAt!).getTime() < LIVE_WINDOW_MS;
     return (
-      <div className="flex items-center justify-between gap-3 rounded-xl border border-white/5 bg-black/20 px-4 py-3">
-        <span className="flex items-center gap-2 text-xs font-bold text-zinc-200">
+      <div className="flex items-center justify-between gap-3 rounded-xl border border-white/10 px-4 py-3">
+        <span className="flex items-center gap-2 text-sm font-semibold text-zinc-200">
           {icon} {label}
         </span>
         {seen ? (
-          <span className="flex items-center gap-2 text-[11px] font-bold text-emerald-400">
-            {live && <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" />}
+          <span className="flex items-center gap-2 text-sm font-medium text-emerald-300">
+            {live && <span aria-hidden="true" className="h-2 w-2 rounded-full bg-emerald-400" />}
             <Check size={14} strokeWidth={3} />
             {live ? "En ligne" : "Détecté"} · {ago(seenAt!, now)}
           </span>
         ) : (
-          <span className="flex items-center gap-2 text-[11px] text-zinc-500">
-            <span className="h-2 w-2 animate-pulse rounded-full bg-amber-400" />
+          <span className="flex items-center gap-2 text-sm text-zinc-400">
+            <span aria-hidden="true" className="h-2 w-2 animate-pulse rounded-full bg-amber-400" />
             En attente…
           </span>
         )}
@@ -203,19 +203,26 @@ export default function SetupWizard({ widgetUrl, chatWidgetUrl }: { widgetUrl: s
   };
 
   return (
-    <div className="rounded-3xl border border-white/10 bg-zinc-950/60 p-6 shadow-2xl backdrop-blur-sm">
+    <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6">
       <div className="mb-6 flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-violet-400">Assistant d'installation</p>
-          <p className="mt-1 text-lg font-black text-white">Mets ton widget en place en 4 étapes</p>
+          <p className="text-sm font-medium text-purple-300">Assistant d'installation</p>
+          <p className="mt-1 font-display text-xl font-bold tracking-tight text-white">Mets ton widget en place en 4 étapes</p>
           <div className="mt-3 flex items-center gap-3">
-            <div className="h-1.5 w-40 overflow-hidden rounded-full bg-white/10">
+            <div
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={flags.length}
+              aria-valuenow={doneCount}
+              aria-label="Progression de l'installation"
+              className="h-1.5 w-40 overflow-hidden rounded-full bg-white/10"
+            >
               <div
                 className="h-full rounded-full bg-emerald-500 transition-all duration-700"
                 style={{ width: `${(doneCount / flags.length) * 100}%` }}
               />
             </div>
-            <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+            <span className="text-sm tabular-nums text-zinc-400">
               {doneCount}/{flags.length}
             </span>
           </div>
@@ -223,7 +230,8 @@ export default function SetupWizard({ widgetUrl, chatWidgetUrl }: { widgetUrl: s
         <button
           onClick={dismiss}
           title="Masquer l'assistant"
-          className="rounded-lg p-1.5 text-zinc-600 transition hover:bg-white/5 hover:text-zinc-300"
+          aria-label="Masquer l'assistant"
+          className="cursor-pointer rounded-lg p-2 text-zinc-400 transition-colors hover:bg-white/5 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400"
         >
           <X size={16} />
         </button>
@@ -237,9 +245,9 @@ export default function SetupWizard({ widgetUrl, chatWidgetUrl }: { widgetUrl: s
         </p>
         <Link
           href="/dashboard/spotify"
-          className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-[10px] font-black uppercase tracking-widest text-black transition hover:bg-zinc-200"
+          className="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-purple-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400"
         >
-          Configurer Spotify <ArrowRight size={12} />
+          Configurer Spotify <ArrowRight size={14} />
         </Link>
       </StepRow>
 
@@ -267,9 +275,9 @@ export default function SetupWizard({ widgetUrl, chatWidgetUrl }: { widgetUrl: s
               key={id}
               disabled={!url}
               onClick={() => copy(id, url)}
-              className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-black/30 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-zinc-200 transition hover:border-violet-500/50 hover:text-white disabled:opacity-50"
+              className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-white/15 px-4 py-2.5 text-sm font-medium text-zinc-200 transition-colors hover:border-purple-500/50 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400 disabled:opacity-50"
             >
-              {flash === id || copied[id] ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+              {flash === id || copied[id] ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
               {flash === id ? "Copié" : label}
             </button>
           ))}
@@ -285,7 +293,7 @@ export default function SetupWizard({ widgetUrl, chatWidgetUrl }: { widgetUrl: s
           {detectionRow("Widget musique", <Music size={14} className="text-violet-400" />, status.musicSeenAt)}
           {detectionRow("Widget chat", <MessageSquareText size={14} className="text-cyan-400" />, status.chatSeenAt)}
         </div>
-        <p className="text-zinc-500">
+        <p className="text-zinc-400">
           Pas encore OBS sous la main ? Le mode test affiche le widget avec de fausses données, mais il ne compte pas comme un chargement :{" "}
           <a
             href={widgetUrl ? `${widgetUrl}?test=1` : undefined}

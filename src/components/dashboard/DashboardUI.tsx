@@ -6,6 +6,9 @@ import { ExternalLink, AlertTriangle, RotateCw } from "lucide-react";
 // Composants UI partagés entre toutes les pages du dashboard utilisateur
 // (Accueil, Spotify, Bot, Widget musique, Widget chat, Statistiques).
 
+const FOCUS = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400";
+
+// `eyebrow` = la section du menu à laquelle la page appartient (Widgets, Analyse…) : un repère de lieu, pas un décor.
 export function PageHeader({
   eyebrow,
   title,
@@ -16,10 +19,10 @@ export function PageHeader({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10">
+    <div className="mb-10 flex flex-col justify-between gap-4 md:flex-row md:items-end">
       <div>
-        <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-purple-400 mb-2">{eyebrow}</p>
-        <h1 className="text-4xl font-black tracking-tighter text-white">{title}</h1>
+        <p className="mb-2 text-sm text-zinc-500">{eyebrow}</p>
+        <h1 className="font-display text-4xl font-extrabold tracking-tight text-white">{title}</h1>
       </div>
       {action}
     </div>
@@ -35,13 +38,13 @@ export function DashboardLoading({ eyebrow, title }: { eyebrow: string; title: s
   return (
     <div className="space-y-8" aria-busy="true" aria-live="polite">
       <PageHeader eyebrow={eyebrow} title={title} />
-      <div className="twichify-skeleton h-24 rounded-[28px] border border-zinc-800/60" />
+      <div className="twichify-skeleton h-24 rounded-2xl border border-white/5" />
       <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
         {[0, 1, 2].map((i) => (
-          <div key={i} className="twichify-skeleton h-32 rounded-[24px] border border-zinc-800/60" />
+          <div key={i} className="twichify-skeleton h-32 rounded-2xl border border-white/5" />
         ))}
       </div>
-      <div className="twichify-skeleton h-72 rounded-[32px] border border-zinc-800/60" />
+      <div className="twichify-skeleton h-72 rounded-2xl border border-white/5" />
       <span className="sr-only">Chargement de tes réglages…</span>
     </div>
   );
@@ -51,132 +54,139 @@ export function DashboardLoadError({ eyebrow, title, onRetry }: { eyebrow: strin
   return (
     <div className="space-y-8">
       <PageHeader eyebrow={eyebrow} title={title} />
-      <div className="flex flex-col items-start gap-4 rounded-[28px] border border-amber-500/20 bg-amber-500/5 p-6 sm:flex-row sm:items-center sm:justify-between">
+      <div
+        role="alert"
+        className="flex flex-col items-start gap-4 rounded-2xl border border-amber-500/25 bg-amber-500/[0.06] p-6 sm:flex-row sm:items-center sm:justify-between"
+      >
         <div className="flex items-start gap-3">
           <AlertTriangle size={20} className="mt-0.5 shrink-0 text-amber-400" />
           <div>
-            <p className="text-sm font-bold text-amber-200">Impossible de charger tes réglages</p>
-            <p className="mt-1 text-xs leading-relaxed text-zinc-400">
+            <p className="text-sm font-semibold text-amber-200">Impossible de charger tes réglages</p>
+            <p className="mt-1 max-w-xl text-sm leading-relaxed text-zinc-400">
               Rien n'a été modifié. Vérifie ta connexion puis réessaie : la page reste bloquée pour ne pas remplacer ta configuration par des valeurs par défaut.
             </p>
           </div>
         </div>
         <button
           onClick={onRetry}
-          className="inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-[11px] font-black uppercase tracking-widest text-amber-200 transition hover:bg-amber-500/20"
+          className={`inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm font-semibold text-amber-200 transition-colors hover:bg-amber-500/20 ${FOCUS}`}
         >
-          <RotateCw size={13} /> Réessayer
+          <RotateCw size={14} /> Réessayer
         </button>
       </div>
     </div>
   );
 }
 
-export function StatCard({ icon, label, value, tone }: { icon: React.ReactNode; label: string; value: string; tone: "emerald" | "amber" | "purple" }) {
-  const toneMap = {
-    emerald: "border-emerald-500/20 bg-emerald-500/5",
-    amber: "border-amber-500/20 bg-amber-500/5",
-    purple: "border-purple-500/20 bg-purple-500/5",
-  };
+// La couleur de la pastille porte l'état : vert = en service, ambre = à configurer, violet = information.
+const STAT_DOT = {
+  emerald: "bg-emerald-400",
+  amber: "bg-amber-400",
+  purple: "bg-purple-400",
+} as const;
 
+export function StatCard({ icon, label, value, tone }: { icon: React.ReactNode; label: string; value: string; tone: "emerald" | "amber" | "purple" }) {
   return (
-    <div className={`rounded-[24px] border ${toneMap[tone]} p-5 shadow-xl shadow-black/20`}>
-      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-950/70 border border-zinc-800">{icon}</div>
-      <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-zinc-500">{label}</p>
-      <p className="mt-2 text-xl font-black tracking-tighter text-white">{value}</p>
+    <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
+      <div className="mb-4 flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04]">{icon}</div>
+      <p className="flex items-center gap-2 text-sm text-zinc-400">
+        <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${STAT_DOT[tone]}`} />
+        {label}
+      </p>
+      <p className="mt-1 text-xl font-bold tracking-tight text-white">{value}</p>
     </div>
   );
 }
 
+// `glow` est conservé dans les props pour ne pas casser les pages existantes, mais n'est plus utilisé : le halo décoratif a disparu.
 export function SourceCard({
   icon,
   label,
   statusText,
   gradient,
-  glow,
   onClick,
 }: {
   icon: React.ReactNode;
   label: string;
   statusText: string;
   gradient: string;
-  glow: string;
+  glow?: string;
   onClick: () => void;
 }) {
   return (
-    <div
-      className="group relative overflow-hidden rounded-[28px] border border-zinc-800 bg-zinc-950/60 p-6 shadow-2xl shadow-black/30 cursor-pointer transition hover:border-white/10 flex flex-col justify-between"
+    <button
+      type="button"
       onClick={onClick}
+      className={`group flex w-full cursor-pointer flex-col gap-4 rounded-2xl border border-white/10 bg-white/[0.02] p-5 text-left transition-colors hover:border-white/20 hover:bg-white/[0.04] ${FOCUS}`}
     >
-      <div className={`absolute -top-10 -right-10 h-40 w-40 rounded-full ${glow} blur-3xl pointer-events-none`} />
-      <div className="relative flex items-center justify-between gap-4 mb-4">
-        <div className="flex items-center gap-4">
-          <div className={`flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${gradient} text-white shadow-lg`}>
-            {icon}
-          </div>
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-zinc-500">OBS Source</p>
-            <p className="text-base font-bold text-white">{label}</p>
-          </div>
+      <div className="flex items-center gap-4">
+        <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${gradient} text-white`}>
+          {icon}
         </div>
-        <ExternalLink size={20} className="text-zinc-400 group-hover:text-white transition" />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm text-zinc-400">Source OBS</p>
+          <p className="truncate text-base font-semibold text-white">{label}</p>
+        </div>
+        <ExternalLink size={18} className="shrink-0 text-zinc-500 transition-colors group-hover:text-white" />
       </div>
-      <p className="text-xs text-zinc-400 bg-zinc-900/50 p-2.5 rounded-xl border border-zinc-800/80 font-mono truncate">
+      <p className="truncate rounded-lg border border-white/10 bg-black/30 px-3 py-2 font-mono text-xs text-zinc-300">
         {statusText}
       </p>
-    </div>
+    </button>
+  );
+}
+
+const ACTION_CLASS = `group flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.02] p-5 text-left transition-colors hover:border-purple-500/40 hover:bg-white/[0.04] ${FOCUS}`;
+
+function ActionContent({ icon, title, subtitle }: { icon: React.ReactNode; title: string; subtitle: string }) {
+  return (
+    <>
+      <div className="flex min-w-0 items-center gap-4">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04]">{icon}</div>
+        <div className="min-w-0">
+          <h3 className="text-base font-semibold text-white">{title}</h3>
+          <p className="text-sm text-zinc-400">{subtitle}</p>
+        </div>
+      </div>
+      <span className="shrink-0 text-sm font-medium text-purple-300 transition-colors group-hover:text-purple-200">Ouvrir</span>
+    </>
   );
 }
 
 export function QuickAction({ icon, title, subtitle, onClick }: { icon: React.ReactNode; title: string; subtitle: string; onClick: () => void }) {
   return (
-    <button
-      onClick={onClick}
-      className="group flex items-center justify-between rounded-[28px] border border-zinc-800 bg-zinc-950/60 p-6 text-left transition hover:border-purple-500/40 hover:bg-zinc-950/80"
-    >
-      <div className="flex items-center gap-4">
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-900 border border-zinc-800">{icon}</div>
-        <div>
-          <h3 className="text-base font-bold text-white">{title}</h3>
-          <p className="text-sm text-zinc-500">{subtitle}</p>
-        </div>
-      </div>
-      <span className="text-xs font-black uppercase tracking-[0.2em] text-purple-400">Ouvrir</span>
+    <button type="button" onClick={onClick} className={`${ACTION_CLASS} cursor-pointer`}>
+      <ActionContent icon={icon} title={title} subtitle={subtitle} />
     </button>
   );
 }
 
 export function QuickActionLink({ icon, title, subtitle, href }: { icon: React.ReactNode; title: string; subtitle: string; href: string }) {
   return (
-    <Link
-      href={href}
-      className="group flex items-center justify-between rounded-[28px] border border-zinc-800 bg-zinc-950/60 p-6 text-left transition hover:border-purple-500/40 hover:bg-zinc-950/80"
-    >
-      <div className="flex items-center gap-4">
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-900 border border-zinc-800">{icon}</div>
-        <div>
-          <h3 className="text-base font-bold text-white">{title}</h3>
-          <p className="text-sm text-zinc-500">{subtitle}</p>
-        </div>
-      </div>
-      <span className="text-xs font-black uppercase tracking-[0.2em] text-purple-400">Ouvrir</span>
+    <Link href={href} className={ACTION_CLASS}>
+      <ActionContent icon={icon} title={title} subtitle={subtitle} />
     </Link>
   );
 }
 
 export function InfoStep({ step, title, text, href, tone = "purple" }: { step: string; title: string; text: string; href: string; tone?: "purple" | "amber" }) {
   const toneMap = {
-    purple: "border-purple-500/20 bg-purple-500/10 text-purple-300",
-    amber: "border-amber-500/20 bg-amber-500/10 text-amber-300",
+    purple: "border-purple-500/25 bg-purple-500/10 text-purple-200",
+    amber: "border-amber-500/25 bg-amber-500/10 text-amber-200",
   };
 
   return (
-    <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5">
-      <span className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.2em] ${toneMap[tone]}`}>{step}</span>
-      <h3 className="mt-3 text-base font-bold text-white">{title}</h3>
-      <p className="mt-2 text-sm text-zinc-400 leading-relaxed">{text}</p>
-      <a href={href} target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-purple-300">
-        Ouvrir <ExternalLink size={12} />
+    <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
+      <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${toneMap[tone]}`}>{step}</span>
+      <h3 className="mt-3 text-base font-semibold text-white">{title}</h3>
+      <p className="mt-2 text-sm leading-relaxed text-zinc-400">{text}</p>
+      <a
+        href={href}
+        target="_blank"
+        rel="noreferrer"
+        className={`mt-4 inline-flex items-center gap-2 text-sm font-medium text-purple-300 underline-offset-4 hover:underline ${FOCUS}`}
+      >
+        Ouvrir <ExternalLink size={13} />
       </a>
     </div>
   );
@@ -188,9 +198,9 @@ export function SliderRow({ label, value, onChange, suffix, max, min = 0 }: { la
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500">
+      <div className="flex items-center justify-between text-sm text-zinc-400">
         <span>{label}</span>
-        <span className="rounded-md bg-purple-600 px-2 py-1 text-white font-mono">{value}{suffix}</span>
+        <span className="rounded-md bg-purple-600 px-2 py-0.5 font-mono text-xs font-semibold text-white">{value}{suffix}</span>
       </div>
       <input
         type="range"
@@ -198,6 +208,7 @@ export function SliderRow({ label, value, onChange, suffix, max, min = 0 }: { la
         max={max}
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        aria-label={label}
         className="twichify-slider h-1.5 w-full cursor-pointer"
         style={{ background: `linear-gradient(to right, #9333ea ${percent}%, #3f3f46 ${percent}%)` }}
       />

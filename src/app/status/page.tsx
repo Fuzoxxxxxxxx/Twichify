@@ -1,9 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import {
-  ArrowLeft,
   CheckCircle2,
   AlertTriangle,
   XCircle,
@@ -16,7 +14,8 @@ import {
   ChevronDown,
   Smile,
 } from "lucide-react";
-import SiteHeader from "@/components/SiteHeader";
+import PublicShell from "@/components/site/PublicShell";
+import PageIntro from "@/components/site/PageIntro";
 
 type BarState = "green" | "yellow" | "red" | "gray";
 
@@ -193,12 +192,12 @@ function Skeleton({ className = "" }: { className?: string }) {
   return <div className={`animate-pulse rounded-lg bg-zinc-800/60 ${className}`} />;
 }
 
-/** Chiffre clé du hero : même présentation que les statistiques du changelog. */
+/** Chiffre clé de la bannière d'état. */
 function HeroStat({ label, value, valueClass = "text-white" }: { label: string; value: string; valueClass?: string }) {
   return (
     <div>
-      <p className={`font-mono font-black text-lg sm:text-2xl ${valueClass}`}>{value}</p>
-      <p className="text-zinc-500 text-[10px] sm:text-xs mt-0.5">{label}</p>
+      <p className={`font-display text-2xl font-extrabold tabular-nums sm:text-3xl ${valueClass}`}>{value}</p>
+      <p className="mt-1 text-sm text-zinc-400">{label}</p>
     </div>
   );
 }
@@ -213,7 +212,7 @@ function ServiceCard({ service, index, view }: { service: Service; index: number
   return (
     <div
       style={{ animationDelay: `${index * 60}ms` }}
-      className="st-fade rounded-2xl border border-zinc-800/80 bg-zinc-950/60 backdrop-blur-xl p-5 sm:p-6 hover:border-purple-500/30 transition-all"
+      className="st-fade rounded-2xl border border-white/10 bg-white/[0.02] p-5 sm:p-6"
     >
       <div className="mb-4 flex items-center justify-between gap-4">
         <div className="flex min-w-0 items-center gap-3">
@@ -222,7 +221,7 @@ function ServiceCard({ service, index, view }: { service: Service; index: number
           </div>
           <div className="min-w-0">
             <p className="truncate text-sm font-extrabold text-white">{service.name}</p>
-            <p className={`mt-0.5 flex items-center gap-1.5 text-[11px] font-semibold ${state.text}`}>
+            <p className={`mt-0.5 flex items-center gap-1.5 text-sm font-medium ${state.text}`}>
               <span className={`h-1.5 w-1.5 rounded-full ${state.dot}`} />
               {state.label}
             </p>
@@ -233,9 +232,9 @@ function ServiceCard({ service, index, view }: { service: Service; index: number
           <span className={`inline-block rounded-lg border px-2.5 py-1 font-mono text-xs font-semibold ${uptimeTone(service.percent)}`}>
             {service.percent}
           </span>
-          <p className="mt-1 text-[10px] text-zinc-600">disponibilité 24 h</p>
+          <p className="mt-1 text-xs text-zinc-400">disponibilité 24 h</p>
           {service.uptime30d !== null && (
-            <p className="mt-0.5 text-[10px] text-zinc-600">
+            <p className="mt-0.5 text-xs text-zinc-400">
               <span className={uptimeText(service.uptime30d)}>{service.uptime30d.toFixed(2)}%</span> sur 30 j
             </p>
           )}
@@ -244,8 +243,8 @@ function ServiceCard({ service, index, view }: { service: Service; index: number
 
       {service.realTraffic && (
         <p
-          className={`mb-3 flex items-center gap-1.5 text-[11px] ${
-            service.realTraffic.degraded ? "text-amber-400" : "text-zinc-500"
+          className={`mb-3 flex items-center gap-1.5 text-sm ${
+            service.realTraffic.degraded ? "text-amber-400" : "text-zinc-400"
           }`}
         >
           <Activity size={11} className="shrink-0" />
@@ -279,7 +278,7 @@ function ServiceCard({ service, index, view }: { service: Service; index: number
         })}
       </div>
 
-      <div className="mt-2.5 flex items-center justify-between text-[11px] font-medium text-zinc-500">
+      <div className="mt-2.5 flex items-center justify-between text-xs font-medium text-zinc-400">
         <span>{byMinute ? `Il y a ${points} min` : "Il y a 24h"}</span>
         <span>{byMinute ? "Maintenant" : "Aujourd'hui"}</span>
       </div>
@@ -300,31 +299,31 @@ function IncidentCard({ incident, active }: { incident: Incident; active?: boole
 
   return (
     <div
-      className={`st-fade space-y-3 rounded-2xl border backdrop-blur-xl p-5 sm:p-6 transition-all ${
+      className={`st-fade space-y-3 rounded-2xl border p-5 sm:p-6 ${
         active
-          ? "border-amber-500/30 bg-amber-950/10"
-          : "border-zinc-800/80 bg-zinc-950/60 hover:border-purple-500/30"
+          ? "border-amber-500/30 bg-amber-500/[0.05]"
+          : "border-white/10 bg-white/[0.02]"
       }`}
     >
       <div className="flex items-start justify-between gap-4">
         <h4 className="text-base font-bold text-white">{incident.title}</h4>
-        <span className="shrink-0 text-[11px] text-zinc-600" title={fullDate(incident.createdAt)}>
+        <span className="shrink-0 text-xs text-zinc-400" title={fullDate(incident.createdAt)}>
           {timeAgo(incident.createdAt)}
         </span>
       </div>
 
-      <p className="whitespace-pre-line text-[13px] leading-relaxed text-zinc-400">{headline}</p>
+      <p className="whitespace-pre-line text-sm leading-relaxed text-zinc-300">{headline}</p>
 
-      <div className="flex flex-wrap items-center gap-2 text-[11px]">
-        <span className={`rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${meta.tone}`}>
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <span className={`rounded-md border px-2 py-0.5 text-xs font-medium ${meta.tone}`}>
           {meta.label}
         </span>
         {impact && (
-          <span className={`rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${impact.tone}`}>
+          <span className={`rounded-md border px-2 py-0.5 text-xs font-medium ${impact.tone}`}>
             {impact.label}
           </span>
         )}
-        <span className="text-zinc-500">
+        <span className="text-zinc-400">
           Service affecté : <strong className="text-zinc-300">{incident.service}</strong>
         </span>
       </div>
@@ -334,7 +333,7 @@ function IncidentCard({ incident, active }: { incident: Incident; active?: boole
           <button
             onClick={() => setOpen((o) => !o)}
             aria-expanded={open}
-            className="inline-flex items-center gap-1.5 text-[11px] font-bold text-zinc-400 transition hover:text-purple-400"
+            className="inline-flex items-center gap-1.5 rounded text-sm font-medium text-zinc-400 transition-colors hover:text-purple-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400"
           >
             <ChevronDown size={13} className={`transition-transform ${open ? "rotate-180" : ""}`} />
             {open ? "Masquer" : "Voir"} les {updates.length} mises à jour
@@ -345,8 +344,8 @@ function IncidentCard({ incident, active }: { incident: Incident; active?: boole
               {updates.map((u, i) => (
                 <li key={i} className="relative">
                   <span className="absolute -left-[21px] top-1.5 h-2 w-2 rounded-full bg-zinc-600 ring-4 ring-zinc-950" />
-                  <p className="whitespace-pre-line text-xs leading-relaxed text-zinc-300">{u.message}</p>
-                  <p className="mt-0.5 font-mono text-[10px] text-zinc-600">{fullDate(u.createdAt)}</p>
+                  <p className="whitespace-pre-line text-sm leading-relaxed text-zinc-300">{u.message}</p>
+                  <p className="mt-0.5 text-xs text-zinc-400">{fullDate(u.createdAt)}</p>
                 </li>
               ))}
             </ol>
@@ -442,122 +441,101 @@ export default function StatusPage() {
   }[heroKey];
 
   const pill = (active: boolean) =>
-    `rounded-full px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-all ${
+    `rounded-full border px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400 ${
       active
-        ? "border-purple-500 bg-purple-500/15 text-purple-300"
-        : "border-zinc-800 bg-zinc-950/60 text-zinc-500 hover:text-zinc-300"
+        ? "border-purple-500/50 bg-purple-500/15 text-purple-200"
+        : "border-white/10 text-zinc-400 hover:border-white/20 hover:text-white"
     }`;
 
   return (
-    <main className="min-h-screen bg-black text-white font-sans selection:bg-purple-500/30 relative flex flex-col justify-between overflow-x-clip">
+    <PublicShell>
       <style>{`
         @keyframes st-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
         .st-fade { animation: st-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
         @media (prefers-reduced-motion: reduce) { .st-fade { animation: none; } }
       `}</style>
 
-      {/* Halo et grille de fond : identiques aux autres pages publiques */}
-      <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[1100px] h-[520px] bg-gradient-to-tr from-purple-600/25 via-indigo-500/15 to-emerald-500/15 blur-[170px] pointer-events-none -z-10" />
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f1f2e15_1px,transparent_1px),linear-gradient(to_bottom,#1f1f2e15_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] -z-10" />
-
-      <div>
-        <SiteHeader />
-
-        <div className="max-w-3xl mx-auto px-6 pt-8 pb-20">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-xs font-semibold text-zinc-400 hover:text-purple-400 transition-colors mb-6 group w-fit"
+      <PageIntro
+        title="État des services"
+        action={
+          <button
+            onClick={loadStatus}
+            disabled={isRefreshing}
+            aria-label="Rafraîchir"
+            title="Rafraîchir"
+            className="inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-xl border border-white/15 px-4 py-2.5 text-sm font-medium text-zinc-200 transition-colors hover:border-white/30 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400 disabled:opacity-50"
           >
-            <ArrowLeft size={14} className="transition-transform group-hover:-translate-x-1" />
-            <span>Accueil</span>
-          </Link>
+            <RefreshCw size={15} className={isRefreshing ? "animate-spin text-purple-300" : ""} />
+            Rafraîchir
+          </button>
+        }
+      >
+        Disponibilité en temps réel de Twichify et des services dont il dépend.
+      </PageIntro>
 
-          {/* HERO : état global + chiffres clés */}
-          <section
-            aria-live="polite"
-            className={`relative overflow-hidden rounded-3xl border ${hero.border} bg-zinc-950/70 backdrop-blur-xl p-6 sm:p-8 mb-6 ${hero.glow} transition-colors duration-300`}
+      {/* État global + chiffres clés */}
+      <section
+        aria-live="polite"
+        className={`mt-8 mb-10 rounded-2xl border ${hero.border} bg-white/[0.02] p-6 transition-colors duration-300 sm:p-8`}
+      >
+        <div className="flex items-center gap-4">
+          <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${hero.chip}`}>
+            <HeroIcon size={18} className={heroKey === "loading" ? "animate-spin" : ""} />
+          </span>
+          <h2 className="font-display text-2xl font-bold tracking-tight text-white sm:text-3xl">{hero.title}</h2>
+        </div>
+
+        <p className="mt-3 text-sm text-zinc-400">
+          {heroSub}
+          {lastUpdated !== "--" && ` · Mis à jour à ${lastUpdated}`}
+        </p>
+
+        {hasError && (
+          <button
+            onClick={loadStatus}
+            className="mt-4 cursor-pointer rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-2 text-sm font-semibold text-rose-200 transition-colors hover:bg-rose-500/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-300"
           >
-            <div className={`absolute top-0 right-0 w-64 h-64 ${hero.blob} blur-[90px] pointer-events-none rounded-full`} />
+            Réessayer
+          </button>
+        )}
 
-            <div className="relative">
-              <div className="flex items-start justify-between gap-4">
-                <div className={`inline-flex items-center gap-2 mb-2.5 ${hero.label}`}>
-                  <div className={`w-8 h-8 rounded-xl border flex items-center justify-center ${hero.chip}`}>
-                    <HeroIcon size={15} className={heroKey === "loading" ? "animate-spin" : ""} />
-                  </div>
-                  <span className="text-[10px] font-black uppercase tracking-[0.3em]">État des services</span>
-                </div>
-
-                <button
-                  onClick={loadStatus}
-                  disabled={isRefreshing}
-                  aria-label="Rafraîchir"
-                  title="Rafraîchir"
-                  className="inline-flex shrink-0 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900/80 p-2.5 text-zinc-400 transition hover:border-zinc-700 hover:text-white disabled:opacity-50"
-                >
-                  <RefreshCw size={15} className={isRefreshing ? "animate-spin text-purple-400" : ""} />
-                </button>
+        {/* Chiffres clés */}
+        {total === 0 ? (
+          <div className="mt-6 grid grid-cols-2 gap-6 border-t border-white/10 pt-6 sm:grid-cols-4">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i}>
+                <Skeleton className="h-7 w-16" />
+                <Skeleton className="mt-2 h-3 w-24" />
               </div>
-
-              <h1 className="flex items-center gap-3 text-3xl sm:text-4xl font-black tracking-tighter text-white">
-                <span className="relative flex h-3 w-3 shrink-0">
-                  <span className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 ${hero.dot}`} />
-                  <span className={`relative inline-flex h-3 w-3 rounded-full ${hero.dot}`} />
-                </span>
-                <span>{hero.title}</span>
-              </h1>
-              <p className="text-zinc-400 text-sm mt-2.5 max-w-lg leading-relaxed">
-                {heroSub}
-                {lastUpdated !== "--" && ` · Mis à jour à ${lastUpdated}`}
-              </p>
-
-              {hasError && (
-                <button
-                  onClick={loadStatus}
-                  className="mt-4 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-2 text-xs font-bold text-rose-300 transition hover:bg-rose-500/20"
-                >
-                  Réessayer
-                </button>
-              )}
-
-              {/* Chiffres clés */}
-              {total === 0 ? (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 mt-6 pt-5 border-t border-zinc-800/70">
-                  {[0, 1, 2, 3].map((i) => (
-                    <div key={i}>
-                      <Skeleton className="h-6 w-16" />
-                      <Skeleton className="mt-2 h-2.5 w-20" />
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 mt-6 pt-5 border-t border-zinc-800/70">
-                  <HeroStat
-                    label="Services opérationnels"
-                    value={`${okCount}/${total}`}
-                    valueClass={okCount === total ? "text-emerald-400" : "text-amber-400"}
-                  />
-                  <HeroStat
-                    label="Disponibilité 24 h"
-                    value={avgUptime !== null ? `${avgUptime.toFixed(1)}%` : "--"}
-                    valueClass={avgUptime !== null ? uptimeText(avgUptime) : "text-zinc-400"}
-                  />
-                  <HeroStat label="Latence BDD" value={latency} valueClass={latencyText(latency)} />
-                  <HeroStat
-                    label="Incidents en cours"
-                    value={String(activeIncidents.length)}
-                    valueClass={activeIncidents.length > 0 ? "text-amber-400" : "text-emerald-400"}
-                  />
-                </div>
-              )}
-            </div>
-          </section>
+            ))}
+          </div>
+        ) : (
+          <div className="mt-6 grid grid-cols-2 gap-6 border-t border-white/10 pt-6 sm:grid-cols-4">
+            <HeroStat
+              label="Services opérationnels"
+              value={`${okCount}/${total}`}
+              valueClass={okCount === total ? "text-emerald-400" : "text-amber-400"}
+            />
+            <HeroStat
+              label="Disponibilité 24 h"
+              value={avgUptime !== null ? `${avgUptime.toFixed(1)}%` : "--"}
+              valueClass={avgUptime !== null ? uptimeText(avgUptime) : "text-zinc-400"}
+            />
+            <HeroStat label="Latence BDD" value={latency} valueClass={latencyText(latency)} />
+            <HeroStat
+              label="Incidents en cours"
+              value={String(activeIncidents.length)}
+              valueClass={activeIncidents.length > 0 ? "text-amber-400" : "text-emerald-400"}
+            />
+          </div>
+        )}
+      </section>
 
           {/* Incidents en cours */}
           {activeIncidents.length > 0 && (
             <section className="mb-10">
-              <h2 className="mb-4 flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-amber-400">
-                <AlertTriangle size={14} />
+              <h2 className="mb-4 flex items-center gap-2 font-display text-xl font-bold text-amber-300">
+                <AlertTriangle size={18} />
                 <span>Incidents en cours</span>
               </h2>
               <div className="space-y-4">
@@ -570,14 +548,14 @@ export default function StatusPage() {
 
           {/* Infrastructure */}
           <section className="mb-12">
-            <div className="rounded-2xl border border-zinc-800/80 bg-zinc-950/60 backdrop-blur-xl p-4 sm:p-5 mb-5 space-y-3.5">
+            <div className="mb-5 space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <h2 className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-zinc-400">
-                  <Server size={14} className="text-purple-400" />
+                <h2 className="flex items-center gap-2.5 font-display text-xl font-bold text-white">
+                  <Server size={18} className="text-purple-300" />
                   <span>Infrastructure</span>
                 </h2>
 
-                <div className="flex items-center gap-1.5" role="group" aria-label="Granularité de la frise">
+                <div className="flex items-center gap-2" role="group" aria-label="Granularité de la frise">
                   {(["minutes", "hours"] as const).map((v) => (
                     <button key={v} onClick={() => setView(v)} aria-pressed={view === v} className={pill(view === v)}>
                       {v === "minutes" ? "90 min" : "24 h"}
@@ -586,11 +564,11 @@ export default function StatusPage() {
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-zinc-500">
-                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-emerald-500" />Opérationnel</span>
-                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-amber-400" />Dégradé</span>
-                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-rose-500" />Panne</span>
-                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-zinc-800" />Aucune donnée</span>
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-zinc-400">
+                <span className="flex items-center gap-2"><span className="h-3 w-3 rounded-sm bg-emerald-500" />Opérationnel</span>
+                <span className="flex items-center gap-2"><span className="h-3 w-3 rounded-sm bg-amber-400" />Dégradé</span>
+                <span className="flex items-center gap-2"><span className="h-3 w-3 rounded-sm bg-rose-500" />Panne</span>
+                <span className="flex items-center gap-2"><span className="h-3 w-3 rounded-sm bg-zinc-700" />Aucune donnée</span>
               </div>
             </div>
 
@@ -598,7 +576,7 @@ export default function StatusPage() {
               {services.length === 0
                 ? loading
                   ? [0, 1, 2].map((i) => (
-                      <div key={i} className="rounded-2xl border border-zinc-800/80 bg-zinc-950/60 p-5 sm:p-6">
+                      <div key={i} className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 sm:p-6">
                         <div className="mb-4 flex items-center gap-3">
                           <Skeleton className="h-10 w-10 rounded-xl" />
                           <div className="space-y-2">
@@ -610,9 +588,9 @@ export default function StatusPage() {
                       </div>
                     ))
                   : (
-                      <div className="text-center py-12 rounded-2xl border border-zinc-800/80 bg-zinc-950/40">
-                        <Server size={28} className="mx-auto text-zinc-700 mb-3" />
-                        <p className="text-sm text-zinc-500">Aucune métrique disponible pour le moment.</p>
+                      <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.02] py-12 text-center">
+                        <Server size={28} className="mx-auto mb-3 text-zinc-600" />
+                        <p className="text-sm text-zinc-300">Aucune métrique disponible pour le moment.</p>
                       </div>
                     )
                 : coreServices.map((service, i) => <ServiceCard key={service.name} service={service} index={i} view={view} />)}
@@ -622,12 +600,12 @@ export default function StatusPage() {
           {/* Émotes du chat (services tiers) */}
           {emoteServices.length > 0 && (
             <section className="mb-12">
-              <div className="rounded-2xl border border-zinc-800/80 bg-zinc-950/60 backdrop-blur-xl p-4 sm:p-5 mb-5">
-                <h2 className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-zinc-400">
-                  <Smile size={14} className="text-purple-400" />
+              <div className="mb-5">
+                <h2 className="flex items-center gap-2.5 font-display text-xl font-bold text-white">
+                  <Smile size={18} className="text-purple-300" />
                   <span>Émotes du chat</span>
                 </h2>
-                <p className="mt-2 text-[11px] leading-relaxed text-zinc-500">
+                <p className="mt-2 text-sm leading-relaxed text-zinc-400">
                   Services tiers utilisés par le widget de chat pour afficher les emotes. Une panne n&apos;empêche pas le chat
                   de s&apos;afficher, mais certaines emotes peuvent manquer.
                 </p>
@@ -643,25 +621,25 @@ export default function StatusPage() {
 
           {/* Historique des incidents */}
           <section>
-            <h2 className="mb-6 text-xs font-extrabold uppercase tracking-wider text-zinc-400">
-              Historique des incidents · 7 derniers jours
+            <h2 className="mb-6 font-display text-xl font-bold text-white">
+              Historique des incidents, 7 derniers jours
             </h2>
 
             {incidents.length === 0 ? (
-              <div className="flex items-center gap-3 rounded-2xl border border-zinc-800/80 bg-zinc-950/40 p-5">
+              <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.02] p-5">
                 <CheckCircle2 size={18} className="shrink-0 text-emerald-400" />
-                <p className="text-xs font-medium text-zinc-400">Aucun incident signalé durant les 7 derniers jours.</p>
+                <p className="text-sm font-medium text-zinc-300">Aucun incident signalé durant les 7 derniers jours.</p>
               </div>
             ) : resolvedIncidents.length === 0 ? (
-              <p className="text-xs text-zinc-500">Aucun incident résolu sur la période.</p>
+              <p className="text-sm text-zinc-400">Aucun incident résolu sur la période.</p>
             ) : (
               <div className="relative pl-8">
-                <div className="absolute left-[9px] top-2 bottom-2 w-px bg-gradient-to-b from-purple-500/50 via-zinc-800 to-transparent" />
+                <div aria-hidden="true" className="absolute left-[9px] top-2 bottom-2 w-px bg-white/10" />
                 <div className="space-y-6">
                   {resolvedIncidents.map((incident, idx) => (
                     <div key={incident._id || idx} className="relative">
-                      <div className="absolute -left-8 top-6 w-[18px] h-[18px] rounded-full border-2 border-zinc-700 bg-zinc-950 flex items-center justify-center">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                      <div aria-hidden="true" className="absolute -left-8 top-6 flex h-[18px] w-[18px] items-center justify-center rounded-full border-2 border-zinc-700 bg-black">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
                       </div>
                       <IncidentCard incident={incident} />
                     </div>
@@ -670,24 +648,6 @@ export default function StatusPage() {
               </div>
             )}
           </section>
-        </div>
-      </div>
-
-      <footer className="w-full border-t border-zinc-900/80 bg-black/40 backdrop-blur-md z-20 mt-auto">
-        <div className="max-w-5xl mx-auto px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-zinc-500">
-          <div className="flex items-center gap-1.5">
-            <span className="font-extrabold text-zinc-300">Twichify</span>
-            <span>— © 2026 Tous droits réservés.</span>
-          </div>
-
-          <div className="flex items-center gap-4 font-medium">
-            <Link href="/" className="hover:text-purple-400 transition-colors">Accueil</Link>
-            <Link href="/help" className="hover:text-purple-400 transition-colors">Aide</Link>
-            <Link href="/privacy" className="hover:text-purple-400 transition-colors">Confidentialité & CGU</Link>
-            <Link href="/mentions-legales" className="hover:text-purple-400 transition-colors">Mentions légales</Link>
-          </div>
-        </div>
-      </footer>
-    </main>
+    </PublicShell>
   );
 }

@@ -1,22 +1,13 @@
 "use client";
 
-
 import { useState } from "react";
-import { signIn, signOut, useSession } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { 
-  ArrowLeft, 
-  Send, 
-  Music, 
-  Tv, 
-  Key, 
-  User as UserIcon, 
-  HelpCircle,
-  MessageSquarePlus,
-  AlertCircle
-} from "lucide-react";
-import SiteHeader from "@/components/SiteHeader";
+import { Send, Music, Tv, Key, User as UserIcon, HelpCircle, AlertCircle } from "lucide-react";
+import PublicShell from "@/components/site/PublicShell";
+import PageIntro from "@/components/site/PageIntro";
+
+const FOCUS = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400";
 
 const categories = [
   { id: "spotify", label: "Spotify", icon: Music },
@@ -63,165 +54,120 @@ export default function NewTicketPage() {
 
   if (status === "loading") {
     return (
-      <main className="min-h-screen bg-black text-white flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
-      </main>
+      <PublicShell width="max-w-2xl">
+        <div className="flex justify-center py-24" aria-busy="true">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-purple-500 border-t-transparent" />
+        </div>
+      </PublicShell>
     );
   }
 
   if (status === "unauthenticated" || !session) {
     return (
-      <main className="min-h-screen bg-black text-white flex items-center justify-center px-6 text-center">
-        <div className="max-w-md rounded-2xl border border-zinc-800 bg-zinc-950/80 p-8 backdrop-blur-xl">
-          <HelpCircle className="mx-auto text-purple-400 mb-3" size={32} />
-          <h2 className="text-lg font-bold mb-2">Connexion requise</h2>
-          <p className="text-zinc-400 text-xs mb-6">
+      <PublicShell width="max-w-md">
+        <div className="mt-10 rounded-2xl border border-white/10 bg-white/[0.02] p-8 text-center">
+          <HelpCircle className="mx-auto mb-3 text-purple-300" size={32} />
+          <h1 className="mb-2 font-display text-2xl font-bold text-white">Connexion requise</h1>
+          <p className="mb-6 text-sm text-zinc-400">
             Vous devez être connecté à votre compte pour ouvrir un ticket de support.
           </p>
           <button
             onClick={() => signIn("twitch")}
-            className="inline-flex items-center justify-center w-full bg-gradient-to-r from-purple-600 to-indigo-600 px-5 py-2.5 rounded-xl font-bold text-xs text-white shadow-lg shadow-purple-600/20 hover:brightness-110 transition-all"
+            className={`inline-flex w-full cursor-pointer items-center justify-center rounded-xl bg-purple-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-purple-500 ${FOCUS}`}
           >
             Se connecter
           </button>
         </div>
-      </main>
+      </PublicShell>
     );
   }
 
   return (
-    <main className="min-h-screen bg-black text-white font-sans selection:bg-purple-500/30 relative flex flex-col justify-between overflow-x-clip">
-      {/* Halo de fond */}
-      <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[1100px] h-[520px] bg-gradient-to-tr from-purple-600/25 via-indigo-500/15 to-emerald-500/15 blur-[170px] pointer-events-none -z-10" />
+    <PublicShell width="max-w-2xl">
+      <PageIntro title="Ouvrir un nouveau ticket" backHref="/help" backLabel="Retour au centre d'aide">
+        Expliquez votre situation ci-dessous. Un membre de l'équipe vous répondra sous peu.
+      </PageIntro>
 
-      {/* Grille de fond */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f1f2e15_1px,transparent_1px),linear-gradient(to_bottom,#1f1f2e15_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] -z-10" />
+      <div className="mt-8 space-y-7">
+        {/* CATÉGORIE */}
+        <div className="space-y-3">
+          <p id="ticket-category-label" className="text-sm font-medium text-zinc-200">
+            Catégorie du problème
+          </p>
+          <div role="group" aria-labelledby="ticket-category-label" className="flex flex-wrap gap-2">
+            {categories.map(({ id, label, icon: Icon }) => {
+              const isSelected = category === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setCategory(id)}
+                  aria-pressed={isSelected}
+                  className={`flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors ${FOCUS} ${
+                    isSelected
+                      ? "border-purple-500/50 bg-purple-500/15 text-purple-200"
+                      : "border-white/10 text-zinc-400 hover:border-white/20 hover:text-white"
+                  }`}
+                >
+                  <Icon size={15} />
+                  <span>{label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
-      <div>
-        {/* HEADER UNIFORMISÉ */}
-        <SiteHeader />
+        {/* SUJET */}
+        <div className="space-y-2">
+          <label htmlFor="ticket-subject" className="text-sm font-medium text-zinc-200">
+            Sujet
+          </label>
+          <input
+            id="ticket-subject"
+            type="text"
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            placeholder="Ex : Le widget musique ne s'affiche plus sur OBS"
+            className="w-full rounded-lg border border-white/10 bg-white/[0.02] px-4 py-3 text-base text-white placeholder-zinc-500 outline-none transition-colors focus:border-purple-500/60"
+          />
+        </div>
 
-        {/* FORMULAIRE DANS CONTENEUR STRUCTURÉ (max-w-2xl) */}
-        <div className="max-w-2xl mx-auto px-6 pt-8 pb-16">
-          
-          <Link 
-            href="/help" 
-            className="inline-flex items-center gap-2 text-xs font-semibold text-zinc-400 hover:text-purple-400 transition-colors mb-6 group"
+        {/* MESSAGE */}
+        <div className="space-y-2">
+          <label htmlFor="ticket-message" className="text-sm font-medium text-zinc-200">
+            Description détaillée
+          </label>
+          <textarea
+            id="ticket-message"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            placeholder="Donnez le maximum de détails (étapes pour reproduire le problème, messages d'erreur...)"
+            rows={6}
+            className="w-full resize-none rounded-lg border border-white/10 bg-white/[0.02] px-4 py-3 text-base text-white placeholder-zinc-500 outline-none transition-colors focus:border-purple-500/60"
+          />
+        </div>
+
+        {/* ERREUR */}
+        {error && (
+          <div
+            role="alert"
+            className="flex items-center gap-2.5 rounded-lg border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm font-medium text-red-200"
           >
-            <ArrowLeft size={14} className="transition-transform group-hover:-translate-x-1" />
-            <span>Retour au centre d'aide</span>
-          </Link>
-
-          <div className="mb-8">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-zinc-900/90 border border-zinc-800/80 text-zinc-300 text-xs mb-4 backdrop-blur-md shadow-inner">
-              <MessageSquarePlus size={14} className="text-purple-400" />
-              <span className="font-semibold text-zinc-300">Support en ligne</span>
-            </div>
-
-            <h1 className="text-3xl sm:text-4xl font-black tracking-tighter mb-2 bg-gradient-to-b from-white via-zinc-100 to-zinc-400 bg-clip-text text-transparent">
-              Ouvrir un nouveau ticket
-            </h1>
-            <p className="text-zinc-400 text-xs sm:text-sm">
-              Expliquez votre situation ci-dessous. Un membre de l'équipe vous répondra sous peu.
-            </p>
+            <AlertCircle size={16} className="shrink-0 text-red-300" />
+            <span>{error}</span>
           </div>
+        )}
 
-          {/* CARTE FORMULAIRE */}
-          <div className="rounded-2xl border border-zinc-800/80 bg-zinc-950/70 p-6 sm:p-8 backdrop-blur-xl shadow-xl space-y-6">
-            
-            {/* SÉLECTION DE LA CATÉGORIE */}
-            <div className="space-y-2.5">
-              <label className="text-[11px] font-extrabold uppercase tracking-widest text-zinc-400">
-                Catégorie du problème
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {categories.map(({ id, label, icon: Icon }) => {
-                  const isSelected = category === id;
-                  return (
-                    <button
-                      key={id}
-                      type="button"
-                      onClick={() => setCategory(id)}
-                      className={`flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold border transition-all duration-200 ${
-                        isSelected
-                          ? "bg-purple-600/20 border-purple-500/50 text-purple-300 shadow-sm"
-                          : "bg-zinc-900/40 border-zinc-800/80 text-zinc-400 hover:text-white hover:border-zinc-700"
-                      }`}
-                    >
-                      <Icon size={14} />
-                      <span>{label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* SUJET */}
-            <div className="space-y-2">
-              <label className="text-[11px] font-extrabold uppercase tracking-widest text-zinc-400">
-                Sujet
-              </label>
-              <input
-                type="text"
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                placeholder="Ex: Le widget musique ne s'affiche plus sur OBS"
-                className="w-full rounded-xl border border-zinc-800/80 bg-zinc-900/40 px-4 py-3 text-xs sm:text-sm text-white placeholder-zinc-500 outline-none focus:border-purple-500/60 focus:ring-1 focus:ring-purple-500/50 transition-all shadow-inner"
-              />
-            </div>
-
-            {/* MESSAGE */}
-            <div className="space-y-2">
-              <label className="text-[11px] font-extrabold uppercase tracking-widest text-zinc-400">
-                Description détaillée
-              </label>
-              <textarea
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Donnez le maximum de détails (étapes pour reproduire le problème, messages d'erreur...)"
-                rows={5}
-                className="w-full rounded-xl border border-zinc-800/80 bg-zinc-900/40 px-4 py-3 text-xs sm:text-sm text-white placeholder-zinc-500 outline-none focus:border-purple-500/60 focus:ring-1 focus:ring-purple-500/50 transition-all resize-none shadow-inner"
-              />
-            </div>
-
-            {/* ERREUR */}
-            {error && (
-              <div className="flex items-center gap-2 text-xs font-medium text-red-300 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
-                <AlertCircle size={15} className="shrink-0 text-red-400" />
-                <span>{error}</span>
-              </div>
-            )}
-
-            {/* BOUTON D'ENVOI */}
-            <button
-              onClick={handleSubmit}
-              disabled={loading}
-              className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 bg-[length:200%_auto] hover:bg-right px-6 py-3 text-xs font-extrabold uppercase tracking-wider text-white transition-all duration-300 hover:scale-[1.01] active:scale-95 disabled:opacity-50 shadow-md shadow-purple-600/20"
-            >
-              <Send size={14} />
-              <span>{loading ? "Envoi en cours..." : "Créer le ticket"}</span>
-            </button>
-          </div>
-
-        </div>
+        {/* ENVOI */}
+        <button
+          onClick={handleSubmit}
+          disabled={loading}
+          className={`flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-purple-600 px-6 py-3.5 text-base font-semibold text-white transition-colors hover:bg-purple-500 disabled:opacity-50 ${FOCUS}`}
+        >
+          <Send size={16} />
+          <span>{loading ? "Envoi en cours..." : "Créer le ticket"}</span>
+        </button>
       </div>
-
-      {/* FOOTER UNIFORMISÉ */}
-      <footer className="w-full border-t border-zinc-900/80 bg-black/40 backdrop-blur-md z-20 mt-auto">
-        <div className="max-w-5xl mx-auto px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-zinc-500">
-          <div className="flex items-center gap-1.5">
-            <span className="font-extrabold text-zinc-300">Twichify</span>
-            <span>— © 2026 Tous droits réservés.</span>
-          </div>
-
-          <div className="flex items-center gap-4 font-medium">
-            <Link href="/" className="hover:text-purple-400 transition-colors">Accueil</Link>
-            <Link href="/help" className="hover:text-purple-400 transition-colors">Aide</Link>
-            <Link href="/privacy" className="hover:text-purple-400 transition-colors">Confidentialité & CGU</Link>
-            <Link href="/mentions-legales" className="hover:text-purple-400 transition-colors">Mentions légales</Link>
-          </div>
-        </div>
-      </footer>
-    </main>
+    </PublicShell>
   );
 }

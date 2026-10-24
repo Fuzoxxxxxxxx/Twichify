@@ -361,15 +361,15 @@ export default function DashboardChat() {
         action={
           <div className="flex flex-wrap items-center justify-end gap-4">
             {isDirty && (
-              <span className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-amber-400">
-                <span className="h-2 w-2 animate-pulse rounded-full bg-amber-400" />
+              <span className="flex items-center gap-2 text-sm font-medium text-amber-300">
+                <span className="h-2 w-2 rounded-full bg-amber-400" />
                 Modifications non enregistrées
               </span>
             )}
             <button
               onClick={saveChatDesign}
               disabled={loading}
-              className="relative flex items-center justify-center gap-2 rounded-2xl bg-white text-black hover:bg-zinc-200 px-6 py-3 text-xs font-black uppercase tracking-[0.1em] shadow-[0_0_20px_rgba(255,255,255,0.2)] transition-all disabled:opacity-50"
+              className="relative flex items-center justify-center gap-2 rounded-lg bg-purple-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-purple-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400 disabled:opacity-50"
             >
               <Save size={16} />
               {loading ? "Sauvegarde..." : "Sauvegarder"}
@@ -382,8 +382,8 @@ export default function DashboardChat() {
       />
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-10 items-start">
-        <div className="rounded-3xl border border-white/5 bg-zinc-900/40 p-8 shadow-2xl backdrop-blur-sm space-y-8">
-          <div className="flex items-center gap-1.5 rounded-2xl border border-white/5 bg-black/30 p-1.5 flex-wrap">
+        <div className="space-y-8 rounded-2xl border border-white/10 bg-white/[0.02] p-6 sm:p-8">
+          <div role="group" aria-label="Catégories de réglages" className="flex flex-wrap items-center gap-1 rounded-xl border border-white/10 p-1">
             {[
               { id: "apparence", label: "Apparence", icon: Palette },
               { id: "comportement", label: "Comportement", icon: Sliders },
@@ -394,10 +394,11 @@ export default function DashboardChat() {
               <button
                 key={id}
                 onClick={() => setChatConfigSubTab(id)}
-                className={`flex-1 flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-[10px] font-black uppercase tracking-widest transition-all ${
+                aria-pressed={chatConfigSubTab === id}
+                className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 ${
                   chatConfigSubTab === id
-                    ? "bg-violet-600 text-white shadow-lg shadow-violet-600/30"
-                    : "text-zinc-500 hover:text-zinc-300 hover:bg-white/5"
+                    ? "bg-white/[0.08] text-white"
+                    : "text-zinc-400 hover:bg-white/[0.04] hover:text-white"
                 }`}
               >
                 <Icon size={13} />
@@ -409,9 +410,9 @@ export default function DashboardChat() {
           {chatConfigSubTab === "apparence" && (
             <div className="space-y-10 animate-in fade-in duration-300">
               <div className="space-y-4">
-                <label className="text-[11px] font-bold uppercase tracking-widest text-zinc-500 flex items-center gap-2">
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-zinc-200">
                   <Sparkles size={14} className="text-violet-400" /> Presets rapides
-                </label>
+                </h3>
                 <div className="flex flex-wrap gap-2">
                   {chatPresets.map((preset) => {
                     const isActive =
@@ -423,10 +424,10 @@ export default function DashboardChat() {
                       <button
                         key={preset.id}
                         onClick={() => applyPreset(preset.config)}
-                        className={`rounded-full px-4 py-2 text-[10px] font-bold uppercase tracking-widest border transition-all ${
+                        className={`rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
                           isActive
-                            ? "border-violet-500 bg-violet-500/15 text-violet-300"
-                            : "border-white/10 bg-black/20 text-zinc-400 hover:bg-white/5 hover:text-zinc-200"
+                            ? "border-violet-500/60 bg-violet-500/15 text-violet-200"
+                            : "border-white/10 text-zinc-400 hover:border-white/20 hover:text-white"
                         }`}
                         title={preset.desc}
                       >
@@ -438,9 +439,9 @@ export default function DashboardChat() {
               </div>
 
               <div className="space-y-4">
-                <label className="text-[11px] font-bold uppercase tracking-widest text-zinc-500 flex items-center gap-2">
-                  <Palette size={14} className="text-violet-400" /> Thème Visuel
-                </label>
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-zinc-200">
+                  <Palette size={14} className="text-violet-400" /> Thème visuel
+                </h3>
                 <div className="grid grid-cols-2 gap-4">
                   {[
                     { id: "glass", label: "Glassmorphism", desc: "Verre flouté" },
@@ -455,30 +456,32 @@ export default function DashboardChat() {
                     <button
                       key={theme.id}
                       onClick={() => setChatTheme(theme.id)}
-                      className={`flex flex-col items-start p-4 rounded-2xl border transition-all duration-200 text-left hover:scale-[1.02] active:scale-[0.98] ${
+                      aria-pressed={chatTheme === theme.id}
+                      className={`flex flex-col items-start rounded-xl border p-4 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 ${
                         chatTheme === theme.id
-                          ? "border-violet-500 bg-violet-500/10 shadow-[0_0_20px_rgba(139,92,246,0.15)]"
-                          : "border-white/5 bg-black/20 hover:bg-white/5"
+                          ? "border-violet-500/60 bg-violet-500/10"
+                          : "border-white/10 hover:border-white/20 hover:bg-white/[0.03]"
                       }`}
                     >
-                      <span className={`text-[12px] font-bold ${chatTheme === theme.id ? "text-violet-400" : "text-zinc-300"}`}>
+                      <span className={`text-sm font-semibold ${chatTheme === theme.id ? "text-violet-300" : "text-zinc-200"}`}>
                         {theme.label}
                       </span>
-                      <span className="text-[10px] text-zinc-500">{theme.desc}</span>
+                      <span className="text-xs text-zinc-400">{theme.desc}</span>
                     </button>
                   ))}
                 </div>
               </div>
 
               <div className="space-y-4">
-                <label className="text-[11px] font-bold uppercase tracking-widest text-zinc-500 flex items-center gap-2">
+                <label htmlFor="chat-animation" className="flex items-center gap-2 text-sm font-semibold text-zinc-200">
                   <Zap size={14} className="text-violet-400" /> Animation
                 </label>
                 <div className="relative">
                   <select
+                    id="chat-animation"
                     value={chatAnimation}
                     onChange={(e) => setChatAnimation(e.target.value)}
-                    className="w-full appearance-none rounded-2xl border border-white/10 bg-zinc-950/80 p-4 pr-10 text-[11px] font-black uppercase tracking-widest text-white outline-none focus:border-violet-500/50 cursor-pointer"
+                    className="w-full cursor-pointer appearance-none rounded-lg border border-white/10 bg-zinc-950 p-4 pr-10 text-sm font-medium text-white outline-none transition-colors focus:border-violet-500/60"
                   >
                     <option value="slide">Glissement (Slide)</option>
                     <option value="fade">Fondu (Fade In)</option>
@@ -490,18 +493,18 @@ export default function DashboardChat() {
               </div>
 
               <div className="space-y-4">
-                <label className="text-[11px] font-bold uppercase tracking-widest text-zinc-500 flex items-center gap-2">
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-zinc-200">
                   <Type size={14} className="text-violet-400" /> Typographie
-                </label>
+                </h3>
                 <div className="flex flex-wrap gap-2">
                   {(["all", "sans", "display", "mono", "serif", "script"] as const).map((cat) => (
                     <button
                       key={cat}
                       onClick={() => setFontCategory(cat)}
-                      className={`rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-all ${
+                      className={`rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors ${
                         fontCategory === cat
-                          ? "border-violet-500 bg-violet-500/15 text-violet-300"
-                          : "border-white/10 bg-black/20 text-zinc-500 hover:bg-white/5 hover:text-zinc-300"
+                          ? "border-violet-500/60 bg-violet-500/15 text-violet-200"
+                          : "border-white/10 text-zinc-400 hover:border-white/20 hover:text-white"
                       }`}
                     >
                       {FONT_CATEGORY_LABELS[cat]}
@@ -516,10 +519,11 @@ export default function DashboardChat() {
                       <button
                         key={f.id}
                         onClick={() => setChatFontFamily(f.id)}
-                        className={`flex flex-col items-start gap-1 rounded-2xl border p-4 text-left transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] ${
+                        aria-pressed={selected}
+                        className={`flex flex-col items-start gap-1 rounded-xl border p-4 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 ${
                           selected
-                            ? "border-violet-500 bg-violet-500/10 shadow-[0_0_20px_rgba(139,92,246,0.15)]"
-                            : "border-white/5 bg-black/20 hover:bg-white/5"
+                            ? "border-violet-500/60 bg-violet-500/10"
+                            : "border-white/10 hover:border-white/20 hover:bg-white/[0.03]"
                         }`}
                       >
                         <span
@@ -528,15 +532,15 @@ export default function DashboardChat() {
                         >
                           Super stream !
                         </span>
-                        <span className="flex w-full items-center justify-between text-[10px] text-zinc-500">
+                        <span className="flex w-full items-center justify-between text-xs text-zinc-400">
                           <span>{f.label}</span>
-                          <span className="uppercase tracking-widest text-zinc-600">{f.family ? "Google" : "Système"}</span>
+                          <span className="text-zinc-500">{f.family ? "Google" : "Système"}</span>
                         </span>
                       </button>
                     );
                   })}
                 </div>
-                <p className="text-[10px] text-zinc-600">
+                <p className="text-xs text-zinc-400">
                   {ALL_FONTS.length} polices. Les polices Google sont chargées par OBS à l'affichage du widget (connexion internet requise).
                 </p>
               </div>
@@ -546,10 +550,11 @@ export default function DashboardChat() {
               <div className="grid grid-cols-2 gap-4">
                 <button
                   onClick={() => setShowColors(!showColors)}
-                  className={`flex items-center justify-between rounded-2xl border p-4 text-[10px] font-black uppercase tracking-widest transition-all duration-200 ${
+                  aria-pressed={showColors}
+                  className={`flex items-center justify-between rounded-xl border p-4 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 ${
                     showColors
-                      ? "border-violet-500/50 bg-violet-500/10 text-white shadow-[0_0_15px_rgba(139,92,246,0.15)]"
-                      : "border-white/5 bg-black/20 text-zinc-500 hover:bg-black/40 hover:text-zinc-300"
+                      ? "border-violet-500/50 bg-violet-500/10 text-white"
+                      : "border-white/10 text-zinc-400 hover:border-white/20 hover:text-white"
                   }`}
                 >
                   <span className="flex items-center gap-2.5"><Palette size={16} /> Couleurs pseudo</span>
@@ -558,10 +563,11 @@ export default function DashboardChat() {
 
                 <button
                   onClick={() => setCompactMode(!compactMode)}
-                  className={`flex items-center justify-between rounded-2xl border p-4 text-[10px] font-black uppercase tracking-widest transition-all duration-200 ${
+                  aria-pressed={compactMode}
+                  className={`flex items-center justify-between rounded-xl border p-4 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 ${
                     compactMode
-                      ? "border-violet-500/50 bg-violet-500/10 text-white shadow-[0_0_15px_rgba(139,92,246,0.15)]"
-                      : "border-white/5 bg-black/20 text-zinc-500 hover:bg-black/40 hover:text-zinc-300"
+                      ? "border-violet-500/50 bg-violet-500/10 text-white"
+                      : "border-white/10 text-zinc-400 hover:border-white/20 hover:text-white"
                   }`}
                 >
                   <span className="flex items-center gap-2.5"><Layout size={16} /> Mode compact</span>
@@ -576,10 +582,11 @@ export default function DashboardChat() {
               <div className="grid grid-cols-2 gap-4">
                 <button
                   onClick={() => setShowBadges(!showBadges)}
-                  className={`flex items-center justify-between rounded-2xl border p-4 text-[10px] font-black uppercase tracking-widest transition-all duration-200 ${
+                  aria-pressed={showBadges}
+                  className={`flex items-center justify-between rounded-xl border p-4 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 ${
                     showBadges
-                      ? "border-emerald-500/50 bg-emerald-500/10 text-white shadow-[0_0_15px_rgba(16,185,129,0.15)]"
-                      : "border-white/5 bg-black/20 text-zinc-500 hover:bg-black/40 hover:text-zinc-300"
+                      ? "border-emerald-500/50 bg-emerald-500/10 text-white"
+                      : "border-white/10 text-zinc-400 hover:border-white/20 hover:text-white"
                   }`}
                 >
                   <span className="flex items-center gap-2.5"><Shield size={16} /> Badges</span>
@@ -588,10 +595,11 @@ export default function DashboardChat() {
 
                 <button
                   onClick={() => setHideBots(!hideBots)}
-                  className={`flex items-center justify-between rounded-2xl border p-4 text-[10px] font-black uppercase tracking-widest transition-all duration-200 ${
+                  aria-pressed={hideBots}
+                  className={`flex items-center justify-between rounded-xl border p-4 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 ${
                     hideBots
-                      ? "border-violet-500/50 bg-violet-500/10 text-white shadow-[0_0_15px_rgba(139,92,246,0.15)]"
-                      : "border-white/5 bg-black/20 text-zinc-500 hover:bg-black/40 hover:text-zinc-300"
+                      ? "border-violet-500/50 bg-violet-500/10 text-white"
+                      : "border-white/10 text-zinc-400 hover:border-white/20 hover:text-white"
                   }`}
                 >
                   <span className="flex items-center gap-2.5"><Bot size={16} /> Masquer Bots</span>
@@ -600,10 +608,11 @@ export default function DashboardChat() {
 
                 <button
                   onClick={() => setHideCommands(!hideCommands)}
-                  className={`flex items-center justify-between rounded-2xl border p-4 text-[10px] font-black uppercase tracking-widest transition-all duration-200 ${
+                  aria-pressed={hideCommands}
+                  className={`flex items-center justify-between rounded-xl border p-4 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 ${
                     hideCommands
-                      ? "border-cyan-500/50 bg-cyan-500/10 text-white shadow-[0_0_15px_rgba(34,211,238,0.15)]"
-                      : "border-white/5 bg-black/20 text-zinc-500 hover:bg-black/40 hover:text-zinc-300"
+                      ? "border-cyan-500/50 bg-cyan-500/10 text-white"
+                      : "border-white/10 text-zinc-400 hover:border-white/20 hover:text-white"
                   }`}
                 >
                   <span className="flex items-center gap-2.5"><MessageSquare size={16} /> Masquer !cmd</span>
@@ -612,10 +621,11 @@ export default function DashboardChat() {
 
                 <button
                   onClick={() => setShowTimestamps(!showTimestamps)}
-                  className={`flex items-center justify-between rounded-2xl border p-4 text-[10px] font-black uppercase tracking-widest transition-all duration-200 ${
+                  aria-pressed={showTimestamps}
+                  className={`flex items-center justify-between rounded-xl border p-4 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 ${
                     showTimestamps
-                      ? "border-amber-500/50 bg-amber-500/10 text-white shadow-[0_0_15px_rgba(245,158,11,0.15)]"
-                      : "border-white/5 bg-black/20 text-zinc-500 hover:bg-black/40 hover:text-zinc-300"
+                      ? "border-amber-500/50 bg-amber-500/10 text-white"
+                      : "border-white/10 text-zinc-400 hover:border-white/20 hover:text-white"
                   }`}
                 >
                   <span className="flex items-center gap-2.5"><Clock size={16} /> Timestamps</span>
@@ -626,9 +636,9 @@ export default function DashboardChat() {
               <SliderRow label="Messages affichés max" value={maxMessages} onChange={setMaxMessages} suffix="" max={20} />
 
               <div className="space-y-3">
-                <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500">
+                <div className="flex items-center justify-between text-sm text-zinc-400">
                   <span>Durée d'affichage</span>
-                  <span className="rounded-md bg-purple-600 px-2 py-1 text-white font-mono">
+                  <span className="rounded-md bg-purple-600 px-2 py-0.5 font-mono text-xs font-semibold text-white">
                     {messageLifetime === "0" ? "Permanent" : `${messageLifetime} s`}
                   </span>
                 </div>
@@ -639,19 +649,21 @@ export default function DashboardChat() {
                   step={5}
                   value={messageLifetime}
                   onChange={(e) => setMessageLifetime(e.target.value)}
+                  aria-label="Durée d'affichage des messages"
                   className="twichify-slider h-1.5 w-full cursor-pointer"
                   style={{ background: `linear-gradient(to right, #9333ea ${(Number(messageLifetime) / 120) * 100}%, #3f3f46 ${(Number(messageLifetime) / 120) * 100}%)` }}
                 />
-                <p className="text-[10px] text-zinc-600">0 = les messages ne disparaissent jamais (seuls les plus récents restent visibles).</p>
+                <p className="text-xs text-zinc-400">0 = les messages ne disparaissent jamais (seuls les plus récents restent visibles).</p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <button
                   onClick={() => setShowReplies(!showReplies)}
-                  className={`flex items-center justify-between rounded-2xl border p-4 text-[10px] font-black uppercase tracking-widest transition-all duration-200 ${
+                  aria-pressed={showReplies}
+                  className={`flex items-center justify-between rounded-xl border p-4 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 ${
                     showReplies
-                      ? "border-cyan-500/50 bg-cyan-500/10 text-white shadow-[0_0_15px_rgba(34,211,238,0.15)]"
-                      : "border-white/5 bg-black/20 text-zinc-500 hover:bg-black/40 hover:text-zinc-300"
+                      ? "border-cyan-500/50 bg-cyan-500/10 text-white"
+                      : "border-white/10 text-zinc-400 hover:border-white/20 hover:text-white"
                   }`}
                 >
                   <span className="flex items-center gap-2.5"><MessageSquare size={16} /> Afficher réponses</span>
@@ -660,10 +672,11 @@ export default function DashboardChat() {
 
                 <button
                   onClick={() => setHighlightFirstMessage(!highlightFirstMessage)}
-                  className={`flex items-center justify-between rounded-2xl border p-4 text-[10px] font-black uppercase tracking-widest transition-all duration-200 ${
+                  aria-pressed={highlightFirstMessage}
+                  className={`flex items-center justify-between rounded-xl border p-4 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 ${
                     highlightFirstMessage
-                      ? "border-amber-500/50 bg-amber-500/10 text-white shadow-[0_0_15px_rgba(245,158,11,0.15)]"
-                      : "border-white/5 bg-black/20 text-zinc-500 hover:bg-black/40 hover:text-zinc-300"
+                      ? "border-amber-500/50 bg-amber-500/10 text-white"
+                      : "border-white/10 text-zinc-400 hover:border-white/20 hover:text-white"
                   }`}
                 >
                   <span className="flex items-center gap-2.5"><Sparkles size={16} /> 1er message</span>
@@ -672,9 +685,9 @@ export default function DashboardChat() {
               </div>
 
               <div className="space-y-3">
-                <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500">
+                <div className="flex items-center justify-between text-sm text-zinc-400">
                   <span>Limite de caractères</span>
-                  <span className="rounded-md bg-purple-600 px-2 py-1 text-white font-mono">
+                  <span className="rounded-md bg-purple-600 px-2 py-0.5 font-mono text-xs font-semibold text-white">
                     {charLimit === "0" ? "Illimité" : `${charLimit} car.`}
                   </span>
                 </div>
@@ -685,17 +698,18 @@ export default function DashboardChat() {
                   step={10}
                   value={charLimit}
                   onChange={(e) => setCharLimit(e.target.value)}
+                  aria-label="Limite de caractères"
                   className="twichify-slider h-1.5 w-full cursor-pointer"
                   style={{ background: `linear-gradient(to right, #9333ea ${(Number(charLimit) / 300) * 100}%, #3f3f46 ${(Number(charLimit) / 300) * 100}%)` }}
                 />
-                <p className="text-[10px] text-zinc-600">0 = illimité. Les messages plus longs sont tronqués avec …</p>
+                <p className="text-xs text-zinc-400">0 = illimité. Les messages plus longs sont tronqués avec …</p>
               </div>
 
-              <div className="space-y-4 border-t border-white/5 pt-6">
-                <label className="text-[11px] font-bold uppercase tracking-widest text-zinc-500 flex items-center gap-2">
+              <div className="space-y-4 border-t border-white/10 pt-6">
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-zinc-200">
                   <Eye size={14} className="text-violet-400" /> Tester sans être en live
-                </label>
-                <p className="text-[11px] text-zinc-600 -mt-2">
+                </h3>
+                <p className="-mt-2 text-sm leading-relaxed text-zinc-400">
                   Le mode test ajoute <span className="font-mono text-zinc-300">?test=1</span> à l'URL du widget : il joue de faux messages en
                   boucle (modérateur, VIP, bot, commande, premier message, réponse, message long) avec tes réglages enregistrés, filtres compris.
                   Aucune statistique n'est enregistrée. Pense à sauvegarder avant.
@@ -705,7 +719,7 @@ export default function DashboardChat() {
                     href={`/widget/chat/${widgetToken}?test=1`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-zinc-300 transition hover:border-violet-500/50 hover:text-white"
+                    className="inline-flex items-center gap-2 rounded-lg border border-white/15 px-4 py-3 text-sm font-medium text-zinc-200 transition-colors hover:border-violet-500/50 hover:text-white"
                   >
                     <Eye size={14} /> Ouvrir le widget en mode test
                   </a>
@@ -716,10 +730,10 @@ export default function DashboardChat() {
 
           {chatConfigSubTab === "roles" && (
             <div className="space-y-4 animate-in fade-in duration-300">
-              <label className="text-[11px] font-bold uppercase tracking-widest text-zinc-500 flex items-center gap-2">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-zinc-200">
                 <Shield size={14} className="text-violet-400" /> Surbrillance par rôle
-              </label>
-              <p className="text-[11px] text-zinc-600 -mt-2">
+              </h3>
+              <p className="-mt-2 text-sm leading-relaxed text-zinc-400">
                 Les messages des rôles activés sont mis en avant avec une bordure et un fond teintés. Priorité : Streamer &gt; Modérateur &gt; VIP &gt; Sub.
               </p>
 
@@ -734,10 +748,10 @@ export default function DashboardChat() {
                 return (
                   <div
                     key={key}
-                    className={`flex items-center justify-between rounded-2xl border p-4 transition-all duration-200 ${
+                    className={`flex items-center justify-between rounded-xl border p-4 transition-colors ${
                       role.enabled
                         ? "border-violet-500/50 bg-violet-500/10"
-                        : "border-white/5 bg-black/20"
+                        : "border-white/10"
                     }`}
                   >
                     <button
@@ -747,17 +761,19 @@ export default function DashboardChat() {
                           [key]: { ...prev[key], enabled: !prev[key].enabled },
                         }))
                       }
-                      className="flex items-center gap-2.5 text-[11px] font-black uppercase tracking-widest text-white"
+                      aria-pressed={role.enabled}
+                      className="flex cursor-pointer items-center gap-2.5 rounded text-sm font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400"
                     >
-                      {role.enabled ? <Check size={16} className="text-violet-400" /> : <EyeOff size={16} className="text-zinc-500" />}
+                      {role.enabled ? <Check size={16} className="text-violet-300" /> : <EyeOff size={16} className="text-zinc-500" />}
                       {label}
                     </button>
 
                     <div className="flex items-center gap-2">
-                      <span className="font-mono text-[10px] text-zinc-400">{role.color}</span>
+                      <span className="font-mono text-xs text-zinc-400">{role.color}</span>
                       <input
                         type="color"
                         value={role.color}
+                        aria-label={`Couleur de surbrillance : ${label}`}
                         onChange={(e) =>
                           setRoleHighlights((prev) => ({
                             ...prev,
@@ -775,74 +791,76 @@ export default function DashboardChat() {
 
           {chatConfigSubTab === "moderation" && (
             <div className="space-y-4 animate-in fade-in duration-300">
-              <label className="text-[11px] font-bold uppercase tracking-widest text-zinc-500 flex items-center gap-2">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-zinc-200">
                 <Bot size={14} className="text-violet-400" /> Filtre de mots
-              </label>
-              <p className="text-[11px] text-zinc-600 -mt-2">
+              </h3>
+              <p className="-mt-2 text-sm leading-relaxed text-zinc-400">
                 Tout message contenant l'un de ces mots (insensible à la casse) sera filtré selon le mode choisi ci-dessous. Sépare les mots par des virgules.
               </p>
               <textarea
                 value={moderationWordsText}
                 onChange={(e) => setModerationWordsText(e.target.value)}
+                aria-label="Mots filtrés"
                 placeholder="ex: motinterdit1, motinterdit2, spam"
                 rows={5}
-                className="w-full rounded-2xl border border-white/10 bg-zinc-950/80 p-4 text-xs text-zinc-100 placeholder-zinc-600 outline-none focus:border-violet-500/50 transition-all resize-none"
+                className="w-full resize-none rounded-lg border border-white/10 bg-white/[0.02] p-4 text-sm text-zinc-100 placeholder-zinc-500 outline-none transition-colors focus:border-violet-500/60"
               />
-              <p className="text-[10px] text-zinc-600">
+              <p className="text-xs text-zinc-400">
                 {moderationWordsText.split(",").map((w) => w.trim()).filter(Boolean).length} mot(s) actuellement filtré(s)
               </p>
 
               <div className="space-y-3">
-                <label className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">
-                  Comportement du filtre
-                </label>
+                <h3 className="text-sm font-semibold text-zinc-200">Comportement du filtre</h3>
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     onClick={() => setModerationMode("hide")}
-                    className={`flex flex-col items-start gap-1 rounded-2xl border p-4 text-left transition-all duration-200 ${
+                    aria-pressed={moderationMode === "hide"}
+                    className={`flex cursor-pointer flex-col items-start gap-1 rounded-xl border p-4 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 ${
                       moderationMode === "hide"
-                        ? "border-violet-500/50 bg-violet-500/10 shadow-[0_0_15px_rgba(139,92,246,0.15)]"
-                        : "border-white/5 bg-black/20 hover:bg-black/40"
+                        ? "border-violet-500/60 bg-violet-500/10"
+                        : "border-white/10 hover:border-white/20 hover:bg-white/[0.03]"
                     }`}
                   >
-                    <span className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-white">
-                      {moderationMode === "hide" && <Check size={14} className="text-violet-400" />}
+                    <span className="flex items-center gap-2 text-sm font-semibold text-white">
+                      {moderationMode === "hide" && <Check size={14} className="text-violet-300" />}
                       Masquer le message
                     </span>
-                    <span className="text-[10px] text-zinc-500">Le message entier disparaît du widget.</span>
+                    <span className="text-xs text-zinc-400">Le message entier disparaît du widget.</span>
                   </button>
                   <button
                     onClick={() => setModerationMode("censor")}
-                    className={`flex flex-col items-start gap-1 rounded-2xl border p-4 text-left transition-all duration-200 ${
+                    aria-pressed={moderationMode === "censor"}
+                    className={`flex cursor-pointer flex-col items-start gap-1 rounded-xl border p-4 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 ${
                       moderationMode === "censor"
-                        ? "border-violet-500/50 bg-violet-500/10 shadow-[0_0_15px_rgba(139,92,246,0.15)]"
-                        : "border-white/5 bg-black/20 hover:bg-black/40"
+                        ? "border-violet-500/60 bg-violet-500/10"
+                        : "border-white/10 hover:border-white/20 hover:bg-white/[0.03]"
                     }`}
                   >
-                    <span className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-white">
-                      {moderationMode === "censor" && <Check size={14} className="text-violet-400" />}
+                    <span className="flex items-center gap-2 text-sm font-semibold text-white">
+                      {moderationMode === "censor" && <Check size={14} className="text-violet-300" />}
                       Censurer le mot
                     </span>
-                    <span className="text-[10px] text-zinc-500">Seul le mot est remplacé par des ****, le reste du message reste visible.</span>
+                    <span className="text-xs text-zinc-400">Seul le mot est remplacé par des ****, le reste du message reste visible.</span>
                   </button>
                 </div>
               </div>
 
-              <div className="space-y-4 border-t border-white/5 pt-6">
-                <label className="text-[11px] font-bold uppercase tracking-widest text-zinc-500 flex items-center gap-2">
+              <div className="space-y-4 border-t border-white/10 pt-6">
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-zinc-200">
                   <Shield size={14} className="text-violet-400" /> Utilisateurs ignorés
-                </label>
-                <p className="text-[11px] text-zinc-600 -mt-2">
+                </h3>
+                <p className="-mt-2 text-sm leading-relaxed text-zinc-400">
                   Les messages de ces pseudos ne s'affichent jamais dans le widget (ex : tes bots, un troll). Sépare les pseudos par des virgules.
                 </p>
                 <textarea
                   value={ignoredUsersText}
                   onChange={(e) => setIgnoredUsersText(e.target.value)}
+                  aria-label="Utilisateurs ignorés"
                   placeholder="ex: nightbot, streamelements, pseudo_troll"
                   rows={3}
-                  className="w-full rounded-2xl border border-white/10 bg-zinc-950/80 p-4 text-xs text-zinc-100 placeholder-zinc-600 outline-none focus:border-violet-500/50 transition-all resize-none"
+                  className="w-full resize-none rounded-lg border border-white/10 bg-white/[0.02] p-4 text-sm text-zinc-100 placeholder-zinc-500 outline-none transition-colors focus:border-violet-500/60"
                 />
-                <p className="text-[10px] text-zinc-600">
+                <p className="text-xs text-zinc-400">
                   {ignoredUsersText.split(",").map((u) => u.trim()).filter(Boolean).length} pseudo(s) ignoré(s)
                 </p>
               </div>
@@ -852,9 +870,9 @@ export default function DashboardChat() {
           {chatConfigSubTab === "position" && (
             <div className="space-y-10 animate-in fade-in duration-300">
               <div className="space-y-4">
-                <label className="text-[11px] font-bold uppercase tracking-widest text-zinc-500 flex items-center gap-2">
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-zinc-200">
                   <Layout size={14} className="text-violet-400" /> Position à l'écran
-                </label>
+                </h3>
                 <div className="relative aspect-video rounded-2xl border border-white/10 bg-black/30 p-3">
                   <div className="absolute inset-3 grid grid-cols-2 grid-rows-2 gap-2">
                     {[
@@ -867,20 +885,22 @@ export default function DashboardChat() {
                         <button
                           onClick={() => setChatPosition(pos.id)}
                           title={positionLabelMap[pos.id]}
-                          className={`w-6 h-6 rounded-md border-2 transition-all ${
+                          aria-label={positionLabelMap[pos.id]}
+                          aria-pressed={chatPosition === pos.id}
+                          className={`h-7 w-7 cursor-pointer rounded-md border-2 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 ${
                             chatPosition === pos.id
-                              ? "border-violet-500 bg-violet-500/40 shadow-[0_0_12px_rgba(139,92,246,0.5)]"
-                              : "border-white/15 bg-white/5 hover:bg-white/10"
+                              ? "border-violet-400 bg-violet-500/40"
+                              : "border-white/20 bg-white/5 hover:bg-white/10"
                           }`}
                         />
                       </div>
                     ))}
                   </div>
-                  <p className="absolute bottom-1 right-1 text-[8px] font-black text-zinc-700 uppercase tracking-widest">
+                  <p className="absolute bottom-1 right-1 text-xs text-zinc-500">
                     Zone OBS
                   </p>
                 </div>
-                <p className="text-[10px] text-zinc-500 text-center">
+                <p className="text-center text-sm text-zinc-400">
                   {positionLabelMap[chatPosition]}
                 </p>
               </div>
@@ -890,18 +910,16 @@ export default function DashboardChat() {
           )}
         </div>
 
-        <div className="relative flex flex-col border border-white/10 rounded-3xl bg-zinc-950/80 min-h-[500px] sticky top-28 overflow-hidden shadow-2xl backdrop-blur-xl">
-          <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 mix-blend-overlay pointer-events-none" />
-
+        <div className="relative flex flex-col border border-white/10 rounded-2xl bg-zinc-950/80 min-h-[500px] sticky top-28 overflow-hidden">
           <div className="relative z-30 flex items-center justify-between px-6 pt-6">
-            <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Aperçu OBS {twitchLogin ? `· #${twitchLogin}` : "· chargement…"}
+            <p className="flex items-center gap-2 text-sm text-zinc-400">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              Aperçu OBS {twitchLogin ? `: #${twitchLogin}` : ": chargement…"}
             </p>
             <div className="flex items-center gap-4">
               <button
                 onClick={() => setPreviewMessages([])}
-                className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-500 hover:text-violet-400 transition-colors"
+                className="flex cursor-pointer items-center gap-1.5 rounded text-sm font-medium text-zinc-400 transition-colors hover:text-violet-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400"
               >
                 <RefreshCw size={12} /> Vider
               </button>
@@ -911,7 +929,7 @@ export default function DashboardChat() {
                   target="_blank"
                   rel="noopener noreferrer"
                   title="Ouvre le vrai widget avec de faux messages (enregistre d'abord ta configuration)"
-                  className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-500 hover:text-emerald-400 transition-colors"
+                  className="flex items-center gap-1.5 rounded text-sm font-medium text-zinc-400 transition-colors hover:text-emerald-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-300"
                 >
                   <Eye size={12} /> Vrai widget
                 </a>
@@ -986,7 +1004,7 @@ export default function DashboardChat() {
           </div>
 
           {!twitchLogin && (
-            <p className="relative z-20 text-center text-[10px] text-zinc-600 pb-4">
+            <p className="relative z-20 pb-4 text-center text-xs text-zinc-500">
               Connecte-toi avec Twitch pour voir tes vrais badges dans l'aperçu.
             </p>
           )}

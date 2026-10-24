@@ -342,7 +342,7 @@ export default function AdminTicketThreadPage() {
       <div className="flex items-center justify-center py-24">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="w-6 h-6 text-purple-500 animate-spin" />
-          <p className="text-xs text-zinc-500 font-medium">Chargement du ticket...</p>
+          <p className="text-sm text-zinc-400">Chargement du ticket...</p>
         </div>
       </div>
     );
@@ -350,15 +350,15 @@ export default function AdminTicketThreadPage() {
 
   if (!ticket) {
     return (
-      <div className="max-w-md mx-auto text-center rounded-2xl border border-zinc-800/80 bg-zinc-950/60 p-8 backdrop-blur-xl mt-10">
-        <AlertTriangle className="mx-auto text-amber-500 mb-3" size={32} />
-        <h2 className="text-base font-bold text-white mb-2">Ticket non disponible</h2>
-        <p className="text-xs text-zinc-400 mb-6">
+      <div role="alert" className="mx-auto mt-10 max-w-md rounded-2xl border border-white/10 bg-white/[0.02] p-8 text-center">
+        <AlertTriangle className="mx-auto text-amber-400 mb-3" size={32} />
+        <h2 className="mb-2 font-display text-xl font-bold text-white">Ticket non disponible</h2>
+        <p className="mb-6 text-sm text-zinc-400">
           Ce ticket n'existe pas ou vous ne disposez pas des permissions requises pour l'afficher.
         </p>
         <Link
           href="/admin/tickets"
-          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-xs font-semibold text-zinc-200 hover:text-white transition-all"
+          className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/15 px-5 py-3 text-sm font-semibold text-zinc-200 transition-colors hover:border-white/30 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400"
         >
           <ArrowLeft size={14} />
           <span>Retour à la liste des tickets</span>
@@ -371,7 +371,7 @@ export default function AdminTicketThreadPage() {
     <div className="max-w-2xl mx-auto flex flex-col">
       <Link 
         href="/admin/tickets" 
-        className="inline-flex items-center gap-2 text-xs font-semibold text-zinc-400 hover:text-purple-400 transition-colors mb-6 group w-fit"
+        className="mb-6 inline-flex w-fit items-center gap-2 rounded text-sm text-zinc-400 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400 group"
       >
         <ArrowLeft size={14} className="transition-transform group-hover:-translate-x-1" />
         <span>Tous les tickets</span>
@@ -379,14 +379,14 @@ export default function AdminTicketThreadPage() {
 
       {/* Affiché uniquement si pris par un autre ET que le ticket n'est PAS fermé */}
       {isAssignedToOther && !isClosed && (
-        <div className="flex items-center justify-between gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 mb-4">
-          <div className="flex items-center gap-2 text-amber-300 text-xs font-semibold">
+        <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/[0.08] px-4 py-3">
+          <div className="flex items-center gap-2 text-sm font-medium text-amber-200">
             <Lock size={14} className="shrink-0" />
             <span>Pris en charge par {ticket.assignedTo?.userName}. Lecture seule.</span>
           </div>
           <button
             onClick={handleTakeover}
-            className="text-[10px] font-black uppercase tracking-widest text-amber-300 hover:text-amber-200 underline shrink-0"
+            className="shrink-0 cursor-pointer rounded text-sm font-semibold text-amber-200 underline underline-offset-4 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300"
           >
             Reprendre
           </button>
@@ -395,25 +395,25 @@ export default function AdminTicketThreadPage() {
 
       {/* Affiché uniquement si assigné à moi ET que le ticket n'est PAS fermé */}
       {isAssignedToMe && !isClosed && (
-        <div className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 mb-4">
-          <div className="flex items-center gap-2 text-emerald-300 text-xs font-semibold">
+        <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-emerald-500/25 bg-emerald-500/[0.06] px-4 py-3">
+          <div className="flex items-center gap-2 text-sm font-medium text-emerald-200">
             <CheckCircle2 size={14} className="shrink-0" />
             <span>Tu as pris en charge ce ticket.</span>
           </div>
           <div className="flex items-center gap-4">
             <button
               onClick={openTransfer}
-              className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-purple-300 hover:text-purple-200 transition-colors"
+              className="flex cursor-pointer items-center gap-1.5 rounded text-sm font-medium text-purple-300 transition-colors hover:text-purple-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400"
             >
-              <ArrowRightLeft size={11} />
+              <ArrowRightLeft size={13} />
               Transférer
             </button>
             <button
               onClick={handleRelease}
               disabled={releasing}
-              className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-colors disabled:opacity-40"
+              className="flex cursor-pointer items-center gap-1.5 rounded text-sm font-medium text-zinc-300 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400 disabled:opacity-40"
             >
-              <LogOut size={11} />
+              <LogOut size={13} />
               Se retirer
             </button>
           </div>
@@ -422,9 +422,9 @@ export default function AdminTicketThreadPage() {
 
       {/* Transfert / escalade : choix du destinataire, motif privé */}
       {transferOpen && isAssignedToMe && !isClosed && (
-        <div className="rounded-2xl border border-zinc-800/80 bg-zinc-950/70 p-4 mb-4 space-y-3 backdrop-blur-xl">
-          <p className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-widest text-zinc-400">
-            <ArrowRightLeft size={12} className="text-purple-400" />
+        <div className="mb-4 space-y-3 rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+          <p className="flex items-center gap-2 text-sm font-semibold text-zinc-200">
+            <ArrowRightLeft size={14} className="text-purple-300" />
             Transférer ou escalader ce ticket
           </p>
 
@@ -433,7 +433,7 @@ export default function AdminTicketThreadPage() {
               <Loader2 size={16} className="animate-spin text-purple-500" />
             </div>
           ) : staffList.length === 0 ? (
-            <p className="text-xs text-zinc-500">Aucun autre membre du staff ne peut prendre en charge des tickets.</p>
+            <p className="text-sm text-zinc-400">Aucun autre membre du staff ne peut prendre en charge des tickets.</p>
           ) : (
             <div className="max-h-48 space-y-1.5 overflow-y-auto pr-1">
               {staffList.map((m) => (
@@ -441,16 +441,15 @@ export default function AdminTicketThreadPage() {
                   key={m.id}
                   type="button"
                   onClick={() => setTransferTo(m.id)}
-                  className={`flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left text-xs transition-all ${
+                  aria-pressed={transferTo === m.id}
+                  className={`flex w-full cursor-pointer items-center justify-between rounded-lg border px-3 py-2.5 text-left text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400 ${
                     transferTo === m.id
-                      ? "border-purple-500 bg-purple-500/15 text-purple-200"
-                      : "border-zinc-800/80 bg-zinc-900/40 text-zinc-300 hover:border-zinc-700"
+                      ? "border-purple-500/60 bg-purple-500/15 text-purple-100"
+                      : "border-white/10 text-zinc-300 hover:border-white/20"
                   }`}
                 >
                   <span className="font-semibold">{m.name}</span>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
-                    {roleLabel(m.role)}
-                  </span>
+                  <span className="text-xs text-zinc-400">{roleLabel(m.role)}</span>
                 </button>
               ))}
             </div>
@@ -461,10 +460,11 @@ export default function AdminTicketThreadPage() {
             onChange={(e) => setTransferReason(e.target.value)}
             maxLength={TRANSFER_REASON_MAX}
             rows={2}
+            aria-label="Motif du transfert"
             placeholder="Motif ou contexte pour la personne qui reprend (visible du staff uniquement)..."
-            className="w-full resize-none rounded-xl border border-zinc-800/80 bg-zinc-900/40 px-3.5 py-2.5 text-xs text-white placeholder-zinc-500 outline-none transition-colors focus:border-purple-500/50"
+            className="w-full resize-none rounded-lg border border-white/10 bg-white/[0.02] px-3.5 py-2.5 text-sm text-white placeholder-zinc-500 outline-none transition-colors focus:border-purple-500/60"
           />
-          <p className="text-[10px] leading-relaxed text-zinc-600">
+          <p className="text-xs leading-relaxed text-zinc-400">
             Le demandeur voit seulement « La conversation a été transférée à … ». Le motif est enregistré dans les notes internes.
           </p>
 
@@ -472,14 +472,14 @@ export default function AdminTicketThreadPage() {
             <button
               onClick={doTransfer}
               disabled={!transferTo || transferBusy}
-              className="flex items-center gap-2 rounded-xl bg-purple-600 px-4 py-2 text-xs font-bold text-white transition-all hover:bg-purple-500 disabled:opacity-50"
+              className="flex cursor-pointer items-center gap-2 rounded-lg bg-purple-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-purple-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400 disabled:opacity-50"
             >
               {transferBusy ? <Loader2 size={13} className="animate-spin" /> : <ArrowRightLeft size={13} />}
               Transférer
             </button>
             <button
               onClick={() => setTransferOpen(false)}
-              className="rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-2 text-xs font-bold text-zinc-400 transition-colors hover:text-white"
+              className="cursor-pointer rounded-lg border border-white/15 px-4 py-2.5 text-sm font-medium text-zinc-300 transition-colors hover:border-white/30 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400"
             >
               Annuler
             </button>
@@ -489,37 +489,33 @@ export default function AdminTicketThreadPage() {
 
       {/* Affiché uniquement s'il y a une erreur ET que le ticket n'est PAS fermé */}
       {claimError && !isClosed && (
-        <div className="flex items-center gap-2 rounded-2xl border border-red-500/20 bg-red-500/5 px-4 py-3 mb-4 text-red-300 text-xs font-semibold">
+        <div role="alert" className="mb-4 flex items-center gap-2 rounded-2xl border border-red-500/25 bg-red-500/[0.08] px-4 py-3 text-sm font-medium text-red-200">
           <AlertTriangle size={14} className="shrink-0" />
           {claimError}
         </div>
       )}
 
-      <div className="rounded-2xl border border-zinc-800/80 bg-zinc-950/60 p-5 sm:p-6 mb-6 backdrop-blur-xl shadow-lg">
-        <div className="flex items-center gap-2 mb-3">
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 text-[10px] font-bold uppercase tracking-wider">
-            <Shield size={12} className="text-purple-400" />
-            <span>Support Admin</span>
-          </span>
-          <span className="text-xs text-zinc-500">•</span>
-          <span className="text-xs text-zinc-400 capitalize font-medium">Catégorie: {ticket.category}</span>
-        </div>
+      <div className="mb-6 rounded-2xl border border-white/10 bg-white/[0.02] p-5 sm:p-6">
+        <p className="mb-3 flex items-center gap-2 text-sm text-zinc-400">
+          <Shield size={14} className="text-purple-300" />
+          <span>Support admin</span>
+          <span aria-hidden="true">·</span>
+          <span className="capitalize">Catégorie : {ticket.category}</span>
+        </p>
 
-        <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white mb-2">
+        <h1 className="mb-2 font-display text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
           {ticket.subject}
         </h1>
 
-        <p className="text-xs text-zinc-400 mb-5 flex items-center gap-1.5">
-          <User size={13} className="text-zinc-500" />
+        <p className="mb-5 flex items-center gap-1.5 text-sm text-zinc-400">
+          <User size={14} className="text-zinc-500" />
           <span>Demandeur :</span>
-          <span className="text-zinc-200 font-semibold">{ticket.userName}</span>
+          <span className="font-semibold text-zinc-200">{ticket.userName}</span>
         </p>
 
-        <div className="pt-4 border-t border-zinc-800/80">
-          <p className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400 mb-2.5">
-            Changer le statut du ticket
-          </p>
-          <div className="flex flex-wrap gap-2">
+        <div className="border-t border-white/10 pt-4">
+          <p className="mb-2.5 text-sm font-medium text-zinc-200">Changer le statut du ticket</p>
+          <div role="group" aria-label="Statut du ticket" className="flex flex-wrap gap-2">
             {statusOptions.map(({ id, label }) => {
               const isActive = ticket.status === id;
               return (
@@ -527,10 +523,11 @@ export default function AdminTicketThreadPage() {
                   key={id}
                   onClick={() => handleStatusChange(id)}
                   disabled={updatingStatus || isActive || isAssignedToOther}
-                  className={`rounded-xl px-3.5 py-1.5 text-xs font-semibold border transition-all duration-200 disabled:opacity-70 disabled:cursor-default ${
+                  aria-pressed={isActive}
+                  className={`cursor-pointer rounded-lg border px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400 disabled:cursor-default disabled:opacity-70 ${
                     isActive
-                      ? "border-purple-500 bg-purple-500/20 text-purple-300 shadow-sm"
-                      : "border-zinc-800/80 bg-zinc-900/40 text-zinc-400 hover:text-white hover:border-zinc-700"
+                      ? "border-purple-500/60 bg-purple-500/20 text-purple-100"
+                      : "border-white/10 text-zinc-400 hover:border-white/20 hover:text-white"
                   }`}
                 >
                   {label}
@@ -542,36 +539,36 @@ export default function AdminTicketThreadPage() {
       </div>
 
       {/* Notes internes : espace de travail du staff, jamais visibles du demandeur */}
-      <div className="mb-6 rounded-2xl border border-dashed border-amber-500/25 bg-amber-500/[0.03] backdrop-blur-xl">
+      <div className="mb-6 rounded-2xl border border-dashed border-amber-500/30 bg-amber-500/[0.04]">
         <button
           onClick={() => setNotesOpen((o) => !o)}
           aria-expanded={notesOpen}
-          className="flex w-full items-center justify-between px-4 py-3 text-left"
+          className="flex w-full cursor-pointer items-center justify-between rounded-2xl px-4 py-3.5 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300"
         >
-          <span className="flex items-center gap-2 text-xs font-bold text-amber-300">
-            <StickyNote size={14} />
+          <span className="flex items-center gap-2 text-sm font-semibold text-amber-200">
+            <StickyNote size={15} />
             Notes internes
-            <span className="font-normal text-zinc-500">· invisibles du demandeur</span>
+            <span className="font-normal text-zinc-400">invisibles du demandeur</span>
           </span>
-          <span className="font-mono text-[10px] text-zinc-500">{notes.length}</span>
+          <span className="text-sm tabular-nums text-zinc-400">{notes.length}</span>
         </button>
 
         {notesOpen && (
-          <div className="space-y-2.5 border-t border-amber-500/15 px-4 py-3">
+          <div className="space-y-3 border-t border-amber-500/20 px-4 py-3">
             {notes.length === 0 ? (
-              <p className="text-xs text-zinc-500">Aucune note pour le moment.</p>
+              <p className="text-sm text-zinc-400">Aucune note pour le moment.</p>
             ) : (
-              <ul className="space-y-1.5">
+              <ul className="space-y-2">
                 {notes.map((n) => (
                   <li
                     key={n._id}
-                    className="flex items-start justify-between gap-3 rounded-lg border border-zinc-800/80 bg-zinc-900/40 px-3 py-2"
+                    className="flex items-start justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2.5"
                   >
                     <div className="min-w-0">
-                      <p className="whitespace-pre-line text-xs leading-relaxed text-zinc-300">
+                      <p className="whitespace-pre-line text-sm leading-relaxed text-zinc-300">
                         <LinkifiedText text={n.text} />
                       </p>
-                      <p className="mt-0.5 font-mono text-[10px] text-zinc-600">
+                      <p className="mt-1 text-xs text-zinc-400">
                         {n.by?.name ?? "Staff"}
                         {n.by?.role ? ` (${roleLabel(n.by.role)})` : ""} ·{" "}
                         {new Date(n.createdAt).toLocaleString("fr-FR", {
@@ -584,10 +581,11 @@ export default function AdminTicketThreadPage() {
                     </div>
                     <button
                       onClick={() => deleteNote(n._id)}
-                      className="shrink-0 p-1 text-zinc-600 transition-colors hover:text-red-400"
+                      className="shrink-0 rounded p-2 text-zinc-400 transition-colors hover:text-red-400"
                       title="Supprimer la note"
+                      aria-label="Supprimer la note"
                     >
-                      <Trash2 size={12} />
+                      <Trash2 size={14} />
                     </button>
                   </li>
                 ))}
@@ -606,14 +604,16 @@ export default function AdminTicketThreadPage() {
                     addNote();
                   }
                 }}
+                aria-label="Ajouter une note interne"
                 placeholder="Ajouter une note pour l'équipe (contexte, piste testée, suite à donner)..."
-                className="w-full rounded-xl border border-zinc-800/80 bg-zinc-900/40 px-3.5 py-2.5 text-xs text-white placeholder-zinc-500 outline-none transition-colors focus:border-amber-500/40"
+                className="w-full rounded-lg border border-white/10 bg-white/[0.02] px-3.5 py-2.5 text-sm text-white placeholder-zinc-500 outline-none transition-colors focus:border-amber-500/50"
               />
               <button
                 onClick={addNote}
                 disabled={!noteDraft.trim() || noteBusy}
-                className="shrink-0 rounded-xl border border-zinc-800 bg-zinc-900/50 px-3 text-zinc-300 transition-colors hover:text-white disabled:opacity-40"
+                className="shrink-0 cursor-pointer rounded-lg border border-white/15 px-3.5 text-zinc-300 transition-colors hover:border-white/30 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300 disabled:opacity-40"
                 title="Ajouter la note"
+                aria-label="Ajouter la note"
               >
                 {noteBusy ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
               </button>
@@ -627,7 +627,7 @@ export default function AdminTicketThreadPage() {
           if (msg.authorRole === "system") {
             return (
               <div key={i} className="flex justify-center">
-                <span className="text-[10px] text-zinc-500 bg-zinc-900/40 border border-zinc-800/60 rounded-full px-3 py-1">
+                <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-zinc-400">
                   {msg.content}
                 </span>
               </div>
@@ -641,29 +641,29 @@ export default function AdminTicketThreadPage() {
               className={`flex ${isStaff ? "justify-end" : "justify-start"}`}
             >
               <div
-                className={`max-w-[85%] sm:max-w-[80%] rounded-2xl p-4 transition-all ${
+                className={`max-w-[85%] rounded-2xl border p-4 sm:max-w-[80%] ${
                   isStaff
-                    ? "bg-gradient-to-br from-purple-950/40 to-indigo-950/30 border border-purple-500/30 text-purple-100 shadow-sm"
-                    : "bg-zinc-950/80 border border-zinc-800/80 text-zinc-200 backdrop-blur-md"
+                    ? "border-purple-500/30 bg-purple-500/[0.08] text-purple-100"
+                    : "border-white/10 bg-white/[0.03] text-zinc-200"
                 }`}
               >
-                <div className="flex items-center gap-2 mb-2 pb-2 border-b border-white/5">
-                  <span className={`text-xs font-bold ${isStaff ? "text-purple-300" : "text-zinc-300"}`}>
+                <div className="mb-2 flex items-center gap-2 border-b border-white/10 pb-2">
+                  <span className={`text-sm font-semibold ${isStaff ? "text-purple-200" : "text-zinc-200"}`}>
                     {msg.authorName}
                   </span>
                   {isStaff && (
-                    <span className="text-[9px] font-extrabold uppercase tracking-widest bg-purple-500/20 border border-purple-500/30 text-purple-300 px-1.5 py-0.5 rounded-md">
+                    <span className="rounded-md border border-purple-500/30 bg-purple-500/15 px-1.5 py-0.5 text-xs font-semibold text-purple-200">
                       Staff
                     </span>
                   )}
                 </div>
 
-                <p className="text-xs sm:text-sm text-zinc-200 leading-relaxed whitespace-pre-wrap">
+                <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-zinc-200">
                   <LinkifiedText text={msg.content} />
                 </p>
 
-                <div className="flex items-center gap-1 text-[10px] text-zinc-500 mt-3 pt-1">
-                  <Clock size={11} className="shrink-0" />
+                <div className="mt-3 flex items-center gap-1.5 text-xs text-zinc-400">
+                  <Clock size={12} className="shrink-0" />
                   <span>{new Date(msg.createdAt).toLocaleString("fr-FR")}</span>
                 </div>
               </div>
@@ -675,7 +675,7 @@ export default function AdminTicketThreadPage() {
 
       {/* INDICATEUR « EN TRAIN D'ÉCRIRE » */}
       {otherIsTyping && !isClosed && !isAssignedToOther && (
-        <div className="flex items-center gap-2 mb-3 px-1 text-xs font-medium text-zinc-500">
+        <div role="status" className="mb-3 flex items-center gap-2 px-1 text-sm text-zinc-400">
           <span className="flex gap-0.5">
             <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-bounce [animation-delay:-0.3s]" />
             <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-bounce [animation-delay:-0.15s]" />
@@ -689,15 +689,15 @@ export default function AdminTicketThreadPage() {
 
       {/* Masquer le formulaire de réponse si le ticket est résolu ou fermé */}
       {isClosed ? (
-        <div className="rounded-2xl border border-zinc-800/80 bg-zinc-950/40 p-4 text-center text-xs text-zinc-500">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 text-center text-sm text-zinc-400">
           Ce ticket est classé ({ticket.status === "resolu" ? "Résolu" : "Fermé"}). Les réponses sont désactivées.
         </div>
       ) : isAssignedToOther ? (
-        <div className="rounded-2xl border border-zinc-800/80 bg-zinc-950/40 p-4 text-center text-xs text-zinc-500">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 text-center text-sm text-zinc-400">
           Ce ticket est en lecture seule tant qu'il est pris en charge par {ticket.assignedTo?.userName}.
         </div>
       ) : (
-        <div className="rounded-2xl border border-zinc-800/80 bg-zinc-950/80 p-3 sm:p-4 backdrop-blur-xl shadow-lg">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-3 sm:p-4">
           <ReplyTemplatePicker
             templates={TICKET_TEMPLATES}
             suggestedCategories={["general", ticket.category]}
@@ -710,24 +710,27 @@ export default function AdminTicketThreadPage() {
               onChange={(e) => setReply(e.target.value)}
               onKeyDown={handleReplyKeyDown}
               onKeyUp={handleReplyKeyUp}
+              aria-label="Réponse"
               placeholder="Rédiger une réponse d'assistance... (Entrée pour envoyer, Entrée+Espace pour envoyer et résoudre, Maj+Entrée pour aller à la ligne)"
               rows={3}
-              className="flex-1 rounded-xl border border-zinc-800/80 bg-zinc-900/40 px-3.5 py-2.5 text-xs sm:text-sm text-white placeholder-zinc-500 outline-none focus:border-purple-500/60 focus:ring-1 focus:ring-purple-500/50 transition-all resize-none shadow-inner"
+              className="flex-1 resize-none rounded-lg border border-white/10 bg-white/[0.02] px-3.5 py-2.5 text-sm text-white placeholder-zinc-500 outline-none transition-colors focus:border-purple-500/60"
             />
-            <div className="flex flex-col gap-2 shrink-0">
+            <div className="flex shrink-0 flex-col gap-2">
               <button
                 onClick={() => handleReply(false)}
                 disabled={sending || !reply.trim()}
-                className="flex items-center justify-center rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 bg-[length:200%_auto] hover:bg-right px-4 py-2.5 text-white transition-all duration-300 disabled:opacity-40 disabled:hover:bg-left hover:scale-[1.02] active:scale-95 shadow-md shadow-purple-600/20"
+                className="flex cursor-pointer items-center justify-center rounded-lg bg-purple-600 px-4 py-2.5 text-white transition-colors hover:bg-purple-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400 disabled:opacity-40"
                 title="Envoyer la réponse"
+                aria-label="Envoyer la réponse"
               >
                 {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
               </button>
               <button
                 onClick={() => handleReply(true)}
                 disabled={sending || !reply.trim() || ticket.status === "resolu"}
-                className="flex items-center justify-center gap-1 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-emerald-300 text-[10px] font-bold uppercase tracking-wider transition-all disabled:opacity-30"
+                className="flex cursor-pointer items-center justify-center gap-1 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2.5 text-emerald-200 transition-colors hover:bg-emerald-500/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-300 disabled:opacity-30"
                 title="Envoyer et marquer comme résolu"
+                aria-label="Envoyer et marquer comme résolu"
               >
                 <CheckCircle2 size={13} />
               </button>

@@ -10,17 +10,15 @@ import { hasPermission, PERMISSIONS } from "@/lib/roles";
 import { LATEST_VERSION } from "@/lib/changelog";
 import {
   LayoutDashboard, Music, Palette, LogOut, MessageSquare, Shield, Bot,
-  BarChart3, MessageSquareText, ChevronRight, Activity, LifeBuoy, Lightbulb, History, Tv, type LucideIcon,
+  BarChart3, MessageSquareText, ChevronRight, Activity, LifeBuoy, Lightbulb, History, Tv,
 } from "lucide-react";
-
-type NavItem = { href: string; label: string; short?: string; icon: LucideIcon };
-type NavGroup = { label: string | null; items: NavItem[] };
+import { SidebarBrand, SidebarNav, MobileNav, type NavGroup } from "@/components/shell/ShellNav";
 
 // Navigation du dashboard, regroupée par catégories. `short` = libellé court de la barre mobile.
 const navGroups: NavGroup[] = [
   {
     label: null,
-    items: [{ href: "/dashboard", label: "Accueil", icon: LayoutDashboard }],
+    items: [{ href: "/dashboard", label: "Accueil", icon: LayoutDashboard, exact: true }],
   },
   {
     label: "Intégrations",
@@ -44,9 +42,6 @@ const navGroups: NavGroup[] = [
     ],
   },
 ];
-
-// Liste à plat, pour la barre de navigation mobile (pas de titres de catégories).
-const tabs: NavItem[] = navGroups.flatMap((group) => group.items);
 
 export default function DashboardShell({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession();
@@ -164,84 +159,49 @@ export default function DashboardShell({ children }: { children: React.ReactNode
         .msg-out-instant { animation: none; display: none; }
       `}</style>
 
-      <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[1200px] h-[500px] bg-gradient-to-tr from-purple-600/15 via-indigo-500/10 to-emerald-500/10 blur-[180px] pointer-events-none -z-10" />
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f1f2e10_1px,transparent_1px),linear-gradient(to_bottom,#1f1f2e10_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_20%_0%,#000_60%,transparent_100%)] -z-10" />
+      <div className="pointer-events-none fixed left-1/2 top-0 -z-10 h-[420px] w-[900px] -translate-x-1/2 bg-purple-600/10 blur-[160px]" />
 
       {/* SIDEBAR — desktop */}
       <aside className="hidden md:flex w-64 shrink-0 border-r border-white/5 bg-zinc-950/40 backdrop-blur-xl flex-col h-screen sticky top-0">
-        <div className="p-6 border-b border-white/5">
-          <Link href="/" className="flex items-center gap-3 font-black text-lg tracking-wider">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-purple-600/30">
-              <Music size={20} />
-            </div>
-            <span className="bg-gradient-to-r from-white via-zinc-200 to-purple-400 bg-clip-text text-transparent">
-              Twichify
-            </span>
-          </Link>
-        </div>
+        <SidebarBrand />
 
-        <nav className="flex-1 space-y-5 overflow-y-auto p-4">
-          {navGroups.map((group) => (
-            <div key={group.label ?? "main"} className="space-y-1">
-              {group.label && (
-                <p className="px-4 pb-1 text-[9px] font-black uppercase tracking-[0.25em] text-zinc-600">{group.label}</p>
-              )}
-              {group.items.map(({ href, label, icon: Icon }) => {
-                const isActive = href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(href);
-                return (
-                  <Link
-                    key={href}
-                    href={href}
-                    className={`relative w-full flex items-center gap-3 rounded-2xl px-4 py-3 text-xs font-bold uppercase tracking-[0.12em] transition-all ${
-                      isActive
-                        ? "bg-gradient-to-r from-purple-600/20 to-indigo-600/10 text-white"
-                        : "text-zinc-500 hover:text-zinc-200 hover:bg-white/5"
-                    }`}
-                  >
-                    {isActive && (
-                      <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-[3px] rounded-full bg-gradient-to-b from-purple-400 to-indigo-500 shadow-[0_0_10px_rgba(139,92,246,0.6)]" />
-                    )}
-                    <Icon size={16} className={isActive ? "text-purple-400" : ""} />
-                    {label}
-                  </Link>
-                );
-              })}
-            </div>
-          ))}
-        </nav>
+        <SidebarNav groups={navGroups} pathname={pathname} />
 
-        <div className="p-4 border-t border-white/5 space-y-2">
+        <div className="space-y-1 border-t border-white/5 p-3">
           {hasPermission(userRole, PERMISSIONS.VIEW_ADMIN_PANEL) && (
             <Link
               href="/admin/"
-              className="flex items-center gap-3 rounded-2xl px-4 py-2.5 text-xs font-bold uppercase tracking-[0.12em] text-purple-300 border border-purple-500/20 bg-purple-500/5 hover:bg-purple-500/10 transition-all"
+              className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-amber-300 transition-colors hover:bg-white/[0.04] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300"
             >
               <Shield size={16} />
               Modération
             </Link>
           )}
 
-          <div className="flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-3 py-2.5 text-emerald-300 text-[9px] font-black uppercase tracking-[0.2em]">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          <Link
+            href="/status"
+            className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-zinc-400 transition-colors hover:bg-white/[0.04] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400"
+          >
+            <span aria-hidden="true" className="mx-[5px] h-1.5 w-1.5 rounded-full bg-emerald-400" />
             Système en ligne
-          </div>
+          </Link>
 
           <div className="relative">
             <button
               onClick={() => setShowProfileMenu((prev) => !prev)}
-              className="flex w-full items-center gap-3 rounded-2xl border border-white/5 bg-black/30 p-2.5 transition hover:border-white/10"
+              className="flex w-full cursor-pointer items-center gap-3 rounded-xl border border-white/10 bg-white/[0.02] p-2.5 transition-colors hover:border-white/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400"
             >
               <img src={session.user.image || ""} className="w-8 h-8 rounded-full border border-zinc-700 object-cover" alt="Profile" />
               <div className="text-left min-w-0 flex-1">
-                <p className="text-[9px] uppercase tracking-[0.2em] text-zinc-500">Compte</p>
+                <p className="text-xs text-zinc-500">Compte</p>
                 <p className="text-xs font-bold text-white truncate">{session.user.name}</p>
               </div>
               <ChevronRight size={14} className={`text-zinc-500 transition-transform ${showProfileMenu ? "-rotate-90" : "rotate-90"}`} />
             </button>
 
             {showProfileMenu && (
-              <div className="absolute left-0 bottom-full z-50 mb-3 w-full rounded-2xl border border-zinc-800 bg-zinc-950/95 p-2 shadow-2xl shadow-black/50 backdrop-blur-xl">
-                <p className="px-3 pb-1 pt-1 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-600">Communauté</p>
+              <div className="absolute left-0 bottom-full z-50 mb-3 w-full rounded-xl border border-white/10 bg-zinc-950/95 p-2 shadow-2xl shadow-black/50 backdrop-blur-xl">
+                <p className="px-3 pb-1 pt-1 text-xs font-medium text-zinc-500">Communauté</p>
                 <Link
                   href="/ideas"
                   onClick={() => setShowProfileMenu(false)}
@@ -261,7 +221,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
 
                 <div className="my-1.5 h-px bg-zinc-800" />
 
-                <p className="px-3 pb-1 pt-1 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-600">Compte & support</p>
+                <p className="px-3 pb-1 pt-1 text-xs font-medium text-zinc-500">Compte & support</p>
                 <Link
                   href="/dashboard/account"
                   onClick={() => setShowProfileMenu(false)}
@@ -303,28 +263,12 @@ export default function DashboardShell({ children }: { children: React.ReactNode
       </aside>
 
       {/* NAV — mobile */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-zinc-950/90 backdrop-blur-xl px-2 py-2 flex items-center justify-around">
-        {tabs.map(({ href, label, short, icon: Icon }) => {
-          const isActive = href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(href);
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={`flex flex-col items-center gap-1 rounded-xl px-3 py-2 text-[9px] font-bold uppercase tracking-wider transition-all ${
-                isActive ? "text-purple-400" : "text-zinc-600"
-              }`}
-            >
-              <Icon size={18} />
-              {short ?? label}
-            </Link>
-          );
-        })}
-      </nav>
+      <MobileNav groups={navGroups} pathname={pathname} />
 
       {/* CONTENU */}
       <div className="flex-1 min-w-0">
         <div className="max-w-5xl mx-auto px-6 md:px-8 py-8 md:py-10 pb-24 md:pb-10">
-          <div key={pathname} className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div key={pathname} className="animate-in fade-in duration-200">
             {children}
           </div>
         </div>

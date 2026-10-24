@@ -4,8 +4,6 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import {
-  ArrowLeft,
-  Music,
   Lightbulb,
   ChevronUp,
   ChevronDown,
@@ -31,7 +29,8 @@ import {
   Send,
 } from "lucide-react";
 import IdeaStatusBadge from "@/components/IdeaStatusBadge";
-import SiteHeader from "@/components/SiteHeader";
+import PublicShell from "@/components/site/PublicShell";
+import PageIntro from "@/components/site/PageIntro";
 import Pagination, { usePagination } from "@/components/Pagination";
 import { useDialog } from "@/components/DialogProvider";
 import { COMMENT_MAX, COMMENTS_SHOWN } from "@/lib/idea-comments";
@@ -78,6 +77,8 @@ const STATUS_FILTERS = [
   { id: "termine", label: "Terminé" },
   { id: "rejete", label: "Rejeté" },
 ];
+
+const FOCUS = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400";
 
 // Nombre d'idées affichées par page.
 const PAGE_SIZE = 10;
@@ -213,95 +214,61 @@ export default function IdeasPage() {
   };
 
   return (
-    <main className="min-h-screen bg-black text-white font-sans selection:bg-purple-500/30 relative flex flex-col justify-between overflow-x-clip">
+    <PublicShell width="max-w-5xl">
       <style jsx global>{`
         @keyframes ideaFloatIn {
           from { opacity: 0; transform: translateY(10px); }
           to { opacity: 1; transform: translateY(0); }
         }
         .idea-float-in { animation: ideaFloatIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) both; }
+        @media (prefers-reduced-motion: reduce) { .idea-float-in { animation: none; } }
       `}</style>
 
-      <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[1100px] h-[520px] bg-gradient-to-tr from-purple-600/25 via-indigo-500/15 to-emerald-500/15 blur-[170px] pointer-events-none -z-10" />
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f1f2e15_1px,transparent_1px),linear-gradient(to_bottom,#1f1f2e15_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] -z-10" />
+      <PageIntro
+        title="Proposez, votez, suivez."
+        action={
+          session ? (
+            <button
+              onClick={() => setShowForm((v) => !v)}
+              aria-expanded={showForm}
+              className={`flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-xl bg-purple-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-purple-500 ${FOCUS}`}
+            >
+              {showForm ? <X size={16} /> : <Plus size={16} />}
+              {showForm ? "Annuler" : "Proposer une idée"}
+            </button>
+          ) : (
+            <Link
+              href="/login"
+              className={`flex shrink-0 items-center justify-center rounded-xl border border-white/15 px-5 py-3 text-sm font-semibold text-zinc-200 transition-colors hover:border-white/30 hover:text-white ${FOCUS}`}
+            >
+              Se connecter pour proposer
+            </Link>
+          )
+        }
+      >
+        Vos idées façonnent Twichify. Proposez une fonctionnalité et votez pour celles que vous voulez voir arriver en
+        priorité.
+      </PageIntro>
 
-      <div>
-        <SiteHeader />
-
-        <div className="max-w-5xl mx-auto px-6 pt-8 pb-16">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-xs font-semibold text-zinc-400 hover:text-purple-400 transition-colors mb-6 group w-fit"
-          >
-            <ArrowLeft size={14} className="transition-transform group-hover:-translate-x-1" />
-            <span>Accueil</span>
-          </Link>
-
-          {/* HERO */}
-          <div className="relative overflow-hidden rounded-3xl border border-purple-500/25 bg-zinc-950/70 backdrop-blur-xl p-6 sm:p-8 mb-6 shadow-[0_0_60px_rgba(147,51,234,0.08)]">
-            <div className="absolute top-0 right-0 w-72 h-72 bg-purple-600/10 blur-[100px] pointer-events-none rounded-full" />
-            <div className="absolute bottom-0 left-0 w-72 h-72 bg-indigo-600/10 blur-[100px] pointer-events-none rounded-full" />
-
-            <div className="relative flex flex-col lg:flex-row lg:items-end justify-between gap-6">
-              <div>
-                <div className="inline-flex items-center gap-2 text-purple-400 mb-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-purple-500/15 border border-purple-500/25 flex items-center justify-center">
-                    <Lightbulb size={15} />
-                  </div>
-                  <span className="text-[10px] font-black uppercase tracking-[0.3em]">Boîte à idées</span>
-                </div>
-                <h1 className="text-3xl sm:text-4xl font-black tracking-tighter text-white leading-tight">
-                  Proposez, votez, <span className="bg-gradient-to-r from-purple-400 to-emerald-400 bg-clip-text text-transparent">suivez.</span>
-                </h1>
-                <p className="text-zinc-400 text-sm mt-2.5 max-w-lg leading-relaxed">
-                  Vos idées façonnent Twichify. Proposez une fonctionnalité et votez pour celles que vous voulez voir arriver en priorité.
-                </p>
-              </div>
-
-              {session ? (
-                <button
-                  onClick={() => setShowForm((v) => !v)}
-                  className="flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 bg-[length:200%_auto] hover:bg-right px-6 py-3.5 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-purple-600/20 transition-all hover:scale-[1.02] active:scale-95 shrink-0"
-                >
-                  {showForm ? <X size={15} /> : <Plus size={15} />}
-                  {showForm ? "Annuler" : "Proposer une idée"}
-                </button>
-              ) : (
-                <Link
-                  href="/login"
-                  className="flex items-center justify-center gap-2 rounded-2xl border border-zinc-700/80 bg-zinc-950/60 px-6 py-3.5 text-xs font-black uppercase tracking-widest text-zinc-200 hover:border-purple-500/60 hover:text-white transition-all shrink-0"
-                >
-                  Se connecter pour proposer
-                </Link>
-              )}
-            </div>
-
-            {/* STATS */}
-            <div className="relative grid grid-cols-4 gap-3 sm:gap-6 mt-7 pt-6 border-t border-zinc-800/70">
-              <div>
-                <p className="font-mono font-black text-white text-lg sm:text-2xl">{stats.total}</p>
-                <p className="text-zinc-500 text-[10px] sm:text-xs mt-0.5">Idées</p>
-              </div>
-              <div>
-                <p className="font-mono font-black text-emerald-400 text-lg sm:text-2xl">{stats.totalVotes}</p>
-                <p className="text-zinc-500 text-[10px] sm:text-xs mt-0.5">Votes</p>
-              </div>
-              <div>
-                <p className="font-mono font-black text-blue-400 text-lg sm:text-2xl">{stats.enCours}</p>
-                <p className="text-zinc-500 text-[10px] sm:text-xs mt-0.5">En cours</p>
-              </div>
-              <div>
-                <p className="font-mono font-black text-purple-400 text-lg sm:text-2xl">{stats.termine}</p>
-                <p className="text-zinc-500 text-[10px] sm:text-xs mt-0.5">Terminées</p>
-              </div>
-            </div>
+      <dl className="mb-8 grid grid-cols-2 gap-6 border-b border-white/10 py-8 sm:grid-cols-4">
+        {[
+          { label: "Idées", value: stats.total, color: "text-white" },
+          { label: "Votes", value: stats.totalVotes, color: "text-emerald-400" },
+          { label: "En cours", value: stats.enCours, color: "text-blue-400" },
+          { label: "Terminées", value: stats.termine, color: "text-purple-300" },
+        ].map((item) => (
+          <div key={item.label}>
+            <dd className={`font-display text-3xl font-extrabold tabular-nums ${item.color}`}>{item.value}</dd>
+            <dt className="mt-1 text-sm text-zinc-400">{item.label}</dt>
           </div>
+        ))}
+      </dl>
 
           {/* FORMULAIRE DE SOUMISSION */}
           {showForm && session && (
-            <div className="rounded-2xl border border-purple-500/30 bg-zinc-950/80 p-5 sm:p-6 backdrop-blur-xl space-y-4 mb-6 idea-float-in">
+            <div className="mb-6 space-y-5 rounded-2xl border border-purple-500/30 bg-white/[0.02] p-5 sm:p-6 idea-float-in">
               <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Catégorie</label>
+                <p className="text-sm font-medium text-zinc-200">Catégorie</p>
                 <div className="flex flex-wrap gap-2">
                   {Object.entries(CATEGORY_META).map(([id, meta]) => {
                     const CatIcon = meta.icon;
@@ -310,10 +277,11 @@ export default function IdeasPage() {
                         key={id}
                         type="button"
                         onClick={() => setForm((f) => ({ ...f, category: id }))}
-                        className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold border transition-all ${
+                        aria-pressed={form.category === id}
+                        className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${FOCUS} ${
                           form.category === id
                             ? `${meta.border} ${meta.bg} ${meta.text}`
-                            : "border-zinc-800 bg-zinc-900/40 text-zinc-400 hover:text-white"
+                            : "border-white/10 text-zinc-400 hover:border-white/20 hover:text-white"
                         }`}
                       >
                         <CatIcon size={12} />
@@ -325,35 +293,37 @@ export default function IdeasPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Titre</label>
+                <label htmlFor="idea-title" className="text-sm font-medium text-zinc-200">Titre</label>
                 <input
+                  id="idea-title"
                   type="text"
                   value={form.title}
                   onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
                   placeholder="Résumez votre idée en une phrase..."
                   maxLength={150}
-                  className="w-full rounded-xl border border-zinc-800/80 bg-zinc-900/40 px-4 py-2.5 text-xs sm:text-sm text-white placeholder-zinc-500 outline-none focus:border-purple-500/50 transition-colors"
+                  className="w-full rounded-lg border border-white/10 bg-white/[0.02] px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none transition-colors focus:border-purple-500/60"
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Description</label>
+                <label htmlFor="idea-description" className="text-sm font-medium text-zinc-200">Description</label>
                 <textarea
+                  id="idea-description"
                   value={form.description}
                   onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
                   placeholder="Expliquez votre idée, pourquoi elle serait utile..."
                   rows={4}
                   maxLength={2000}
-                  className="w-full rounded-xl border border-zinc-800/80 bg-zinc-900/40 px-4 py-2.5 text-xs sm:text-sm text-white placeholder-zinc-500 outline-none focus:border-purple-500/50 transition-colors resize-none"
+                  className="w-full resize-none rounded-lg border border-white/10 bg-white/[0.02] px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none transition-colors focus:border-purple-500/60"
                 />
               </div>
 
-              {formError && <p className="text-xs text-red-400 font-semibold">{formError}</p>}
+              {formError && <p role="alert" className="text-sm font-medium text-red-400">{formError}</p>}
 
               <button
                 onClick={handleSubmitIdea}
                 disabled={submitting || !form.title.trim() || !form.description.trim()}
-                className="w-full flex items-center justify-center gap-2 rounded-xl bg-purple-600 hover:bg-purple-500 px-4 py-2.5 text-xs font-bold text-white transition-all disabled:opacity-50"
+                className={`flex w-full items-center justify-center gap-2 rounded-lg bg-purple-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-purple-500 disabled:opacity-50 ${FOCUS}`}
               >
                 {submitting ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />}
                 <span>Soumettre l'idée</span>
@@ -362,50 +332,54 @@ export default function IdeasPage() {
           )}
 
           {/* BARRE DE RECHERCHE, TRI ET FILTRES */}
-          <div className="rounded-2xl border border-zinc-800/80 bg-zinc-950/60 backdrop-blur-xl p-4 sm:p-5 space-y-4 mb-6">
+          <div className="mb-8 space-y-4">
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="relative flex-1">
-                <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
+                <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
                 <input
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Rechercher une idée..."
-                  className="w-full rounded-xl border border-zinc-800/80 bg-zinc-900/50 pl-9 pr-4 py-2.5 text-xs text-white placeholder-zinc-500 outline-none focus:border-purple-500/50 transition-all"
+                  aria-label="Rechercher une idée"
+                  className="w-full rounded-lg border border-white/10 bg-white/[0.02] py-3 pl-10 pr-4 text-sm text-white placeholder-zinc-500 outline-none transition-colors focus:border-purple-500/60"
                 />
               </div>
 
-              <div className="flex items-center rounded-xl border border-zinc-800/80 bg-zinc-900/50 p-1 shrink-0">
+              <div role="group" aria-label="Trier les idées" className="flex shrink-0 items-center rounded-lg border border-white/10 p-1">
                 <button
                   onClick={() => setSort("popular")}
-                  className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-widest transition-all ${
-                    sort === "popular" ? "bg-purple-500/20 text-purple-300" : "text-zinc-500 hover:text-zinc-300"
+                  aria-pressed={sort === "popular"}
+                  className={`flex items-center gap-1.5 rounded-md px-3.5 py-2 text-sm font-medium transition-colors ${FOCUS} ${
+                    sort === "popular" ? "bg-white/[0.08] text-white" : "text-zinc-400 hover:text-white"
                   }`}
                 >
-                  <Flame size={12} />
+                  <Flame size={14} />
                   Populaires
                 </button>
                 <button
                   onClick={() => setSort("recent")}
-                  className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-widest transition-all ${
-                    sort === "recent" ? "bg-purple-500/20 text-purple-300" : "text-zinc-500 hover:text-zinc-300"
+                  aria-pressed={sort === "recent"}
+                  className={`flex items-center gap-1.5 rounded-md px-3.5 py-2 text-sm font-medium transition-colors ${FOCUS} ${
+                    sort === "recent" ? "bg-white/[0.08] text-white" : "text-zinc-400 hover:text-white"
                   }`}
                 >
-                  <Clock size={12} />
+                  <Clock size={14} />
                   Récentes
                 </button>
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-1.5 pt-3.5 border-t border-zinc-800/70">
+            <div role="group" aria-label="Filtrer par statut" className="flex flex-wrap items-center gap-2">
               {STATUS_FILTERS.map(({ id, label }) => (
                 <button
                   key={id}
                   onClick={() => setStatusFilter(id)}
-                  className={`rounded-full px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-all ${
+                  aria-pressed={statusFilter === id}
+                  className={`rounded-full border px-4 py-2 text-sm font-medium transition-colors ${FOCUS} ${
                     statusFilter === id
-                      ? "border-purple-500 bg-purple-500/15 text-purple-300"
-                      : "border-zinc-800 bg-zinc-950/60 text-zinc-500 hover:text-zinc-300"
+                      ? "border-purple-500/50 bg-purple-500/15 text-purple-200"
+                      : "border-white/10 text-zinc-400 hover:border-white/20 hover:text-white"
                   }`}
                 >
                   {label}
@@ -413,13 +387,14 @@ export default function IdeasPage() {
               ))}
             </div>
 
-            <div className="flex flex-wrap items-center gap-1.5">
+            <div role="group" aria-label="Filtrer par catégorie" className="flex flex-wrap items-center gap-2">
               <button
                 onClick={() => setCategoryFilter("tous")}
-                className={`rounded-full px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-all ${
+                aria-pressed={categoryFilter === "tous"}
+                className={`rounded-full border px-4 py-2 text-sm font-medium transition-colors ${FOCUS} ${
                   categoryFilter === "tous"
-                    ? "border-cyan-500 bg-cyan-500/15 text-cyan-300"
-                    : "border-zinc-800 bg-zinc-950/60 text-zinc-500 hover:text-zinc-300"
+                    ? "border-cyan-500/50 bg-cyan-500/15 text-cyan-200"
+                    : "border-white/10 text-zinc-400 hover:border-white/20 hover:text-white"
                 }`}
               >
                 Toutes catégories
@@ -430,13 +405,14 @@ export default function IdeasPage() {
                   <button
                     key={id}
                     onClick={() => setCategoryFilter(id)}
-                    className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-all ${
+                    aria-pressed={categoryFilter === id}
+                    className={`flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-medium transition-colors ${FOCUS} ${
                       categoryFilter === id
                         ? `${meta.border} ${meta.bg} ${meta.text}`
-                        : "border-zinc-800 bg-zinc-950/60 text-zinc-500 hover:text-zinc-300"
+                        : "border-white/10 text-zinc-400 hover:border-white/20 hover:text-white"
                     }`}
                   >
-                    <CatIcon size={11} />
+                    <CatIcon size={13} />
                     {meta.label}
                   </button>
                 );
@@ -446,14 +422,14 @@ export default function IdeasPage() {
 
           {/* LISTE DES IDÉES */}
           {loading ? (
-            <div className="py-16 text-center border border-zinc-800/80 bg-zinc-950/60 rounded-2xl backdrop-blur-xl">
-              <Loader2 className="w-5 h-5 text-purple-500 animate-spin mx-auto mb-2" />
-              <p className="text-zinc-500 text-xs">Chargement des idées...</p>
+            <div className="rounded-2xl border border-white/10 bg-white/[0.02] py-16 text-center" aria-busy="true">
+              <Loader2 className="w-5 h-5 text-purple-400 animate-spin mx-auto mb-2" />
+              <p className="text-zinc-400 text-sm">Chargement des idées...</p>
             </div>
           ) : visibleIdeas.length === 0 ? (
-            <div className="text-center py-16 rounded-2xl border border-zinc-800/80 bg-zinc-950/40">
-              <Lightbulb size={28} className="mx-auto text-zinc-700 mb-3" />
-              <p className="text-sm text-zinc-500">Aucune idée pour ces filtres.</p>
+            <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.02] py-16 text-center">
+              <Lightbulb size={28} className="mx-auto text-zinc-600 mb-3" />
+              <p className="text-sm text-zinc-300">Aucune idée pour ces filtres.</p>
             </div>
           ) : (
             <div ref={listRef} className="space-y-3 scroll-mt-24">
@@ -474,25 +450,7 @@ export default function IdeasPage() {
           )}
 
           <Pagination page={page} pageCount={pageCount} onPageChange={setPage} scrollToRef={listRef} className="mt-8" />
-        </div>
-      </div>
-
-      <footer className="w-full border-t border-zinc-900/80 bg-black/40 backdrop-blur-md z-20 mt-auto">
-        <div className="max-w-5xl mx-auto px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-zinc-500">
-          <div className="flex items-center gap-1.5">
-            <span className="font-extrabold text-zinc-300">Twichify</span>
-            <span>— © 2026 Tous droits réservés.</span>
-          </div>
-
-          <div className="flex items-center gap-4 font-medium">
-            <Link href="/" className="hover:text-purple-400 transition-colors">Accueil</Link>
-            <Link href="/help" className="hover:text-purple-400 transition-colors">Aide</Link>
-            <Link href="/privacy" className="hover:text-purple-400 transition-colors">Confidentialité & CGU</Link>
-            <Link href="/mentions-legales" className="hover:text-purple-400 transition-colors">Mentions légales</Link>
-          </div>
-        </div>
-      </footer>
-    </main>
+    </PublicShell>
   );
 }
 
@@ -541,17 +499,16 @@ function IdeaCard({
   };
 
   return (
-    <div className="group relative flex gap-4 rounded-2xl border border-zinc-800/80 bg-zinc-950/60 p-4 sm:p-5 hover:border-purple-500/30 hover:bg-zinc-950/90 transition-all backdrop-blur-xl overflow-hidden">
-      {/* LISERÉ DE CATÉGORIE */}
-      <div className={`absolute left-0 top-0 bottom-0 w-[3px] ${meta.accent} opacity-70 group-hover:opacity-100 transition-opacity`} />
-
+    <div className="relative flex gap-4 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02] p-4 transition-colors hover:border-white/20 sm:p-5">
       {/* COLONNE DE VOTE */}
-      <div className="flex flex-col items-center gap-1 shrink-0 pt-0.5 pl-1">
+      <div className="flex flex-col items-center gap-1 shrink-0 pt-0.5">
         <button
           onClick={() => onVote(idea._id, "up")}
           disabled={!isLoggedIn}
           title={isLoggedIn ? "Voter pour" : "Connecte-toi pour voter"}
-          className={`p-1.5 rounded-lg border transition-all disabled:opacity-30 disabled:cursor-not-allowed active:scale-90 ${
+          aria-label="Voter pour cette idée"
+          aria-pressed={myVote === "up"}
+          className={`rounded-lg border p-2 transition-colors disabled:cursor-not-allowed disabled:opacity-30 ${FOCUS} ${
             myVote === "up"
               ? "border-emerald-500/50 bg-emerald-500/15 text-emerald-400"
               : "border-zinc-800 bg-zinc-900/40 text-zinc-500 hover:text-emerald-400 hover:border-emerald-500/30"
@@ -559,14 +516,16 @@ function IdeaCard({
         >
           <ChevronUp size={16} />
         </button>
-        <span className={`text-sm font-black font-mono tabular-nums ${idea.score > 0 ? "text-emerald-400" : idea.score < 0 ? "text-red-400" : "text-white"}`}>
+        <span className={`text-base font-bold tabular-nums ${idea.score > 0 ? "text-emerald-400" : idea.score < 0 ? "text-red-400" : "text-white"}`}>
           {idea.score}
         </span>
         <button
           onClick={() => onVote(idea._id, "down")}
           disabled={!isLoggedIn}
           title={isLoggedIn ? "Voter contre" : "Connecte-toi pour voter"}
-          className={`p-1.5 rounded-lg border transition-all disabled:opacity-30 disabled:cursor-not-allowed active:scale-90 ${
+          aria-label="Voter contre cette idée"
+          aria-pressed={myVote === "down"}
+          className={`rounded-lg border p-2 transition-colors disabled:cursor-not-allowed disabled:opacity-30 ${FOCUS} ${
             myVote === "down"
               ? "border-red-500/50 bg-red-500/15 text-red-400"
               : "border-zinc-800 bg-zinc-900/40 text-zinc-500 hover:text-red-400 hover:border-red-500/30"
@@ -580,27 +539,27 @@ function IdeaCard({
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 mb-1.5 flex-wrap">
           {rank && rank <= 3 && (
-            <span className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-amber-300 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-md">
+            <span className="flex items-center gap-1 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-xs font-semibold text-amber-300">
               <TrendingUp size={10} />
               #{rank}
             </span>
           )}
-          <span className={`flex items-center gap-1.5 text-[10px] font-mono uppercase px-2 py-0.5 rounded-md border ${meta.bg} ${meta.border} ${meta.text}`}>
+          <span className={`flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium ${meta.bg} ${meta.border} ${meta.text}`}>
             <CatIcon size={11} />
             {meta.label}
           </span>
           <IdeaStatusBadge status={idea.status} />
         </div>
 
-        <h3 className="text-sm font-bold text-white mb-1">{idea.title}</h3>
-        <p className="text-[12px] text-zinc-400 leading-relaxed whitespace-pre-wrap">{idea.description}</p>
+        <h3 className="mb-1 text-base font-semibold text-white">{idea.title}</h3>
+        <p className="whitespace-pre-wrap text-sm leading-relaxed text-zinc-300">{idea.description}</p>
 
-        <div className="flex items-center gap-3 mt-2.5">
-          <p className="text-[10px] text-zinc-600">
-            Proposé par <span className="text-zinc-400 font-semibold">{idea.authorName}</span> ·{" "}
+        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
+          <p className="text-xs text-zinc-400">
+            Proposé par <span className="font-semibold text-zinc-300">{idea.authorName}</span> ·{" "}
             {new Date(idea.createdAt).toLocaleDateString("fr-FR")}
           </p>
-          <span className="flex items-center gap-1 text-[10px] text-zinc-600">
+          <span className="flex items-center gap-1 text-xs text-zinc-400">
             <Vote size={11} />
             {idea.upvotes.length + idea.downvotes.length} vote{idea.upvotes.length + idea.downvotes.length > 1 ? "s" : ""}
           </span>
@@ -608,14 +567,14 @@ function IdeaCard({
 
         {/* RÉPONSE OFFICIELLE */}
         {idea.officialResponse?.content && (
-          <div className="mt-3 flex items-start gap-2.5 rounded-xl border border-purple-500/30 bg-gradient-to-br from-purple-950/30 to-indigo-950/20 p-3.5">
-            <MessageSquareQuote size={15} className="text-purple-400 shrink-0 mt-0.5" />
+          <div className="mt-3 flex items-start gap-2.5 rounded-xl border border-purple-500/30 bg-purple-500/[0.06] p-4">
+            <MessageSquareQuote size={16} className="text-purple-300 shrink-0 mt-0.5" />
             <div className="min-w-0">
-              <p className="text-[10px] font-black uppercase tracking-widest text-purple-300 mb-1 flex items-center gap-1.5">
-                <CheckCircle2 size={11} />
+              <p className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-purple-200">
+                <CheckCircle2 size={12} />
                 Réponse de l'équipe
               </p>
-              <p className="text-[12px] text-zinc-200 leading-relaxed whitespace-pre-wrap">
+              <p className="whitespace-pre-wrap text-sm leading-relaxed text-zinc-200">
                 {idea.officialResponse.content}
               </p>
             </div>
@@ -628,20 +587,20 @@ function IdeaCard({
             {!editing ? (
               <button
                 onClick={() => setEditing(true)}
-                className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-500 hover:text-purple-400 transition-colors"
+                className={`inline-flex items-center gap-1.5 rounded text-sm font-medium text-zinc-400 transition-colors hover:text-purple-300 ${FOCUS}`}
               >
                 <ShieldCheck size={12} />
                 Gérer (staff)
               </button>
             ) : (
-              <div className="rounded-xl border border-zinc-800/80 bg-zinc-900/50 p-3.5 space-y-3 mt-1">
+              <div className="mt-1 space-y-3 rounded-xl border border-white/10 bg-white/[0.03] p-4">
                 <div className="flex items-center justify-between">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400 flex items-center gap-1.5">
-                    <ShieldCheck size={12} className="text-purple-400" />
+                  <p className="flex items-center gap-1.5 text-sm font-semibold text-zinc-200">
+                    <ShieldCheck size={14} className="text-purple-300" />
                     Panneau staff
                   </p>
-                  <button onClick={() => setEditing(false)} className="text-zinc-500 hover:text-white transition-colors">
-                    <X size={13} />
+                  <button onClick={() => setEditing(false)} aria-label="Fermer le panneau staff" className={`rounded p-1 text-zinc-400 transition-colors hover:text-white ${FOCUS}`}>
+                    <X size={14} />
                   </button>
                 </div>
 
@@ -650,10 +609,11 @@ function IdeaCard({
                     <button
                       key={s.id}
                       onClick={() => setStatusDraft(s.id)}
-                      className={`rounded-lg px-2.5 py-1 text-[10px] font-bold border transition-all ${
+                      aria-pressed={statusDraft === s.id}
+                      className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${FOCUS} ${
                         statusDraft === s.id
-                          ? "border-purple-500 bg-purple-500/20 text-purple-300"
-                          : "border-zinc-800 bg-zinc-950/60 text-zinc-500 hover:text-zinc-300"
+                          ? "border-purple-500/50 bg-purple-500/20 text-purple-200"
+                          : "border-white/10 text-zinc-400 hover:border-white/20 hover:text-white"
                       }`}
                     >
                       {s.label}
@@ -666,13 +626,14 @@ function IdeaCard({
                   onChange={(e) => setResponseDraft(e.target.value)}
                   placeholder="Réponse officielle (laisser vide pour ne pas en publier)..."
                   rows={2}
-                  className="w-full rounded-lg border border-zinc-800 bg-zinc-950/80 px-3 py-2 text-[11px] text-white placeholder-zinc-600 outline-none focus:border-purple-500/50 transition-colors resize-none"
+                  aria-label="Réponse officielle"
+                  className="w-full resize-none rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none transition-colors focus:border-purple-500/60"
                 />
 
                 <button
                   onClick={handleSave}
                   disabled={saving}
-                  className="flex items-center justify-center gap-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 px-3 py-1.5 text-[10px] font-bold text-white transition-all disabled:opacity-50 w-full"
+                  className={`flex w-full items-center justify-center gap-1.5 rounded-lg bg-purple-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-purple-500 disabled:opacity-50 ${FOCUS}`}
                 >
                   {saving ? (
                     <Loader2 size={12} className="animate-spin" />
@@ -784,13 +745,13 @@ function IdeaComments({
   };
 
   return (
-    <div className="mt-3 border-t border-zinc-800/60 pt-2.5">
+    <div className="mt-4 border-t border-white/10 pt-3">
       <button
         onClick={toggle}
         aria-expanded={open}
-        className="inline-flex items-center gap-1.5 text-[11px] font-bold text-zinc-500 transition-colors hover:text-purple-400"
+        className={`inline-flex items-center gap-1.5 rounded text-sm font-medium text-zinc-400 transition-colors hover:text-purple-300 ${FOCUS}`}
       >
-        <MessageCircle size={13} />
+        <MessageCircle size={14} />
         {total === 0 ? "Commenter" : `${total} commentaire${total > 1 ? "s" : ""}`}
         <ChevronDown size={12} className={`transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
@@ -802,7 +763,7 @@ function IdeaComments({
               <Loader2 size={15} className="animate-spin text-purple-500" />
             </div>
           ) : loadError ? (
-            <p className="text-xs text-red-400">
+            <p role="alert" className="text-sm text-red-400">
               Impossible de charger les commentaires.{" "}
               <button onClick={load} className="font-bold underline hover:text-red-300">
                 Réessayer
@@ -811,31 +772,31 @@ function IdeaComments({
           ) : (
             <>
               {total > COMMENTS_SHOWN && (
-                <p className="text-[10px] text-zinc-600">
+                <p className="text-xs text-zinc-400">
                   Les {COMMENTS_SHOWN} commentaires les plus récents sont affichés.
                 </p>
               )}
 
               {comments.length === 0 ? (
-                <p className="text-xs text-zinc-500">Aucun commentaire pour le moment. Soyez le premier !</p>
+                <p className="text-sm text-zinc-400">Aucun commentaire pour le moment. Soyez le premier !</p>
               ) : (
                 <ul className="space-y-2">
                   {comments.map((c) => (
                     <li
                       key={c.id}
                       className={`rounded-xl border px-3.5 py-2.5 ${
-                        c.isStaff ? "border-purple-500/25 bg-purple-500/5" : "border-zinc-800/80 bg-zinc-900/40"
+                        c.isStaff ? "border-purple-500/25 bg-purple-500/5" : "border-white/10 bg-white/[0.02]"
                       }`}
                     >
                       <div className="mb-1 flex items-center justify-between gap-3">
-                        <p className="flex min-w-0 items-center gap-2 text-[11px]">
-                          <span className="truncate font-bold text-zinc-200">{c.authorName}</span>
+                        <p className="flex min-w-0 items-center gap-2 text-sm">
+                          <span className="truncate font-semibold text-zinc-200">{c.authorName}</span>
                           {c.isStaff && (
-                            <span className="shrink-0 rounded-md border border-purple-500/30 bg-purple-500/10 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-purple-300">
+                            <span className="shrink-0 rounded-md border border-purple-500/30 bg-purple-500/10 px-1.5 py-0.5 text-xs font-semibold text-purple-200">
                               Équipe
                             </span>
                           )}
-                          <span className="shrink-0 font-mono text-[10px] text-zinc-600">
+                          <span className="shrink-0 text-xs text-zinc-400">
                             {new Date(c.createdAt).toLocaleString("fr-FR", {
                               day: "2-digit",
                               month: "short",
@@ -847,7 +808,8 @@ function IdeaComments({
                         {c.canDelete && (
                           <button
                             onClick={() => remove(c)}
-                            className="shrink-0 p-1 text-zinc-600 transition-colors hover:text-red-400"
+                            className="shrink-0 rounded p-2 text-zinc-400 transition-colors hover:text-red-400"
+                            aria-label={c.mine ? "Supprimer mon commentaire" : "Supprimer (modération)"}
                             title={c.mine ? "Supprimer mon commentaire" : "Supprimer (modération)"}
                           >
                             <Trash2 size={12} />
@@ -855,7 +817,7 @@ function IdeaComments({
                         )}
                       </div>
                       {/* Texte brut : jamais interprété comme du HTML ni transformé en liens */}
-                      <p className="whitespace-pre-wrap break-words text-xs leading-relaxed text-zinc-300">{c.content}</p>
+                      <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-zinc-300">{c.content}</p>
                     </li>
                   ))}
                 </ul>
@@ -875,16 +837,17 @@ function IdeaComments({
                     maxLength={COMMENT_MAX}
                     rows={2}
                     placeholder="Ajouter un commentaire (soyez constructif et respectueux)..."
-                    className="w-full resize-none rounded-xl border border-zinc-800/80 bg-zinc-900/40 px-3.5 py-2.5 text-xs text-white placeholder-zinc-500 outline-none transition-colors focus:border-purple-500/50"
+                    aria-label="Ajouter un commentaire"
+                    className="w-full resize-none rounded-lg border border-white/10 bg-white/[0.02] px-3.5 py-2.5 text-sm text-white placeholder-zinc-500 outline-none transition-colors focus:border-purple-500/60"
                   />
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-zinc-600">
+                    <span className="text-xs text-zinc-400">
                       {draft.trim().length}/{COMMENT_MAX} · Ctrl + Entrée pour publier
                     </span>
                     <button
                       onClick={post}
                       disabled={!draft.trim() || posting}
-                      className="inline-flex items-center gap-1.5 rounded-lg bg-purple-600 px-3.5 py-1.5 text-[11px] font-bold text-white transition-all hover:bg-purple-500 disabled:opacity-50"
+                      className={`inline-flex items-center gap-1.5 rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-purple-500 disabled:opacity-50 ${FOCUS}`}
                     >
                       {posting ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
                       Publier
@@ -892,8 +855,8 @@ function IdeaComments({
                   </div>
                 </div>
               ) : (
-                <p className="text-xs text-zinc-500">
-                  <Link href="/login" className="font-bold text-purple-400 hover:text-purple-300">
+                <p className="text-sm text-zinc-400">
+                  <Link href="/login" className="font-semibold text-purple-300 underline-offset-4 hover:underline">
                     Connectez-vous
                   </Link>{" "}
                   pour commenter.

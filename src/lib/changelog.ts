@@ -12,6 +12,20 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "3.14.0",
+    date: "24/10/2026",
+    title: "Nouveau design du site",
+    changes: [
+      { type: "improved", text: "L'accueil est entièrement redessiné : nouveaux titres, section « Prêt en trois étapes », roadmap en liste, et deux aperçus séparés pour le widget musique et le widget chat, avec un lien direct pour les personnaliser." },
+      { type: "improved", text: "Le dashboard adopte un style plus sobre et plus lisible : nouvelle barre latérale, cartes à la bordure fine, libellés en minuscules, textes plus grands et plus contrastés. Toutes les pages sont concernées : Accueil, Spotify, Bot, Widget musique, Widget chat, Statistiques, Twitch et Compte." },
+      { type: "improved", text: "Les pages publiques partagent maintenant le même cadre (en-tête, pied de page, titres) : Aide, Idées, Changelog, Statut, Support, Confidentialité & CGU et Mentions légales. Les textes juridiques sont plus faciles à lire." },
+      { type: "improved", text: "Les pages d'erreur (page introuvable, accès refusé, erreur serveur) et les pages de connexion Twitch (autorisation annulée, compte déjà associé) sont refaites, avec des liens utiles vers l'aide et le statut." },
+      { type: "improved", text: "Le panneau staff est redessiné. L'accueil met en avant ce qui reste à traiter (tickets en attente, idées à l'étude) et une répartition des tickets. Tickets, FAQ, idées, utilisateurs, incidents et annonce globale reprennent le même style que le reste du site." },
+      { type: "improved", text: "Accessibilité : le focus au clavier est visible partout, les boutons à bascule et les filtres indiquent leur état aux lecteurs d'écran, les champs ont des libellés, les messages d'erreur sont annoncés, et les animations sont réduites si ton système le demande." },
+      { type: "improved", text: "L'aperçu du widget musique et du widget chat ne charge plus de fond décoratif depuis un site externe : la page se charge plus vite et ne fait plus d'appel à un service tiers." },
+    ],
+  },
+  {
     version: "3.13.0",
     date: "09/10/2026",
     title: "Page de statut en temps réel",

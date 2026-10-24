@@ -10,6 +10,9 @@ import {
   ALL_ROLES, ROLE_LABELS, ROLE_PERMISSIONS, PERMISSION_LABELS, PERMISSIONS, getRoleLevel, type Permission,
 } from "@/lib/roles";
 import { BannerBar, type BannerLevel } from "@/components/SiteBanner";
+import { PageHeader } from "@/components/dashboard/DashboardUI";
+
+const FOCUS = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400";
 
 /* ───────────── Types ───────────── */
 
@@ -274,7 +277,7 @@ async function fetchJson(url: string) {
 
 function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
-    <section className={`rounded-3xl border border-white/5 bg-zinc-950/60 p-6 backdrop-blur-xl ${className}`}>
+    <section className={`rounded-2xl border border-white/10 bg-white/[0.02] p-6 ${className}`}>
       {children}
     </section>
   );
@@ -286,12 +289,12 @@ function SectionTitle({
   return (
     <div className="mb-5 flex items-start justify-between gap-3">
       <div className="flex items-start gap-3">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-purple-500/20 bg-purple-500/10 text-purple-300">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-purple-300">
           <Icon size={17} />
         </span>
         <div>
-          <h2 className="text-sm font-extrabold uppercase tracking-[0.15em] text-white">{title}</h2>
-          {subtitle && <p className="mt-0.5 text-xs text-zinc-500">{subtitle}</p>}
+          <h2 className="font-display text-lg font-bold tracking-tight text-white">{title}</h2>
+          {subtitle && <p className="mt-0.5 text-sm text-zinc-400">{subtitle}</p>}
         </div>
       </div>
       {right}
@@ -303,13 +306,13 @@ function StatCard({
   icon: Icon, label, value, hint, accent = "text-purple-400",
 }: { icon: typeof Users; label: string; value: number; hint?: string; accent?: string }) {
   return (
-    <div className="group rounded-2xl border border-white/5 bg-zinc-950/60 p-5 backdrop-blur-xl transition-colors hover:border-white/10">
-      <div className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500">
-        <Icon size={13} className={accent} />
+    <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
+      <div className="mb-3 flex items-center gap-2 text-sm text-zinc-400">
+        <Icon size={14} className={accent} />
         {label}
       </div>
-      <p className="text-3xl font-black tracking-tight text-white">{value.toLocaleString("fr-FR")}</p>
-      {hint && <p className="mt-1 text-xs text-zinc-500">{hint}</p>}
+      <p className="font-display text-3xl font-extrabold tabular-nums tracking-tight text-white">{value.toLocaleString("fr-FR")}</p>
+      {hint && <p className="mt-1 text-sm text-zinc-400">{hint}</p>}
     </div>
   );
 }
@@ -320,9 +323,9 @@ function Breakdown({ items }: { items: { label: string; value: number; bar: stri
     <ul className="space-y-2.5">
       {items.map((i) => (
         <li key={i.label}>
-          <div className="mb-1 flex justify-between text-xs">
+          <div className="mb-1 flex justify-between text-sm">
             <span className="text-zinc-400">{i.label}</span>
-            <span className="font-bold text-zinc-200">{i.value}</span>
+            <span className="font-semibold tabular-nums text-zinc-200">{i.value}</span>
           </div>
           <div className="h-1.5 overflow-hidden rounded-full bg-white/5">
             <div className={`h-full rounded-full transition-all duration-700 ${i.bar}`} style={{ width: `${(i.value / max) * 100}%` }} />
@@ -335,7 +338,7 @@ function Breakdown({ items }: { items: { label: string; value: number; bar: stri
 
 function RoleBadge({ role }: { role: string }) {
   return (
-    <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${roleStyle(role).badge}`}>
+    <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${roleStyle(role).badge}`}>
       {ROLE_LABELS[role] ?? role}
     </span>
   );
@@ -529,40 +532,36 @@ export default function OwnerPage() {
 
   return (
     <div className="space-y-6">
-      {/* En-tête */}
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 text-black shadow-lg shadow-amber-500/20">
-            <Crown size={22} />
-          </span>
-          <div>
-            <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.3em] text-purple-400">Administration</p>
-            <h1 className="text-2xl font-black tracking-tight text-white">Propriétaire</h1>
-            <p className="text-xs text-zinc-500">Réservé au Créateur et aux Co-créateurs.</p>
+      <PageHeader
+        eyebrow="Administration"
+        title="Propriétaire"
+        action={
+          <div className="flex flex-wrap items-center gap-3">
+            {refreshFailed && <span role="alert" className="text-sm text-rose-300">Actualisation impossible</span>}
+            {updatedAt && !refreshFailed && (
+              <span className="text-sm text-zinc-400">
+                Mis à jour {new Date(updatedAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={() => load()}
+              disabled={refreshing}
+              className={`flex cursor-pointer items-center gap-2 rounded-lg border border-white/15 px-4 py-2.5 text-sm font-medium text-zinc-200 transition-colors hover:border-white/30 hover:text-white disabled:opacity-50 ${FOCUS}`}
+            >
+              <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
+              Actualiser
+            </button>
           </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          {refreshFailed && <span className="text-xs text-rose-400">Actualisation impossible</span>}
-          {updatedAt && !refreshFailed && (
-            <span className="text-[11px] text-zinc-600">
-              Mis à jour {new Date(updatedAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
-            </span>
-          )}
-          <button
-            type="button"
-            onClick={() => load()}
-            disabled={refreshing}
-            className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3.5 py-2 text-xs font-bold text-zinc-300 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50 cursor-pointer"
-          >
-            <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
-            Actualiser
-          </button>
-        </div>
-      </header>
+        }
+      />
+      <p className="-mt-6 flex items-center gap-2 text-sm text-zinc-400">
+        <Crown size={14} className="text-amber-300" />
+        Réservé au Créateur et aux Co-créateurs.
+      </p>
 
       {/* Onglets */}
-      <div role="tablist" aria-label="Sections" className="flex w-fit max-w-full gap-1.5 overflow-x-auto rounded-2xl border border-zinc-800/80 bg-zinc-950/60 p-1.5 backdrop-blur-xl">
+      <div role="tablist" aria-label="Sections" className="flex w-fit max-w-full gap-1 overflow-x-auto rounded-xl border border-white/10 p-1">
         {TABS.map(({ id, label, icon: Icon }) => {
           const active = tab === id;
           return (
@@ -574,16 +573,16 @@ export default function OwnerPage() {
               aria-selected={active}
               aria-controls={`panel-${id}`}
               onClick={() => selectTab(id)}
-              className={`flex shrink-0 items-center gap-2 rounded-xl border px-4 py-2 text-xs font-bold uppercase tracking-widest transition-all cursor-pointer ${
+              className={`flex shrink-0 cursor-pointer items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${FOCUS} ${
                 active
-                  ? "border-purple-500/50 bg-purple-600/20 text-purple-300"
-                  : "border-transparent text-zinc-500 hover:bg-white/5 hover:text-zinc-200"
+                  ? "bg-white/[0.08] text-white"
+                  : "text-zinc-400 hover:bg-white/[0.04] hover:text-white"
               }`}
             >
-              <Icon size={13} />
+              <Icon size={14} />
               {label}
               {id === "audit" && audit.length > 0 && (
-                <span className="rounded-full bg-white/10 px-1.5 text-[9px] font-black text-zinc-300">{audit.length}</span>
+                <span className="rounded-full bg-white/10 px-1.5 text-xs font-semibold tabular-nums text-zinc-300">{audit.length}</span>
               )}
               {id === "banner" && bannerState(savedBanner, now) === "live" && (
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" aria-label="Annonce en ligne" />
@@ -636,12 +635,12 @@ export default function OwnerPage() {
               </div>
               <ul className="grid grid-cols-2 gap-x-6 gap-y-2.5">
                 {rolesByLevel.map((r) => (
-                  <li key={r} className="flex items-center justify-between text-xs">
+                  <li key={r} className="flex items-center justify-between text-sm">
                     <span className="flex items-center gap-2 text-zinc-400">
                       <span className={`h-2 w-2 rounded-full ${roleStyle(r).dot}`} />
                       {ROLE_LABELS[r]}
                     </span>
-                    <span className="font-bold text-zinc-200">{overview.users.byRole[r] || 0}</span>
+                    <span className="font-semibold tabular-nums text-zinc-200">{overview.users.byRole[r] || 0}</span>
                   </li>
                 ))}
               </ul>
@@ -651,11 +650,11 @@ export default function OwnerPage() {
               <SectionTitle icon={Activity} title="Activité" subtitle={`${overview.faqCount} article${overview.faqCount > 1 ? "s" : ""} dans la FAQ`} />
               <div className="grid gap-6 sm:grid-cols-2">
                 <div>
-                  <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600">Tickets</p>
+                  <p className="mb-3 text-sm font-semibold text-zinc-200">Tickets</p>
                   <Breakdown items={TICKET_ROWS.map((r) => ({ label: r.label, bar: r.bar, value: overview.tickets[r.key] || 0 }))} />
                 </div>
                 <div>
-                  <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600">Idées</p>
+                  <p className="mb-3 text-sm font-semibold text-zinc-200">Idées</p>
                   <Breakdown items={IDEA_ROWS.map((r) => ({ label: r.label, bar: r.bar, value: overview.ideas[r.key] || 0 }))} />
                 </div>
               </div>
@@ -666,19 +665,19 @@ export default function OwnerPage() {
             <Card>
               <SectionTitle icon={Activity} title="Services externes" subtitle="Dernière vérification du cron de statut." />
               {overview.services.length === 0 ? (
-                <p className="text-sm text-zinc-500">Aucune vérification récente (le cron n'a pas tourné ces dernières 24 h).</p>
+                <p className="text-sm text-zinc-400">Aucune vérification récente (le cron n'a pas tourné ces dernières 24 h).</p>
               ) : (
                 <ul className="space-y-2">
                   {overview.services.map((s) => (
-                    <li key={s.name} className="flex items-center justify-between gap-3 rounded-2xl border border-white/5 bg-black/30 px-4 py-3">
+                    <li key={s.name} className="flex items-center justify-between gap-3 rounded-xl border border-white/10 px-4 py-3">
                       <div>
-                        <p className="text-sm font-semibold text-zinc-100">{s.name}</p>
-                        <p className="text-[11px] text-zinc-600">
+                        <p className="text-base font-semibold text-zinc-100">{s.name}</p>
+                        <p className="text-sm text-zinc-400">
                           {timeAgo(s.checkedAt, now)}
                           {s.latencyMs !== null && ` · ${s.latencyMs} ms`}
                         </p>
                       </div>
-                      <span className={`rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${SERVICE_STYLES[s.status]?.cls}`}>
+                      <span className={`rounded-full border px-3 py-1 text-xs font-medium ${SERVICE_STYLES[s.status]?.cls}`}>
                         {SERVICE_STYLES[s.status]?.label ?? s.status}
                       </span>
                     </li>
@@ -693,7 +692,7 @@ export default function OwnerPage() {
                 title="Configuration"
                 subtitle={`Node ${overview.runtime.node} · ${overview.runtime.environment}`}
                 right={
-                  <span className={`rounded-full border px-2.5 py-1 text-[10px] font-black ${
+                  <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold tabular-nums ${
                     envMissing.length === 0
                       ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
                       : "border-rose-500/30 bg-rose-500/10 text-rose-300"
@@ -704,7 +703,7 @@ export default function OwnerPage() {
               />
               <ul className="space-y-2">
                 {overview.env.map((v) => (
-                  <li key={v.name} className="flex items-center gap-3 rounded-2xl border border-white/5 bg-black/30 px-4 py-2.5">
+                  <li key={v.name} className="flex items-center gap-3 rounded-xl border border-white/10 px-4 py-2.5">
                     {v.ok ? (
                       <CircleCheck size={16} className="shrink-0 text-emerald-400" />
                     ) : v.required ? (
@@ -713,10 +712,10 @@ export default function OwnerPage() {
                       <TriangleAlert size={16} className="shrink-0 text-amber-400" />
                     )}
                     <div className="min-w-0 flex-1">
-                      <p className="truncate font-mono text-xs text-zinc-200">{v.name}</p>
-                      <p className="truncate text-[11px] text-zinc-600">{v.note}</p>
+                      <p className="truncate font-mono text-sm text-zinc-200">{v.name}</p>
+                      <p className="truncate text-sm text-zinc-400">{v.note}</p>
                     </div>
-                    <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+                    <span className="shrink-0 text-xs font-medium text-zinc-400">
                       {v.ok ? "OK" : v.required ? "Manquante" : "Optionnelle"}
                     </span>
                   </li>
@@ -737,41 +736,41 @@ export default function OwnerPage() {
               subtitle="Bandeau affiché en haut de tout le site (hors overlays OBS)."
               right={
                 <div className="flex flex-col items-end gap-1">
-                  <span className={`rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${STATE_PILLS[liveState].cls}`}>
+                  <span className={`rounded-full border px-3 py-1 text-xs font-medium ${STATE_PILLS[liveState].cls}`}>
                     {STATE_PILLS[liveState].label}
                   </span>
-                  {stateHint && <span className="text-[11px] text-zinc-600">{stateHint}</span>}
+                  {stateHint && <span className="text-sm text-zinc-400">{stateHint}</span>}
                 </div>
               }
             />
 
             <div className="space-y-5">
               <div>
-                <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600">Modèles rapides</p>
+                <p className="mb-2 text-sm font-semibold text-zinc-200">Modèles rapides</p>
                 <div className="flex flex-wrap gap-2">
                   {PRESETS.map(({ label, icon: Icon, level, message }) => (
                     <button
                       key={label}
                       type="button"
                       onClick={() => setBanner({ ...banner, level, message })}
-                      className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3.5 py-2 text-xs font-semibold text-zinc-300 transition-colors hover:border-white/20 hover:bg-white/10 hover:text-white cursor-pointer"
+                      className={`flex cursor-pointer items-center gap-2 rounded-lg border border-white/15 px-3.5 py-2 text-sm font-medium text-zinc-200 transition-colors hover:border-white/30 hover:text-white ${FOCUS}`}
                     >
-                      <Icon size={13} className="text-zinc-400" />
+                      <Icon size={14} className="text-zinc-400" />
                       {label}
                     </button>
                   ))}
                 </div>
               </div>
 
-              <div className="flex items-center justify-between rounded-2xl border border-white/5 bg-black/30 px-4 py-3">
-                <span className="text-sm font-semibold text-zinc-200">Afficher l'annonce</span>
+              <div className="flex items-center justify-between rounded-xl border border-white/10 px-4 py-3">
+                <span className="text-base font-semibold text-zinc-200">Afficher l'annonce</span>
                 <button
                   type="button"
                   role="switch"
                   aria-checked={banner.enabled}
                   aria-label="Afficher l'annonce"
                   onClick={() => setBanner({ ...banner, enabled: !banner.enabled })}
-                  className={`relative h-6 w-11 rounded-full transition-colors cursor-pointer ${banner.enabled ? "bg-purple-600" : "bg-zinc-700"}`}
+                  className={`relative h-6 w-11 cursor-pointer rounded-full transition-colors ${FOCUS} ${banner.enabled ? "bg-purple-600" : "bg-zinc-700"}`}
                 >
                   <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${banner.enabled ? "left-[22px]" : "left-0.5"}`} />
                 </button>
@@ -785,8 +784,8 @@ export default function OwnerPage() {
                     role="radio"
                     aria-checked={banner.level === opt.value}
                     onClick={() => setBanner({ ...banner, level: opt.value })}
-                    className={`rounded-xl border px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer ${
-                      banner.level === opt.value ? opt.active : "border-white/10 text-zinc-500 hover:border-white/20 hover:text-zinc-300"
+                    className={`cursor-pointer rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${FOCUS} ${
+                      banner.level === opt.value ? opt.active : "border-white/10 text-zinc-400 hover:border-white/20 hover:text-white"
                     }`}
                   >
                     {opt.label}
@@ -795,9 +794,9 @@ export default function OwnerPage() {
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
-                <div className="rounded-2xl border border-white/5 bg-black/30 p-4">
-                  <p className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500">
-                    <CalendarClock size={13} className="text-purple-400" /> Début
+                <div className="rounded-xl border border-white/10 p-4">
+                  <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-zinc-200">
+                    <CalendarClock size={14} className="text-purple-300" /> Début
                   </p>
                   <div className="flex gap-2" role="radiogroup" aria-label="Début de l'annonce">
                     {(["now", "scheduled"] as const).map((m) => (
@@ -807,10 +806,10 @@ export default function OwnerPage() {
                         role="radio"
                         aria-checked={banner.startMode === m}
                         onClick={() => setBanner({ ...banner, startMode: m })}
-                        className={`rounded-xl border px-3.5 py-2 text-xs font-semibold transition-colors cursor-pointer ${
+                        className={`cursor-pointer rounded-lg border px-3.5 py-2 text-sm font-medium transition-colors ${FOCUS} ${
                           banner.startMode === m
-                            ? "border-purple-500/50 bg-purple-600/20 text-purple-200"
-                            : "border-white/10 text-zinc-500 hover:border-white/20 hover:text-zinc-300"
+                            ? "border-purple-500/50 bg-purple-600/20 text-purple-100"
+                            : "border-white/10 text-zinc-400 hover:border-white/20 hover:text-white"
                         }`}
                       >
                         {m === "now" ? "Immédiat" : "Programmé"}
@@ -823,20 +822,20 @@ export default function OwnerPage() {
                       value={banner.startLocal}
                       onChange={(e) => setBanner({ ...banner, startLocal: e.target.value })}
                       aria-label="Date de début"
-                      className="mt-3 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-purple-500/50 [color-scheme:dark]"
+                      className="mt-3 w-full rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2.5 text-sm text-white outline-none transition-colors focus:border-purple-500/60 [color-scheme:dark]"
                     />
                   )}
                 </div>
 
-                <div className="rounded-2xl border border-white/5 bg-black/30 p-4">
-                  <p className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500">
-                    <PowerOff size={13} className="text-purple-400" /> Fin automatique
+                <div className="rounded-xl border border-white/10 p-4">
+                  <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-zinc-200">
+                    <PowerOff size={14} className="text-purple-300" /> Fin automatique
                   </p>
                   <select
                     value={banner.endMode}
                     onChange={(e) => setBanner({ ...banner, endMode: e.target.value as EndMode })}
                     aria-label="Fin automatique"
-                    className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-purple-500/50 [color-scheme:dark]"
+                    className="w-full cursor-pointer rounded-lg border border-white/10 bg-zinc-950 px-3 py-2.5 text-sm text-white outline-none transition-colors focus:border-purple-500/60 [color-scheme:dark]"
                   >
                     {END_OPTIONS.map((o) => (
                       <option key={o.value} value={o.value}>{o.label}</option>
@@ -848,11 +847,11 @@ export default function OwnerPage() {
                       value={banner.endLocal}
                       onChange={(e) => setBanner({ ...banner, endLocal: e.target.value })}
                       aria-label="Date de fin"
-                      className="mt-3 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-purple-500/50 [color-scheme:dark]"
+                      className="mt-3 w-full rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2.5 text-sm text-white outline-none transition-colors focus:border-purple-500/60 [color-scheme:dark]"
                     />
                   )}
                   {banner.endMode !== "never" && banner.endMode !== "custom" && (
-                    <p className="mt-2 text-[11px] text-zinc-600">
+                    <p className="mt-2 text-sm text-zinc-400">
                       Comptée {banner.startMode === "scheduled" ? "à partir du début" : "à partir de la publication"}.
                     </p>
                   )}
@@ -866,27 +865,27 @@ export default function OwnerPage() {
                   rows={3}
                   aria-label="Message de l'annonce"
                   placeholder="Écris ton message ou choisis un modèle rapide…"
-                  className="w-full resize-none rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition-colors placeholder:text-zinc-600 focus:border-purple-500/50"
+                  className="w-full resize-none rounded-lg border border-white/10 bg-white/[0.02] px-4 py-3 text-sm text-white outline-none transition-colors placeholder:text-zinc-500 focus:border-purple-500/60"
                 />
-                <p className={`mt-1 text-right text-[11px] ${banner.message.length >= MAX_MESSAGE ? "text-amber-400" : "text-zinc-600"}`}>
+                <p className={`mt-1 text-right text-sm tabular-nums ${banner.message.length >= MAX_MESSAGE ? "text-amber-300" : "text-zinc-400"}`}>
                   {banner.message.length}/{MAX_MESSAGE}
                 </p>
               </div>
 
               {banner.enabled && !banner.message.trim() && (
-                <p className="flex items-center gap-2 text-xs text-amber-400">
+                <p role="alert" className="flex items-center gap-2 text-sm text-amber-300">
                   <TriangleAlert size={14} /> Écris un message avant d'activer l'annonce.
                 </p>
               )}
 
               {banner.message.trim() && (
                 <div>
-                  <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600">Aperçu</p>
-                  <div className="overflow-hidden rounded-2xl border border-white/5">
+                  <p className="mb-2 text-sm font-semibold text-zinc-200">Aperçu</p>
+                  <div className="overflow-hidden rounded-xl border border-white/10">
                     <BannerBar message={banner.message.trim()} level={banner.level} />
                   </div>
                   {banner.level === "critical" && (
-                    <p className="mt-2 text-[11px] text-zinc-600">Une annonce critique ne peut pas être fermée par les visiteurs.</p>
+                    <p className="mt-2 text-sm text-zinc-400">Une annonce critique ne peut pas être fermée par les visiteurs.</p>
                   )}
                 </div>
               )}
@@ -896,7 +895,7 @@ export default function OwnerPage() {
                   type="button"
                   onClick={saveBanner}
                   disabled={saving || !dirty}
-                  className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-3 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
+                  className={`flex cursor-pointer items-center gap-2 rounded-xl bg-purple-600 px-6 py-3 text-base font-semibold text-white transition-colors hover:bg-purple-500 disabled:cursor-not-allowed disabled:opacity-40 ${FOCUS}`}
                 >
                   {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
                   Enregistrer
@@ -906,17 +905,17 @@ export default function OwnerPage() {
                     type="button"
                     onClick={removeBanner}
                     disabled={saving}
-                    className="flex items-center gap-2 rounded-2xl border border-rose-500/30 px-5 py-3 text-sm font-bold text-rose-300 transition-colors hover:bg-rose-500/10 disabled:opacity-40 cursor-pointer"
+                    className="flex cursor-pointer items-center gap-2 rounded-xl border border-rose-500/30 px-5 py-3 text-base font-semibold text-rose-200 transition-colors hover:bg-rose-500/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-300 disabled:opacity-40"
                   >
                     <PowerOff size={16} />
                     Retirer
                   </button>
                 )}
-                {dirty && !saving && <span className="text-xs text-amber-400">Modifications non enregistrées</span>}
+                {dirty && !saving && <span className="text-sm text-amber-300">Modifications non enregistrées</span>}
                 {feedback && !dirty && (
-                  <span className={`text-xs font-medium ${feedback.ok ? "text-emerald-400" : "text-rose-400"}`}>{feedback.text}</span>
+                  <span role="status" className={`text-sm font-medium ${feedback.ok ? "text-emerald-300" : "text-rose-300"}`}>{feedback.text}</span>
                 )}
-                {feedback && !feedback.ok && dirty && <span className="text-xs font-medium text-rose-400">{feedback.text}</span>}
+                {feedback && !feedback.ok && dirty && <span role="alert" className="text-sm font-medium text-rose-300">{feedback.text}</span>}
               </div>
             </div>
           </Card>
@@ -933,7 +932,7 @@ export default function OwnerPage() {
             ) : (
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {staff.map((m) => (
-                  <div key={m._id} className="flex items-center gap-3 rounded-2xl border border-white/5 bg-black/30 p-3">
+                  <div key={m._id} className="flex items-center gap-3 rounded-xl border border-white/10 p-3">
                     {m.image ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={m.image} alt="" className="h-10 w-10 rounded-full object-cover" />
@@ -943,27 +942,27 @@ export default function OwnerPage() {
                       </span>
                     )}
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-zinc-100">{m.name}</p>
+                      <p className="truncate text-base font-semibold text-zinc-100">{m.name}</p>
                       <RoleBadge role={m.role} />
                     </div>
                   </div>
                 ))}
               </div>
             )}
-            <p className="mt-4 text-[11px] text-zinc-600">Les rôles se modifient depuis l'onglet « Utilisateurs » du panneau admin.</p>
+            <p className="mt-4 text-sm text-zinc-400">Les rôles se modifient depuis l'onglet « Utilisateurs » du panneau admin.</p>
           </Card>
 
           <Card>
             <SectionTitle icon={KeyRound} title="Matrice des permissions" subtitle="Modifiable dans src/lib/roles.ts (ROLE_PERMISSIONS)." />
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[600px] text-left text-xs">
+              <table className="w-full min-w-[600px] text-left text-sm">
                 <thead>
-                  <tr className="border-b border-white/5 text-[10px] uppercase tracking-wider text-zinc-500">
+                  <tr className="border-b border-white/10 text-sm text-zinc-300">
                     <th className="sticky left-0 bg-zinc-950 py-2 pr-4 font-bold">Permission</th>
                     {matrixRoles.map((r) => (
                       <th key={r} className="px-2 py-2 text-center font-bold">
                         {ROLE_LABELS[r]}
-                        <span className="block font-medium normal-case text-zinc-600">
+                        <span className="block text-xs font-normal text-zinc-400">
                           {overview.users.byRole[r] || 0} membre{(overview.users.byRole[r] || 0) > 1 ? "s" : ""}
                         </span>
                       </th>
@@ -972,8 +971,8 @@ export default function OwnerPage() {
                 </thead>
                 <tbody>
                   {permissions.map((p) => (
-                    <tr key={p} className={`border-b border-white/5 last:border-0 ${p === PERMISSIONS.OWNER_ZONE ? "bg-amber-500/5" : ""}`}>
-                      <td className="sticky left-0 bg-zinc-950 py-2.5 pr-4 text-zinc-300">
+                    <tr key={p} className={`border-b border-white/10 last:border-0 ${p === PERMISSIONS.OWNER_ZONE ? "bg-amber-500/[0.06]" : ""}`}>
+                      <td className="sticky left-0 bg-zinc-950 py-3 pr-4 text-zinc-300">
                         {PERMISSION_LABELS[p]}
                         {p === PERMISSIONS.OWNER_ZONE && <Crown size={11} className="ml-1.5 inline text-amber-400" />}
                       </td>
@@ -1011,10 +1010,11 @@ export default function OwnerPage() {
                   key={f.id}
                   type="button"
                   onClick={() => setAuditFilter(f.id)}
-                  className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
+                  aria-pressed={auditFilter === f.id}
+                  className={`cursor-pointer rounded-full border px-4 py-2 text-sm font-medium transition-colors ${FOCUS} ${
                     auditFilter === f.id
-                      ? "border-purple-500/50 bg-purple-600/20 text-purple-200"
-                      : "border-white/10 text-zinc-500 hover:border-white/20 hover:text-zinc-300"
+                      ? "border-purple-500/50 bg-purple-500/15 text-purple-200"
+                      : "border-white/10 text-zinc-400 hover:border-white/20 hover:text-white"
                   }`}
                 >
                   {f.label}
@@ -1023,11 +1023,11 @@ export default function OwnerPage() {
             </div>
 
             {filteredAudit.length === 0 ? (
-              <p className="py-6 text-center text-sm text-zinc-500">
+              <p className="py-6 text-center text-sm text-zinc-400">
                 {audit.length === 0 ? "Aucune action enregistrée pour le moment." : "Aucune action dans cette catégorie."}
               </p>
             ) : (
-              <ul className="divide-y divide-white/5">
+              <ul className="divide-y divide-white/10">
                 {filteredAudit.map((e) => {
                   const meta = AUDIT_META[e.action];
                   const Icon = meta?.icon ?? ScrollText;
@@ -1040,12 +1040,12 @@ export default function OwnerPage() {
                         <p className="text-sm text-zinc-200">
                           <span className="font-semibold text-white">{e.actorName}</span>{" "}
                           <RoleBadge role={e.actorRole} />
-                          <span className="text-zinc-500"> · {meta?.label ?? e.action}</span>
+                          <span className="text-zinc-400"> · {meta?.label ?? e.action}</span>
                           {e.targetName && <span className="text-zinc-300"> · {e.targetName}</span>}
                         </p>
-                        {e.details && <p className="mt-0.5 break-words text-xs text-zinc-500">{e.details}</p>}
+                        {e.details && <p className="mt-0.5 break-words text-sm text-zinc-400">{e.details}</p>}
                       </div>
-                      <time className="shrink-0 text-[11px] text-zinc-600" dateTime={e.createdAt} title={fmtDate(e.createdAt)}>
+                      <time className="shrink-0 text-sm text-zinc-400" dateTime={e.createdAt} title={fmtDate(e.createdAt)}>
                         {timeAgo(e.createdAt, now)}
                       </time>
                     </li>

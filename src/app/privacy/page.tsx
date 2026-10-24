@@ -1,16 +1,9 @@
 import Link from "next/link";
-import SiteHeader from "@/components/SiteHeader";
+import PublicShell from "@/components/site/PublicShell";
+import PageIntro from "@/components/site/PageIntro";
 import { TERMS_REVISED_LABEL } from "@/lib/terms";
 import type { Metadata } from "next";
-import {
-  ShieldCheck,
-  ArrowLeft,
-  ArrowRight,
-  Lock,
-  Database,
-  UserCheck,
-  Mail,
-} from "lucide-react";
+import { ArrowRight, Lock, Database, UserCheck, Mail } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Confidentialité | Twichify",
@@ -185,13 +178,13 @@ const SECTIONS = [
           traitée et combien de temps elle est conservée :
         </p>
 
-        <div className="overflow-x-auto rounded-2xl border border-white/5 bg-zinc-900/60">
+        <div className="overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.02]">
           <table className="w-full min-w-[640px] text-left text-xs">
             <caption className="sr-only">
               Données traitées par Twichify, finalité et durée de conservation
             </caption>
             <thead>
-              <tr className="border-b border-white/5 text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+              <tr className="border-b border-white/10 text-sm font-semibold text-zinc-300">
                 <th scope="col" className="px-4 py-3">Donnée</th>
                 <th scope="col" className="px-4 py-3">Finalité</th>
                 <th scope="col" className="px-4 py-3">Conservation</th>
@@ -437,7 +430,7 @@ const SECTIONS = [
           conservé.
         </p>
 
-        <div className="relative overflow-hidden rounded-2xl border border-purple-500/20 bg-gradient-to-r from-purple-950/40 to-zinc-900/80 p-5 shadow-lg">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
           <div className="flex items-start gap-4">
             <div className="inline-flex shrink-0 items-center justify-center rounded-xl border border-purple-500/20 bg-purple-500/10 p-2.5 text-purple-400">
               <Mail size={20} aria-hidden="true" />
@@ -482,55 +475,17 @@ const SECTIONS = [
 
 export default function PrivacyPage() {
   return (
-    <main className="relative min-h-screen overflow-x-clip bg-[#030305] font-sans text-zinc-300 selection:bg-purple-500/30 selection:text-purple-200">
+    <PublicShell width="max-w-6xl">
       <style>{`
         html { scroll-behavior: smooth; }
         @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
       `}</style>
 
-      {/* Background Glow */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute left-1/2 top-0 h-[350px] w-[600px] -translate-x-1/2 rounded-full bg-purple-600/10 blur-[130px]"
-      />
-
-      <SiteHeader />
-
-      <div className="relative mx-auto max-w-6xl space-y-12 px-4 py-16 sm:px-6">
-        <div>
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 rounded-full border border-white/5 bg-zinc-900/60 px-4 py-2 text-xs font-medium text-zinc-400 shadow-sm backdrop-blur-md transition-all duration-200 hover:border-white/10 hover:bg-zinc-800/60 hover:text-white"
-          >
-            <ArrowLeft size={14} aria-hidden="true" />
-            Retour à l'accueil
-          </Link>
-        </div>
-
-        <header className="space-y-4 border-b border-white/5 pb-10">
-          <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-purple-500/30 bg-gradient-to-br from-purple-500/20 to-purple-700/5 text-purple-400 shadow-xl shadow-purple-950/20">
-              <ShieldCheck size={30} aria-hidden="true" />
-            </div>
-
-            <div>
-              <h1 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
-                Conditions Générales & Confidentialité
-              </h1>
-
-              <div className="mt-1.5 flex items-center gap-2 text-xs text-zinc-400">
-                <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" aria-hidden="true" />
-                <span>Dernière mise à jour : {LAST_UPDATED}</span>
-              </div>
-            </div>
-          </div>
-
-          <p className="max-w-2xl pt-2 text-sm leading-relaxed text-zinc-400">
-            Transparence totale sur le traitement de vos données, la sécurité
-            de vos clés API et les conditions d'utilisation de nos widgets
-            (Spotify & Chat Twitch) pour vos streams.
-          </p>
-        </header>
+      <div className="space-y-12">
+        <PageIntro title="Conditions générales et confidentialité" meta={`Dernière mise à jour : ${LAST_UPDATED}`}>
+          Transparence totale sur le traitement de vos données, la sécurité de vos clés API et les conditions
+          d'utilisation de nos widgets (Spotify &amp; Chat Twitch) pour vos streams.
+        </PageIntro>
 
         {/* Points clés */}
         <section aria-label="Points clés de confidentialité" className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -538,21 +493,14 @@ export default function PrivacyPage() {
             const Icon = item.icon;
 
             return (
-              <div
-                key={index}
-                className="group rounded-2xl border border-white/5 bg-zinc-900/40 p-5 backdrop-blur-md transition-all duration-300 hover:border-purple-500/30 hover:bg-zinc-900/70"
-              >
-                <div className="mb-3 inline-flex items-center justify-center rounded-xl border border-purple-500/20 bg-purple-500/10 p-2.5 text-purple-400 transition-transform duration-300 group-hover:scale-105">
+              <div key={index} className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
+                <div className="mb-3 inline-flex items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] p-2.5 text-purple-300">
                   <Icon size={20} aria-hidden="true" />
                 </div>
 
-                <h2 className="text-xs font-bold uppercase tracking-wider text-white">
-                  {item.title}
-                </h2>
+                <h2 className="text-base font-semibold text-white">{item.title}</h2>
 
-                <p className="mt-2 text-xs leading-relaxed text-zinc-400">
-                  {item.description}
-                </p>
+                <p className="mt-2 text-sm leading-relaxed text-zinc-400">{item.description}</p>
               </div>
             );
           })}
@@ -561,11 +509,11 @@ export default function PrivacyPage() {
         {/* Exercer ses droits */}
         <section
           aria-label="Exercer vos droits"
-          className="flex flex-col gap-5 rounded-2xl border border-purple-500/20 bg-gradient-to-r from-purple-950/40 to-zinc-900/60 p-6 shadow-lg sm:flex-row sm:items-center sm:justify-between"
+          className="flex flex-col gap-5 rounded-2xl border border-purple-500/30 bg-purple-500/[0.06] p-6 sm:flex-row sm:items-center sm:justify-between"
         >
           <div className="space-y-1">
-            <h2 className="text-sm font-bold text-white">Exercez vos droits en un clic</h2>
-            <p className="max-w-xl text-xs leading-relaxed text-zinc-400">
+            <h2 className="text-base font-semibold text-white">Exercez vos droits en un clic</h2>
+            <p className="max-w-xl text-sm leading-relaxed text-zinc-400">
               Téléchargez une copie de vos données ou supprimez définitivement
               votre compte, directement depuis votre tableau de bord.
             </p>
@@ -573,7 +521,7 @@ export default function PrivacyPage() {
 
           <Link
             href="/dashboard/account"
-            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-purple-600 px-5 py-3 text-xs font-bold text-white shadow-lg shadow-purple-600/25 transition-all hover:bg-purple-500"
+            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-purple-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-purple-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400"
           >
             Gérer mes données
             <ArrowRight size={14} aria-hidden="true" />
@@ -584,7 +532,7 @@ export default function PrivacyPage() {
           {/* Sommaire */}
           <aside>
             <nav aria-label="Sommaire" className="lg:sticky lg:top-24">
-              <p className="mb-3 hidden text-[10px] font-bold uppercase tracking-[0.25em] text-zinc-500 lg:block">
+              <p className="mb-3 hidden text-sm font-semibold text-zinc-200 lg:block">
                 Sommaire
               </p>
               <ol className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 lg:mx-0 lg:flex-col lg:gap-1 lg:overflow-visible lg:px-0 lg:pb-0">
@@ -592,9 +540,9 @@ export default function PrivacyPage() {
                   <li key={sec.id} className="shrink-0">
                     <a
                       href={`#section-${sec.id}`}
-                      className="flex items-center gap-2.5 whitespace-nowrap rounded-full border border-white/5 bg-zinc-900/40 px-3 py-1.5 text-xs text-zinc-400 transition-colors hover:border-purple-500/30 hover:text-white lg:rounded-lg lg:border-transparent lg:bg-transparent lg:px-2 lg:hover:bg-white/5"
+                      className="flex items-center gap-2.5 whitespace-nowrap rounded-full border border-white/10 px-3 py-1.5 text-sm text-zinc-400 transition-colors hover:border-purple-500/40 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400 lg:rounded-lg lg:border-transparent lg:px-2 lg:hover:bg-white/5"
                     >
-                      <span className="font-mono text-[10px] text-purple-400">{sec.id}</span>
+                      <span className="text-xs tabular-nums text-purple-300">{sec.id}</span>
                       {sec.short}
                     </a>
                   </li>
@@ -604,51 +552,26 @@ export default function PrivacyPage() {
           </aside>
 
           {/* Sections */}
-          <article className="space-y-8 text-sm leading-relaxed text-zinc-300">
+          {/* Les petits textes (text-xs, gris moyen) des sections sont remontés d'un cran : c'est un texte juridique, il doit être lu. */}
+          <article className="space-y-10 text-base leading-relaxed text-zinc-300 [&_.text-xs]:text-sm [&_.text-xs]:leading-relaxed [&_.text-zinc-500]:text-zinc-400">
             {SECTIONS.map((sec) => (
               <section
                 key={sec.id}
                 id={`section-${sec.id}`}
                 aria-labelledby={`section-title-${sec.id}`}
-                className="scroll-mt-24 space-y-3 rounded-2xl border border-white/5 bg-zinc-900/20 p-6 backdrop-blur-xs transition-colors hover:border-white/10"
+                className="scroll-mt-24 space-y-4 border-t border-white/10 pt-8 first:border-t-0 first:pt-0"
               >
-                <div className="flex items-center gap-3 text-base font-bold text-white">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-purple-500/20 bg-purple-500/10 font-mono text-xs text-purple-400">
-                    {sec.id}
-                  </span>
+                <h2 id={`section-title-${sec.id}`} className="flex items-baseline gap-3 font-display text-xl font-bold text-white">
+                  <span className="text-base tabular-nums text-purple-300">{sec.id}</span>
+                  {sec.title}
+                </h2>
 
-                  <h2 id={`section-title-${sec.id}`}>{sec.title}</h2>
-                </div>
-
-                <div className="text-zinc-400 sm:pl-10">{sec.content}</div>
+                <div className="text-zinc-400">{sec.content}</div>
               </section>
             ))}
           </article>
         </div>
-
-        <footer className="flex flex-col items-center justify-between gap-4 border-t border-white/5 pt-8 text-xs text-zinc-400 sm:flex-row">
-          <p>© 2026 Twichify. Tous droits réservés.</p>
-
-          <p className="text-[11px] text-zinc-400">
-            Non affilié à Spotify AB ni Twitch Interactive, Inc.
-          </p>
-
-          <div className="flex items-center gap-4">
-            <Link
-              href="/mentions-legales"
-              className="font-medium text-zinc-400 transition-colors hover:text-purple-400"
-            >
-              Mentions légales
-            </Link>
-            <Link
-              href="/dashboard"
-              className="font-medium text-zinc-400 transition-colors hover:text-purple-400"
-            >
-              Retourner au tableau de bord
-            </Link>
-          </div>
-        </footer>
       </div>
-    </main>
+    </PublicShell>
   );
 }

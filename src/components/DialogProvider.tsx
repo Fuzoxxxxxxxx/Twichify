@@ -94,18 +94,18 @@ export function DialogProvider({ children }: { children: ReactNode }) {
         <div className="fixed bottom-6 right-6 z-[110] animate-in slide-in-from-bottom-4 fade-in duration-300">
           <div
             role={toast.type === "error" ? "alert" : "status"}
-            className={`flex max-w-sm items-center gap-3 rounded-2xl border px-5 py-4 shadow-2xl backdrop-blur-xl ${
+            className={`flex max-w-sm items-center gap-3 rounded-xl border px-4 py-3.5 shadow-2xl shadow-black/50 ${
               toast.type === "success"
-                ? "border-emerald-500/30 bg-emerald-950/80 text-emerald-200"
-                : "border-red-500/30 bg-red-950/80 text-red-200"
+                ? "border-emerald-500/30 bg-zinc-950 text-emerald-100"
+                : "border-red-500/30 bg-zinc-950 text-red-100"
             }`}
           >
             {toast.type === "success" ? (
-              <CheckCircle2 size={18} className="shrink-0" />
+              <CheckCircle2 size={18} className="shrink-0 text-emerald-400" />
             ) : (
-              <AlertCircle size={18} className="shrink-0" />
+              <AlertCircle size={18} className="shrink-0 text-red-400" />
             )}
-            <p className="text-sm font-bold">{toast.message}</p>
+            <p className="text-sm font-medium">{toast.message}</p>
           </div>
         </div>
       )}
