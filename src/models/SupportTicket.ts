@@ -56,6 +56,14 @@ const SupportTicketSchema = new Schema({
   // Notes internes du staff. `select: false` : le champ n'est JAMAIS renvoyé par défaut (le demandeur reçoit les tickets
   // tels quels via les routes publiques) ; seules les routes du staff le demandent explicitement (`.select("+internalNotes")`).
   internalNotes: { type: [InternalNoteSchema], default: [], select: false },
+  // Enquête de satisfaction : le demandeur indique, une fois le ticket résolu ou fermé, si son problème est réglé.
+  satisfaction: {
+    rating: { type: String, enum: ["yes", "no"], default: undefined },
+    comment: { type: String, default: "" },
+    ratedAt: { type: Date, default: null },
+  },
+  // Dernière alerte envoyée au staff parce que le ticket attend une réponse depuis trop longtemps (limite la fréquence des rappels).
+  staffAlertedAt: { type: Date, default: null },
   messages: [MessageSchema],
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },

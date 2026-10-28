@@ -12,8 +12,32 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "3.16.0",
+    date: "26/10/2026",
+    title: "Annonces, enquête de satisfaction et alertes du support",
+    changes: [
+      { type: "new", text: "Après la résolution d'un ticket, une enquête « Ça a réglé ton problème ? » s'affiche en deux clics. Si la réponse est non, tu peux préciser ce qui manque, et la personne du support qui t'a répondu en est prévenue. Tu peux changer d'avis tant que le ticket reste clos." },
+      { type: "new", text: "Staff : les statistiques du support affichent maintenant le taux de satisfaction, comparé à la période précédente, et la liste des derniers problèmes signalés comme non réglés, avec leur commentaire." },
+      { type: "new", text: "Staff : une alerte prévient quand un ticket attend une réponse depuis plus de 48 h. Elle va à la personne qui l'a pris en charge, ou à toute l'équipe support si personne ne l'a pris, avec un rappel au plus toutes les 24 h tant qu'il reste sans réponse." },
+      { type: "new", text: "Créateur et Co-créateurs : une page Annonces (Admin > Communauté) permet d'envoyer une notification à tous les utilisateurs ou à un groupe : nouveaux de la semaine, Spotify connecté ou non, widget jamais détecté, équipe. Le nombre de destinataires s'affiche avant l'envoi, avec un aperçu et une confirmation." },
+      { type: "improved", text: "Les annonces gardent un historique, un envoi identique est refusé pendant 10 minutes pour éviter un double clic, et chaque envoi est inscrit dans le journal d'audit." },
+    ],
+  },
+  {
+    version: "3.15.0",
+    date: "26/10/2026",
+    title: "Centre de notifications",
+    changes: [
+      { type: "new", text: "Une cloche de notifications apparait dans le dashboard : tu es prévenu quand l'équipe répond à un de tes tickets, change son statut (en cours, résolu, fermé), répond à une de tes idées, change son statut, ou quand quelqu'un la commente. Le compteur de non lues s'actualise tout seul." },
+      { type: "new", text: "Une page Notifications regroupe tout l'historique : filtre sur les non lues, suppression, et bouton pour tout marquer comme lu. Les notifications sont conservées 90 jours." },
+      { type: "improved", text: "Plusieurs réponses d'affilée sur un même ticket ou une même idée sont regroupées dans une seule notification tant que tu ne l'as pas lue, pour ne pas te noyer sous les alertes." },
+      { type: "new", text: "Staff : une page Statistiques du support (Admin > Support) affiche le nombre de tickets créés par jour, le délai de première réponse, le taux et le délai de résolution, la répartition par catégorie et par statut, les tickets qui attendent depuis le plus longtemps et l'activité de chaque membre, avec une comparaison à la période précédente (7, 30 ou 90 jours)." },
+      { type: "improved", text: "Les membres du staff reçoivent aussi une notification quand le demandeur répond sur un ticket qu'ils ont pris en charge." },
+    ],
+  },
+  {
     version: "3.14.0",
-    date: "24/10/2026",
+    date: "26/10/2026",
     title: "Nouveau design du site",
     changes: [
       { type: "improved", text: "L'accueil est entièrement redessiné : nouveaux titres, section « Prêt en trois étapes », roadmap en liste, et deux aperçus séparés pour le widget musique et le widget chat, avec un lien direct pour les personnaliser." },

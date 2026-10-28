@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 import { runStatusChecks } from "@/lib/status-checker";
+import { runSupportAlertsThrottled } from "@/lib/support-alerts";
 
 // Les checks durent au pire ~10 s (2 tentatives × 4 s + pause). Marge pour la base.
 export const maxDuration = 30;
@@ -27,6 +28,10 @@ export async function GET(request: Request) {
 
   try {
     const result = await runStatusChecks("cron");
+
+    // Profite de ce cron fréquent pour alerter le staff des tickets restés sans réponse (limité à une fois par quart d'heure,
+    // et sans jamais faire échouer le check de statut).
+    await runSupportAlertsThrottled();
 
     if (!result.ran) {
       // Un check récent existe déjà (sonde paresseuse) : rien à faire, ce n'est pas une erreur.

@@ -9,7 +9,8 @@ export type AuditAction =
   | "incident.update"
   | "incident.delete"
   | "idea.update"
-  | "idea.comment.delete";
+  | "idea.comment.delete"
+  | "announcement.send";
 
 type AuditEntry = {
   actor: { _id: unknown; name?: string | null; role?: string | null };

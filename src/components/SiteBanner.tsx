@@ -7,13 +7,30 @@ import { Info, TriangleAlert, OctagonAlert, X } from "lucide-react";
 
 export type BannerLevel = "info" | "warning" | "critical";
 
-const STYLES: Record<BannerLevel, { bar: string; icon: typeof Info }> = {
-  info: { bar: "bg-indigo-600/20 border-indigo-500/30 text-indigo-100", icon: Info },
-  warning: { bar: "bg-amber-500/20 border-amber-500/30 text-amber-100", icon: TriangleAlert },
-  critical: { bar: "bg-rose-600/25 border-rose-500/40 text-rose-100", icon: OctagonAlert },
+// Fonds pleins (pas de transparence) : la bannière reste lisible quel que soit le contenu de la page derrière.
+const STYLES: Record<BannerLevel, { bar: string; iconColor: string; button: string; icon: typeof Info }> = {
+  info: {
+    bar: "bg-zinc-900 border-white/10 text-zinc-100",
+    iconColor: "text-purple-300",
+    button: "hover:bg-white/10 focus-visible:outline-purple-300",
+    icon: Info,
+  },
+  warning: {
+    bar: "bg-amber-950 border-amber-500/30 text-amber-50",
+    iconColor: "text-amber-300",
+    button: "hover:bg-amber-500/20 focus-visible:outline-amber-300",
+    icon: TriangleAlert,
+  },
+  critical: {
+    bar: "bg-rose-950 border-rose-500/40 text-rose-50",
+    iconColor: "text-rose-300",
+    button: "hover:bg-rose-500/20 focus-visible:outline-rose-300",
+    icon: OctagonAlert,
+  },
 };
 
 // Présentation seule : réutilisée par le site et par l'aperçu de l'espace propriétaire.
+// Une annonce critique est annoncée tout de suite aux lecteurs d'écran (role="alert"), les autres poliment (role="status").
 export function BannerBar({
   message,
   level,
@@ -23,21 +40,21 @@ export function BannerBar({
   level: BannerLevel;
   onDismiss?: () => void;
 }) {
-  const { bar, icon: Icon } = STYLES[level] ?? STYLES.info;
+  const { bar, iconColor, button, icon: Icon } = STYLES[level] ?? STYLES.info;
 
   return (
-    <div role="status" className={`w-full border-b backdrop-blur-xl ${bar}`}>
-      <div className="mx-auto flex max-w-7xl items-center justify-center gap-3 px-6 py-2.5 text-sm font-medium">
-        <Icon size={16} className="shrink-0" aria-hidden="true" />
+    <div role={level === "critical" ? "alert" : "status"} className={`w-full border-b ${bar}`}>
+      <div className="mx-auto flex max-w-7xl items-center justify-center gap-3 px-6 py-3 text-sm font-medium leading-snug">
+        <Icon size={18} className={`shrink-0 ${iconColor}`} aria-hidden="true" />
         <span className="text-center">{message}</span>
         {onDismiss && (
           <button
             type="button"
             onClick={onDismiss}
             aria-label="Fermer l'annonce"
-            className="ml-2 shrink-0 rounded-md p-1 opacity-70 transition-opacity hover:opacity-100 cursor-pointer"
+            className={`-my-1.5 -mr-2 ml-1 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-current opacity-80 transition hover:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-1 ${button}`}
           >
-            <X size={14} />
+            <X size={16} />
           </button>
         )}
       </div>

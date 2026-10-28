@@ -3,8 +3,16 @@ import mongoose from "mongoose";
 import SupportTicket from "@/models/SupportTicket";
 import { requirePermission } from "@/lib/auth-helpers";
 import { canActOn, PERMISSIONS } from "@/lib/roles";
+import { notify, snippet } from "@/lib/notifications";
 
 const VALID_STATUSES = ["en_attente", "en_cours", "resolu", "ferme"];
+
+// Titre de la notification envoyée au demandeur quand son ticket change de statut (rien pour un retour à « en attente »).
+const STATUS_NOTIFICATION_TITLES: Record<string, string> = {
+  en_cours: "Ton ticket est en cours de traitement",
+  resolu: "Ton ticket a été résolu",
+  ferme: "Ton ticket a été fermé",
+};
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const staff = await requirePermission(PERMISSIONS.MANAGE_TICKETS);
@@ -60,6 +68,18 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     ticket.updatedAt = new Date();
     await ticket.save();
+
+    // Prévient le demandeur (sauf s'il a changé le statut lui-même).
+    if (status !== previousStatus && STATUS_NOTIFICATION_TITLES[status] && ticket.userId !== staffId) {
+      await notify({
+        userId: ticket.userId,
+        type: "ticket_status",
+        title: STATUS_NOTIFICATION_TITLES[status],
+        body: `« ${snippet(ticket.subject, 80)} »`,
+        href: `/support/${ticket._id}`,
+        dedupeKey: `ticket:${ticket._id}:status`,
+      });
+    }
 
     return NextResponse.json({ ticket });
   } catch (error) {

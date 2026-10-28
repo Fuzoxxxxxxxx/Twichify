@@ -13,6 +13,7 @@ import {
   BarChart3, MessageSquareText, ChevronRight, Activity, LifeBuoy, Lightbulb, History, Tv,
 } from "lucide-react";
 import { SidebarBrand, SidebarNav, MobileNav, type NavGroup } from "@/components/shell/ShellNav";
+import NotificationBell from "@/components/notifications/NotificationBell";
 
 // Navigation du dashboard, regroupée par catégories. `short` = libellé court de la barre mobile.
 const navGroups: NavGroup[] = [
@@ -162,8 +163,8 @@ export default function DashboardShell({ children }: { children: React.ReactNode
       <div className="pointer-events-none fixed left-1/2 top-0 -z-10 h-[420px] w-[900px] -translate-x-1/2 bg-purple-600/10 blur-[160px]" />
 
       {/* SIDEBAR — desktop */}
-      <aside className="hidden md:flex w-64 shrink-0 border-r border-white/5 bg-zinc-950/40 backdrop-blur-xl flex-col h-screen sticky top-0">
-        <SidebarBrand />
+      <aside className="hidden md:flex w-64 shrink-0 border-r border-white/5 bg-zinc-950/40 backdrop-blur-xl flex-col h-screen sticky top-0 z-30">
+        <SidebarBrand action={<NotificationBell />} />
 
         <SidebarNav groups={navGroups} pathname={pathname} />
 
@@ -263,6 +264,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
       </aside>
 
       {/* NAV — mobile */}
+      <NotificationBell variant="floating" />
       <MobileNav groups={navGroups} pathname={pathname} />
 
       {/* CONTENU */}

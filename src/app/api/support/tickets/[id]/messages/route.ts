@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import SupportTicket from "@/models/SupportTicket";
 import { getSessionUser } from "@/lib/auth-helpers";
 import { hasPermission, PERMISSIONS } from "@/lib/roles";
+import { notify, snippet } from "@/lib/notifications";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await getSessionUser();
@@ -57,6 +58,27 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     ticket.updatedAt = new Date();
     await ticket.save();
+
+    // Notifications (best-effort : n'interrompent jamais la réponse). Les messages successifs sont regroupés tant que la notification n'est pas lue.
+    if (isStaff && !isOwner) {
+      await notify({
+        userId: ticket.userId,
+        type: "ticket_reply",
+        title: `Réponse à « ${snippet(ticket.subject, 60)} »`,
+        body: `${user.name} : ${snippet(content)}`,
+        href: `/support/${ticket._id}`,
+        dedupeKey: `ticket:${ticket._id}:reply`,
+      });
+    } else if (isOwner && ticket.assignedTo?.userId && ticket.assignedTo.userId !== ticket.userId) {
+      await notify({
+        userId: ticket.assignedTo.userId,
+        type: "ticket_user_reply",
+        title: `Le demandeur a répondu : « ${snippet(ticket.subject, 60)} »`,
+        body: `${ticket.userName} : ${snippet(content)}`,
+        href: `/admin/tickets/${ticket._id}`,
+        dedupeKey: `ticket:${ticket._id}:userreply`,
+      });
+    }
 
     return NextResponse.json({ ticket });
   } catch (error) {

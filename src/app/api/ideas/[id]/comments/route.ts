@@ -10,6 +10,7 @@ import {
   COMMENTS_PER_DAY,
   COMMENTS_SHOWN,
 } from "@/lib/idea-comments";
+import { notify, snippet } from "@/lib/notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -90,7 +91,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     await ensureDb();
 
-    if (!(await Idea.exists({ _id: id }))) {
+    const idea = await Idea.findById(id).select("authorId title").lean<{ authorId: string; title: string }>();
+    if (!idea) {
       return NextResponse.json({ error: "Idée introuvable" }, { status: 404 });
     }
 
@@ -116,6 +118,19 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     });
 
     const viewer = { id: authorId, canModerate: hasPermission(user.role, PERMISSIONS.MANAGE_IDEAS) };
+
+    // Prévient l'auteur de l'idée (sauf pour son propre commentaire). Regroupé tant qu'il n'est pas lu.
+    if (idea.authorId && idea.authorId !== authorId) {
+      await notify({
+        userId: idea.authorId,
+        type: "idea_comment",
+        title: `Nouveau commentaire sur « ${snippet(idea.title, 60)} »`,
+        body: `${user.name || "Utilisateur"} : ${snippet(clean)}`,
+        href: "/ideas",
+        dedupeKey: `idea:${id}:comment`,
+      });
+    }
+
     return NextResponse.json({ comment: toPublic(comment, viewer) }, { status: 201 });
   } catch (error) {
     console.error("Erreur POST commentaire:", error);

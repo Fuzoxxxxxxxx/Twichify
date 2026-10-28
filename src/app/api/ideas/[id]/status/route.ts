@@ -5,8 +5,18 @@ import { requirePermission } from "@/lib/auth-helpers";
 import { PERMISSIONS } from "@/lib/roles";
 import { logAudit } from "@/lib/audit";
 import { IDEA_HISTORY_LIMIT, IDEA_RESPONSE_MAX } from "@/lib/idea-admin";
+import { notify, snippet } from "@/lib/notifications";
 
 const VALID_STATUSES = ["en_etude", "planifie", "en_cours", "termine", "rejete"];
+
+// Formulation du statut dans la notification envoyée à l'auteur de l'idée.
+const STATUS_PHRASES: Record<string, string> = {
+  en_etude: "à l'étude",
+  planifie: "planifiée",
+  en_cours: "en cours de développement",
+  termine: "terminée",
+  rejete: "refusée",
+};
 
 // PATCH : réservé au staff (permission manageIdeas) — change le statut d'une idée
 // et/ou publie, modifie ou retire la réponse officielle.
@@ -79,6 +89,32 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       target: { id, name: idea.title },
       details: details.join(" · "),
     });
+
+    // Prévient l'auteur de l'idée (sauf s'il est lui-même le membre du staff qui agit).
+    if (idea.authorId && idea.authorId !== by.userId) {
+      const ideaTitle = `« ${snippet(idea.title, 80)} »`;
+      for (const e of events) {
+        if (e.type === "status" && e.to) {
+          await notify({
+            userId: idea.authorId,
+            type: "idea_status",
+            title: `Ton idée est maintenant ${STATUS_PHRASES[e.to] ?? e.to}`,
+            body: ideaTitle,
+            href: "/ideas",
+            dedupeKey: `idea:${id}:status`,
+          });
+        } else if (e.type === "response") {
+          await notify({
+            userId: idea.authorId,
+            type: "idea_response",
+            title: "L'équipe a répondu à ton idée",
+            body: `${ideaTitle} : ${snippet(idea.officialResponse?.content, 120)}`,
+            href: "/ideas",
+            dedupeKey: `idea:${id}:response`,
+          });
+        }
+      }
+    }
 
     return NextResponse.json({ idea });
   } catch (error) {

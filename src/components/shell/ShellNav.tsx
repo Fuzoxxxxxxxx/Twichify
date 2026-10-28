@@ -24,15 +24,19 @@ const FOCUS = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visi
 export const isNavActive = (pathname: string | null, item: NavItem) =>
   !!pathname && (item.exact ? pathname === item.href : pathname.startsWith(item.href));
 
-export function SidebarBrand({ tag }: { tag?: React.ReactNode }) {
+// `action` : bouton à droite du logo (cloche de notifications). Le bloc est `relative` pour que sa fenêtre déroulante s'y cale.
+export function SidebarBrand({ tag, action }: { tag?: React.ReactNode; action?: React.ReactNode }) {
   return (
-    <div className="border-b border-white/5 px-5 py-5">
-      <Link href="/" className={`flex items-center gap-3 rounded-lg ${FOCUS}`}>
-        <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-purple-600 text-white">
-          <Music size={18} />
-        </span>
-        <span className="font-display text-xl font-extrabold tracking-tight text-white">Twichify</span>
-      </Link>
+    <div className="relative border-b border-white/5 px-5 py-5">
+      <div className="flex items-center justify-between gap-3">
+        <Link href="/" className={`flex items-center gap-3 rounded-lg ${FOCUS}`}>
+          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-purple-600 text-white">
+            <Music size={18} />
+          </span>
+          <span className="font-display text-xl font-extrabold tracking-tight text-white">Twichify</span>
+        </Link>
+        {action}
+      </div>
       {tag && <div className="mt-4">{tag}</div>}
     </div>
   );

@@ -4,11 +4,12 @@ import { useState, useEffect, useRef, KeyboardEvent as ReactKeyboardEvent } from
 import { useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { ArrowLeft, Send, ShieldCheck, User as UserIcon, Lock, HelpCircle, Clock, Loader2 } from "lucide-react";
+import { ArrowLeft, Send, ShieldCheck, User as UserIcon, Lock, HelpCircle, Clock, Loader2, ThumbsUp, ThumbsDown, CheckCircle2 } from "lucide-react";
 import TicketStatusBadge from "@/components/TicketStatusBadge";
 import LinkifiedText from "@/components/LinkifiedText";
 import PublicShell from "@/components/site/PublicShell";
 import PageIntro from "@/components/site/PageIntro";
+import { SATISFACTION_COMMENT_MAX, type SatisfactionRating, type TicketSatisfaction } from "@/lib/support-satisfaction";
 
 interface Message {
   authorId: string;
@@ -33,6 +34,7 @@ interface Ticket {
   messages: Message[];
   userId: string;
   typing?: TypingState | null;
+  satisfaction?: TicketSatisfaction;
 }
 
 const FOCUS = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400";
@@ -41,6 +43,148 @@ const FOCUS = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visi
 const POLL_INTERVAL_MS = 3000;
 // Ping « en train d'écrire » : au plus un toutes les 2s pendant la saisie (évite de spammer l'API à chaque frappe)
 const TYPING_PING_INTERVAL_MS = 2000;
+
+// Enquête affichée sous un ticket résolu ou fermé : « Ça a réglé ton problème ? » en deux clics. Un « non » propose d'ajouter un commentaire.
+function SatisfactionSurvey({
+  ticketId,
+  satisfaction,
+  onSaved,
+}: {
+  ticketId: string;
+  satisfaction?: TicketSatisfaction;
+  onSaved: (s: TicketSatisfaction) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [choice, setChoice] = useState<SatisfactionRating | null>(null);
+  const [comment, setComment] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const rated = !!satisfaction?.rating && !editing;
+
+  const submit = async (rating: SatisfactionRating, text = "") => {
+    setSaving(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/support/tickets/${ticketId}/satisfaction`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rating, comment: text }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error || "Impossible d'enregistrer ta réponse.");
+        return;
+      }
+      onSaved(data.satisfaction);
+      setEditing(false);
+      setChoice(null);
+      setComment("");
+    } catch {
+      setError("Erreur réseau, réessaie.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (rated) {
+    return (
+      <div role="status" className="mt-4 rounded-2xl border border-white/10 bg-white/[0.02] p-5">
+        <p className="flex items-center gap-2 text-sm font-semibold text-zinc-200">
+          <CheckCircle2 size={16} className="shrink-0 text-emerald-400" />
+          {satisfaction?.rating === "yes" ? "Merci pour ton retour, content que ce soit réglé !" : "Merci pour ton retour, l'équipe en a pris note."}
+        </p>
+        {satisfaction?.rating === "no" && (
+          <p className="mt-1 text-sm text-zinc-400">
+            Si ton problème persiste, tu peux{" "}
+            <Link href="/support/new" className="text-purple-300 underline underline-offset-4 hover:text-purple-200">
+              ouvrir une nouvelle demande
+            </Link>
+            .
+          </p>
+        )}
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          className={`mt-3 cursor-pointer rounded text-sm font-medium text-zinc-400 underline-offset-4 transition-colors hover:text-white hover:underline ${FOCUS}`}
+        >
+          Modifier ma réponse
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.02] p-5">
+      <p id="satisfaction-question" className="text-base font-semibold text-white">
+        Ça a réglé ton problème ?
+      </p>
+
+      {choice === "no" ? (
+        <div className="mt-3 space-y-3">
+          <label htmlFor="satisfaction-comment" className="block text-sm text-zinc-400">
+            Qu'est-ce qui manque ? <span className="text-zinc-500">(optionnel)</span>
+          </label>
+          <textarea
+            id="satisfaction-comment"
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            maxLength={SATISFACTION_COMMENT_MAX}
+            rows={3}
+            placeholder="Dis-nous ce qui ne fonctionne toujours pas."
+            className="w-full resize-none rounded-lg border border-white/10 bg-white/[0.02] px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none transition-colors focus:border-purple-500/60"
+          />
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => submit("no", comment)}
+              disabled={saving}
+              className={`inline-flex cursor-pointer items-center gap-2 rounded-lg bg-purple-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-purple-500 disabled:opacity-50 ${FOCUS}`}
+            >
+              {saving ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+              Envoyer
+            </button>
+            <button
+              type="button"
+              onClick={() => setChoice(null)}
+              disabled={saving}
+              className={`cursor-pointer rounded-lg border border-white/15 px-4 py-2.5 text-sm font-medium text-zinc-300 transition-colors hover:border-white/30 hover:text-white disabled:opacity-50 ${FOCUS}`}
+            >
+              Retour
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div role="group" aria-labelledby="satisfaction-question" className="mt-3 flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={() => submit("yes")}
+            disabled={saving}
+            className={`inline-flex cursor-pointer items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-3 text-sm font-semibold text-emerald-100 transition-colors hover:bg-emerald-500/20 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-300`}
+          >
+            {saving ? <Loader2 size={15} className="animate-spin" /> : <ThumbsUp size={15} />}
+            Oui, c'est réglé
+          </button>
+          <button
+            type="button"
+            onClick={() => setChoice("no")}
+            disabled={saving}
+            className={`inline-flex cursor-pointer items-center gap-2 rounded-xl border border-white/15 px-5 py-3 text-sm font-semibold text-zinc-200 transition-colors hover:border-white/30 hover:text-white disabled:opacity-50 ${FOCUS}`}
+          >
+            <ThumbsDown size={15} />
+            Non, pas vraiment
+          </button>
+        </div>
+      )}
+
+      {error && (
+        <p role="alert" className="mt-3 text-sm text-rose-300">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
 
 export default function TicketThreadPage() {
   const params = useParams();
@@ -277,15 +421,22 @@ export default function TicketThreadPage() {
       {/* ZONE DE RÉPONSE / ÉTAT FERMÉ */}
       <div className="mt-6">
         {isClosed ? (
-          <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 text-center">
-            <p className="flex items-center justify-center gap-2 text-sm font-semibold text-zinc-300">
-              <Lock size={15} className="text-zinc-500" />
-              Ce ticket a été {ticket.status === "resolu" ? "résolu" : "fermé"}.
-            </p>
-            <p className="mt-1 text-sm text-zinc-400">
-              Si votre problème persiste, veuillez ouvrir une nouvelle demande d'assistance.
-            </p>
-          </div>
+          <>
+            <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 text-center">
+              <p className="flex items-center justify-center gap-2 text-sm font-semibold text-zinc-300">
+                <Lock size={15} className="text-zinc-500" />
+                Ce ticket a été {ticket.status === "resolu" ? "résolu" : "fermé"}.
+              </p>
+              <p className="mt-1 text-sm text-zinc-400">
+                Si votre problème persiste, veuillez ouvrir une nouvelle demande d'assistance.
+              </p>
+            </div>
+            <SatisfactionSurvey
+              ticketId={ticket._id}
+              satisfaction={ticket.satisfaction}
+              onSaved={(s) => setTicket((t) => (t ? { ...t, satisfaction: s } : t))}
+            />
+          </>
         ) : (
           <div className="flex gap-3">
             <textarea
