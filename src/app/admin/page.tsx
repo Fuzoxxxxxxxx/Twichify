@@ -49,6 +49,17 @@ interface OpenIncident {
   status: string;
 }
 
+// Réponse JSON, ou objet vide si la requête échoue (403, réseau…) : chaque source de l'accueil est indépendante.
+// Type de retour explicite : sans lui, TypeScript réduit le résultat à `{}` et refuse l'accès aux champs.
+async function fetchJsonOrEmpty(url: string): Promise<any> {
+  try {
+    const res = await fetch(url, { cache: "no-store" });
+    return res.ok ? await res.json() : {};
+  } catch {
+    return {};
+  }
+}
+
 // Répartition des tickets : l'ordre est celui du traitement (du plus urgent au clos).
 const TICKET_SEGMENTS = [
   { key: "en_attente", label: "En attente", color: "bg-amber-400" },
@@ -81,12 +92,11 @@ export default function AdminHomePage() {
 
   // Chaque source est indépendante : un rôle sans accès aux tickets (403) ne doit pas bloquer le reste de l'accueil.
   useEffect(() => {
-    const load = (url: string) =>
-      fetch(url, { cache: "no-store" })
-        .then((r) => (r.ok ? r.json() : {}))
-        .catch(() => ({}));
-
-    Promise.all([load("/api/admin/tickets"), load("/api/faq"), load("/api/ideas")])
+    Promise.all([
+      fetchJsonOrEmpty("/api/admin/tickets"),
+      fetchJsonOrEmpty("/api/faq"),
+      fetchJsonOrEmpty("/api/ideas"),
+    ])
       .then(([ticketsData, faqData, ideasData]) => {
         setTickets(ticketsData.tickets || []);
         setArticles(faqData.articles || []);
@@ -98,10 +108,7 @@ export default function AdminHomePage() {
   // Page de statut : seulement pour qui peut publier des incidents (sinon l'API répond 403 et l'alerte serait inutile).
   useEffect(() => {
     if (!canManageStatus) return;
-    Promise.all([
-      fetch("/api/status", { cache: "no-store" }).then((r) => (r.ok ? r.json() : {})).catch(() => ({})),
-      fetch("/api/admin/incidents", { cache: "no-store" }).then((r) => (r.ok ? r.json() : {})).catch(() => ({})),
-    ]).then(([live, inc]) => {
+    Promise.all([fetchJsonOrEmpty("/api/status"), fetchJsonOrEmpty("/api/admin/incidents")]).then(([live, inc]) => {
       setServices(live.services || []);
       setIncidents(inc.incidents || []);
     });
