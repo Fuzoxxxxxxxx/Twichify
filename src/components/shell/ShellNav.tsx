@@ -27,11 +27,11 @@ export const isNavActive = (pathname: string | null, item: NavItem) =>
 // `action` : bouton à droite du logo (cloche de notifications). Le bloc est `relative` pour que sa fenêtre déroulante s'y cale.
 export function SidebarBrand({ tag, action }: { tag?: React.ReactNode; action?: React.ReactNode }) {
   return (
-    <div className="relative border-b border-white/5 px-5 py-5">
+    <div className="relative border-b border-white/[0.06] px-5 py-5">
       <div className="flex items-center justify-between gap-3">
         <Link href="/" className={`flex items-center gap-3 rounded-lg ${FOCUS}`}>
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-purple-600 text-white">
-            <Music size={18} />
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 text-white shadow-lg shadow-purple-900/40">
+            <Music size={18} aria-hidden="true" />
           </span>
           <span className="font-display text-xl font-extrabold tracking-tight text-white">Twichify</span>
         </Link>
@@ -59,7 +59,9 @@ export function SidebarNav({ groups, pathname }: { groups: NavGroup[]; pathname:
     <nav aria-label="Navigation principale" className="flex-1 space-y-6 overflow-y-auto px-3 py-5">
       {groups.map((group) => (
         <div key={group.label ?? "main"} className="space-y-0.5">
-          {group.label && <p className="px-3 pb-1.5 text-xs font-medium text-zinc-500">{group.label}</p>}
+          {group.label && (
+            <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-500">{group.label}</p>
+          )}
           {group.items.map((item) => {
             const active = isNavActive(pathname, item);
             const Icon = item.icon;
@@ -68,8 +70,8 @@ export function SidebarNav({ groups, pathname }: { groups: NavGroup[]; pathname:
                 key={item.href}
                 href={item.href}
                 aria-current={active ? "page" : undefined}
-                className={`relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${FOCUS} ${
-                  active ? "bg-white/[0.06] text-white" : "text-zinc-400 hover:bg-white/[0.04] hover:text-white"
+                className={`group relative flex items-center gap-3 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${FOCUS} ${
+                  active ? "bg-white/[0.07] text-white" : "text-zinc-400 hover:bg-white/[0.04] hover:text-white"
                 }`}
               >
                 {active && (
@@ -78,7 +80,14 @@ export function SidebarNav({ groups, pathname }: { groups: NavGroup[]; pathname:
                     className="absolute -left-3 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-purple-400"
                   />
                 )}
-                <Icon size={16} className={active ? "text-purple-300" : ""} />
+                <span
+                  aria-hidden="true"
+                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors ${
+                    active ? "bg-purple-500/20 text-purple-200" : "bg-white/[0.03] text-zinc-400 group-hover:text-white"
+                  }`}
+                >
+                  <Icon size={15} />
+                </span>
                 {item.label}
                 {item.badge ? <CountBadge count={item.badge} /> : null}
               </Link>
@@ -109,7 +118,10 @@ export function MobileNav({ groups, pathname }: { groups: NavGroup[]; pathname: 
               active ? "text-purple-300" : "text-zinc-500"
             }`}
           >
-            <Icon size={18} />
+            {active && (
+              <span aria-hidden="true" className="absolute inset-x-3 -top-1.5 h-0.5 rounded-full bg-purple-400" />
+            )}
+            <Icon size={18} aria-hidden="true" />
             <span className="max-w-full truncate">{item.short ?? item.label}</span>
             {item.badge ? (
               <span className="absolute right-1 top-0.5">

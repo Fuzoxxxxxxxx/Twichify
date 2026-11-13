@@ -4,8 +4,9 @@
  *
  * L'ordre du tableau est l'ordre d'affichage (filtres de l'aide, liste de l'admin, tri des articles).
  * Les clés « spotify », « obs », « api », « compte » et « autre » existaient déjà : ne pas les renommer,
- * des articles y sont rattachés. Les catégories de la FAQ sont indépendantes de celles des tickets de support.
- * Pour en ajouter une : l'ajouter ici (et une icône dans `app/help/page.tsx`).
+ * des articles de FAQ et des tickets de support y sont rattachés. Les tickets utilisent les mêmes catégories (modèle SupportTicket,
+ * formulaire d'ouverture, admin) : une catégorie ajoutée ici devient aussi une catégorie de ticket.
+ * Pour en ajouter une : l'ajouter ici (et une icône dans `components/faq-category-icons.ts`).
  */
 export const FAQ_CATEGORIES = [
   { key: "demarrage", label: "Premiers pas", description: "Connexion, configuration initiale et premiers réglages." },
@@ -13,6 +14,7 @@ export const FAQ_CATEGORIES = [
   { key: "bot", label: "Bot & commandes", description: "Nightbot, Wizebot, StreamElements, StreamLabs et annonces automatiques." },
   { key: "obs", label: "OBS & overlays", description: "Ajouter les widgets dans OBS, dimensions, affichage et liens d'overlay." },
   { key: "chat", label: "Widget de chat", description: "Thèmes, filtres, emotes, badges et affichage des messages." },
+  { key: "bandeau", label: "Widget bandeau", description: "Messages, logos, polices, couleurs et animations du bandeau d'informations." },
   { key: "twitch", label: "Twitch", description: "Statistiques de chaîne, followers, départs, équipe et autorisations." },
   { key: "stats", label: "Statistiques", description: "Historique d'écoute et statistiques de chat." },
   { key: "statut", label: "Statut du service", description: "Page de statut, incidents et disponibilité des services." },

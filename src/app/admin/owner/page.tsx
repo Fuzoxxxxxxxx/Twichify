@@ -4,15 +4,14 @@ import { useCallback, useEffect, useState } from "react";
 import {
   Crown, Users, Music, UserPlus, LifeBuoy, Megaphone, Activity, KeyRound, ScrollText, ShieldCheck,
   Check, Minus, Loader2, CircleCheck, CircleX, TriangleAlert, Save, RefreshCw, LayoutDashboard, Trash2,
-  Wrench, Sparkles, Siren, CalendarClock, PowerOff, Lightbulb,
+  Wrench, Sparkles, Siren, CalendarClock, PowerOff, Lightbulb, ArrowRightLeft, HelpCircle,
 } from "lucide-react";
 import {
   ALL_ROLES, ROLE_LABELS, ROLE_PERMISSIONS, PERMISSION_LABELS, PERMISSIONS, getRoleLevel, type Permission,
 } from "@/lib/roles";
 import { BannerBar, type BannerLevel } from "@/components/SiteBanner";
 import { PageHeader } from "@/components/dashboard/DashboardUI";
-
-const FOCUS = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400";
+import { BTN_SECONDARY, CARD, FilterPills, FOCUS, timeAgo } from "@/components/admin/AdminUI";
 
 /* ───────────── Types ───────────── */
 
@@ -235,14 +234,24 @@ const AUDIT_META: Record<string, { label: string; icon: typeof Megaphone; cls: s
   "incident.delete": { label: "Incident supprimé", icon: Trash2, cls: "bg-rose-500/10 text-rose-300 border-rose-500/20" },
   "idea.update": { label: "Idée modérée", icon: Lightbulb, cls: "bg-amber-500/10 text-amber-300 border-amber-500/20" },
   "idea.comment.delete": { label: "Commentaire supprimé", icon: Trash2, cls: "bg-rose-500/10 text-rose-300 border-rose-500/20" },
+  "announcement.send": { label: "Annonce envoyée", icon: Megaphone, cls: "bg-indigo-500/10 text-indigo-300 border-indigo-500/20" },
+  "ticket.transfer": { label: "Ticket transféré", icon: ArrowRightLeft, cls: "bg-purple-500/10 text-purple-300 border-purple-500/20" },
+  "ticket.takeover": { label: "Ticket repris", icon: LifeBuoy, cls: "bg-amber-500/10 text-amber-300 border-amber-500/20" },
+  "faq.create": { label: "Article FAQ créé", icon: HelpCircle, cls: "bg-emerald-500/10 text-emerald-300 border-emerald-500/20" },
+  "faq.update": { label: "Article FAQ modifié", icon: HelpCircle, cls: "bg-sky-500/10 text-sky-300 border-sky-500/20" },
+  "faq.delete": { label: "Article FAQ supprimé", icon: Trash2, cls: "bg-rose-500/10 text-rose-300 border-rose-500/20" },
 };
 
+// Filtres par famille d'actions : une puce regroupe toutes les actions dont le nom commence par l'un de ses préfixes.
 const AUDIT_FILTERS = [
-  { id: "all", label: "Tout" },
-  { id: "role.change", label: "Rôles" },
-  { id: "user.delete", label: "Suppressions" },
-  { id: "banner.update", label: "Annonces" },
-  { id: "idea.update", label: "Idées" },
+  { id: "all", label: "Tout", prefixes: [] as string[] },
+  { id: "roles", label: "Rôles", prefixes: ["role."] },
+  { id: "users", label: "Suppressions", prefixes: ["user."] },
+  { id: "tickets", label: "Tickets", prefixes: ["ticket."] },
+  { id: "faq", label: "FAQ", prefixes: ["faq."] },
+  { id: "announcements", label: "Annonces", prefixes: ["banner.", "announcement."] },
+  { id: "ideas", label: "Idées", prefixes: ["idea."] },
+  { id: "incidents", label: "Incidents", prefixes: ["incident."] },
 ];
 
 const SERVICE_STYLES: Record<ServiceStatus, { label: string; cls: string }> = {
@@ -256,17 +265,6 @@ const SERVICE_STYLES: Record<ServiceStatus, { label: string; cls: string }> = {
 const fmtDate = (d: string) =>
   new Date(d).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" });
 
-function timeAgo(iso: string, now: number): string {
-  const s = Math.max(0, Math.floor((now - new Date(iso).getTime()) / 1000));
-  if (s < 60) return "à l'instant";
-  const m = Math.floor(s / 60);
-  if (m < 60) return `il y a ${m} min`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `il y a ${h} h`;
-  const d = Math.floor(h / 24);
-  return d < 30 ? `il y a ${d} j` : fmtDate(iso);
-}
-
 async function fetchJson(url: string) {
   const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) throw new Error(String(res.status));
@@ -277,7 +275,7 @@ async function fetchJson(url: string) {
 
 function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
-    <section className={`rounded-2xl border border-white/10 bg-white/[0.02] p-6 ${className}`}>
+    <section className={`${CARD} p-6 ${className}`}>
       {children}
     </section>
   );
@@ -359,8 +357,8 @@ function Skeleton() {
         {[0, 1, 2, 3].map((i) => <div key={i} className="h-28 rounded-2xl bg-white/5" />)}
       </div>
       <div className="grid gap-6 lg:grid-cols-2">
-        <div className="h-56 rounded-3xl bg-white/5" />
-        <div className="h-56 rounded-3xl bg-white/5" />
+        <div className="h-56 rounded-2xl bg-white/5" />
+        <div className="h-56 rounded-2xl bg-white/5" />
       </div>
     </div>
   );
@@ -492,12 +490,12 @@ export default function OwnerPage() {
 
   if (error) {
     return (
-      <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-sm text-rose-200">
+      <div role="alert" className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-sm text-rose-200">
         <p>{error}</p>
         <button
           type="button"
           onClick={() => { setError(null); load(true); }}
-          className="mt-4 rounded-xl border border-rose-500/40 px-4 py-2 text-xs font-bold uppercase tracking-wider hover:bg-rose-500/10 cursor-pointer"
+          className={`${BTN_SECONDARY} mt-4`}
         >
           Réessayer
         </button>
@@ -527,7 +525,11 @@ export default function OwnerPage() {
     });
   }
 
-  const filteredAudit = auditFilter === "all" ? audit : audit.filter((e) => e.action === auditFilter);
+  const activeAuditFilter = AUDIT_FILTERS.find((f) => f.id === auditFilter);
+  const filteredAudit =
+    !activeAuditFilter || activeAuditFilter.prefixes.length === 0
+      ? audit
+      : audit.filter((e) => activeAuditFilter.prefixes.some((p) => e.action.startsWith(p)));
   const roleTotal = Math.max(1, overview.users.total);
 
   return (
@@ -535,6 +537,7 @@ export default function OwnerPage() {
       <PageHeader
         eyebrow="Administration"
         title="Propriétaire"
+        description="Réservé au Créateur et aux Co-créateurs : état du service, annonce globale, équipe et journal d'audit."
         action={
           <div className="flex flex-wrap items-center gap-3">
             {refreshFailed && <span role="alert" className="text-sm text-rose-300">Actualisation impossible</span>}
@@ -555,10 +558,6 @@ export default function OwnerPage() {
           </div>
         }
       />
-      <p className="-mt-6 flex items-center gap-2 text-sm text-zinc-400">
-        <Crown size={14} className="text-amber-300" />
-        Réservé au Créateur et aux Co-créateurs.
-      </p>
 
       {/* Onglets */}
       <div role="tablist" aria-label="Sections" className="flex w-fit max-w-full gap-1 overflow-x-auto rounded-xl border border-white/10 p-1">
@@ -1004,22 +1003,8 @@ export default function OwnerPage() {
               subtitle="50 dernières actions sensibles · conservées 180 jours."
             />
 
-            <div className="mb-4 flex flex-wrap gap-2">
-              {AUDIT_FILTERS.map((f) => (
-                <button
-                  key={f.id}
-                  type="button"
-                  onClick={() => setAuditFilter(f.id)}
-                  aria-pressed={auditFilter === f.id}
-                  className={`cursor-pointer rounded-full border px-4 py-2 text-sm font-medium transition-colors ${FOCUS} ${
-                    auditFilter === f.id
-                      ? "border-purple-500/50 bg-purple-500/15 text-purple-200"
-                      : "border-white/10 text-zinc-400 hover:border-white/20 hover:text-white"
-                  }`}
-                >
-                  {f.label}
-                </button>
-              ))}
+            <div className="mb-4">
+              <FilterPills label="Filtrer le journal" options={AUDIT_FILTERS} value={auditFilter} onChange={setAuditFilter} />
             </div>
 
             {filteredAudit.length === 0 ? (

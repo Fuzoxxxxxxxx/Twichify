@@ -3,7 +3,8 @@ import mongoose from "mongoose";
 import FaqArticle from "@/models/FaqArticle";
 import { requirePermission } from "@/lib/auth-helpers";
 import { PERMISSIONS } from "@/lib/roles";
-import { isFaqCategory } from "@/lib/faq-categories";
+import { isFaqCategory, faqCategoryLabel } from "@/lib/faq-categories";
+import { logAudit } from "@/lib/audit";
 
 export async function POST(req: Request) {
   const staff = await requirePermission(PERMISSIONS.MANAGE_FAQ);
@@ -21,6 +22,12 @@ export async function POST(req: Request) {
     }
 
     const article = await FaqArticle.create({ question, answer, category, order: order || 0 });
+    await logAudit({
+      actor: staff,
+      action: "faq.create",
+      target: { id: String(article._id), name: String(question).slice(0, 120) },
+      details: `Catégorie : ${faqCategoryLabel(category)}`,
+    });
     return NextResponse.json({ article });
   } catch (error) {
     console.error("Erreur POST FAQ admin:", error);

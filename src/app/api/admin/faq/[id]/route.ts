@@ -3,7 +3,8 @@ import mongoose from "mongoose";
 import FaqArticle from "@/models/FaqArticle";
 import { requirePermission } from "@/lib/auth-helpers";
 import { PERMISSIONS } from "@/lib/roles";
-import { isFaqCategory } from "@/lib/faq-categories";
+import { isFaqCategory, faqCategoryLabel } from "@/lib/faq-categories";
+import { logAudit } from "@/lib/audit";
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const staff = await requirePermission(PERMISSIONS.MANAGE_FAQ);
@@ -29,6 +30,12 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     );
 
     if (!article) return NextResponse.json({ error: "Article introuvable" }, { status: 404 });
+    await logAudit({
+      actor: staff,
+      action: "faq.update",
+      target: { id, name: String(article.question).slice(0, 120) },
+      details: `Catégorie : ${faqCategoryLabel(article.category)}`,
+    });
     return NextResponse.json({ article });
   } catch (error) {
     console.error("Erreur PUT FAQ admin:", error);
@@ -47,7 +54,15 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
       await mongoose.connect(process.env.DATABASE_URL!);
     }
 
-    await FaqArticle.findByIdAndDelete(id);
+    const deleted = await FaqArticle.findByIdAndDelete(id);
+    if (deleted) {
+      await logAudit({
+        actor: staff,
+        action: "faq.delete",
+        target: { id, name: String(deleted.question).slice(0, 120) },
+        details: `Catégorie : ${faqCategoryLabel(deleted.category)}`,
+      });
+    }
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Erreur DELETE FAQ admin:", error);

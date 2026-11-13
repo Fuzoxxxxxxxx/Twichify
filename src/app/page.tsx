@@ -1,14 +1,15 @@
 "use client";
 
-import { signIn, signOut, useSession } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
-import { Tv, Music, MessageSquare, ShieldCheck, Zap, MonitorPlay, Disc3, ListPlus, Webhook, type LucideIcon } from "lucide-react";
+import { Tv, Music, MessageSquare, Megaphone, ShieldCheck, Zap, MonitorPlay, Disc3, ListPlus, Webhook, Clock, Crown, ChevronDown, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import TermsModal, { type TermsUpdateInfo } from "@/components/TermsModal";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/site/SiteFooter";
 import MusicWidgetPreview from "@/components/home/MusicWidgetPreview";
 import ChatWidgetPreview from "@/components/home/ChatWidgetPreview";
+import BannerWidgetPreview from "@/components/home/BannerWidgetPreview";
 import { LATEST_VERSION } from "@/lib/changelog";
 
 // Police des titres de l'accueil : `font-display` (Bricolage Grotesque, déclarée dans app/layout.tsx). Le texte courant garde Geist.
@@ -21,15 +22,15 @@ const SECONDARY_BUTTON = `inline-flex items-center justify-center rounded-xl bor
 const steps = [
   {
     title: "Connectez vos comptes",
-    desc: "Liez Twitch en un clic, puis ajoutez vos clés API Spotify. Elles restent les vôtres.",
+    desc: "Liez Twitch en un clic, puis créez une application Spotify gratuite et collez ses clés API. Elles restent les vôtres.",
   },
   {
     title: "Choisissez le style",
     desc: "8 thèmes, des couleurs et des animations à régler, avec un aperçu en direct à chaque changement.",
   },
   {
-    title: "Ajoutez deux liens dans OBS",
-    desc: "Un lien pour le chat, un pour la musique, à coller comme sources navigateur dans OBS, Streamlabs ou tout autre logiciel.",
+    title: "Ajoutez vos liens dans OBS",
+    desc: "Un lien par widget (musique, chat, bandeau), à coller comme source navigateur dans OBS, Streamlabs ou tout autre logiciel.",
     snippet: "twichify.vercel.app/widget/votre-lien",
   },
 ];
@@ -48,7 +49,7 @@ const reasons: { icon: LucideIcon; title: string; desc: string }[] = [
   {
     icon: MonitorPlay,
     title: "Prêt pour OBS",
-    desc: "Deux liens navigateur à copier-coller comme source dans OBS, Streamlabs ou tout autre logiciel de stream.",
+    desc: "Un lien navigateur par widget, à copier-coller comme source dans OBS, Streamlabs ou tout autre logiciel de stream.",
   },
 ];
 
@@ -73,6 +74,75 @@ const roadmapItems: { title: string; desc: string; icon: LucideIcon; status: str
     icon: Webhook,
     status: "En réflexion",
     statusClass: "border-white/10 bg-transparent text-zinc-400",
+  },
+];
+
+// Les prérequis, dits avant l'inscription et non en pleine installation.
+const PREREQUISITES: {
+  icon: LucideIcon;
+  title: string;
+  desc: string;
+  tag?: string;
+  link?: { href: string; label: string };
+}[] = [
+  {
+    icon: Tv,
+    title: "Un compte Twitch",
+    desc: "Vous vous connectez avec, en un clic. Il sert aussi à lire le chat de votre chaîne.",
+  },
+  {
+    icon: Crown,
+    title: "Spotify Premium",
+    tag: "Obligatoire pour la musique",
+    desc: "D'après la documentation de Spotify, le propriétaire d'une application en mode développement doit avoir un compte Premium. Les widgets chat et bandeau n'en ont pas besoin.",
+    link: {
+      href: "https://developer.spotify.com/documentation/web-api/concepts/quota-modes",
+      label: "Lire la documentation Spotify",
+    },
+  },
+  {
+    icon: Clock,
+    title: "Environ 5 minutes",
+    desc: "Le temps de créer une application Spotify gratuite, d'en copier les clés, puis de coller vos liens dans OBS.",
+  },
+];
+
+// Les objections les plus fréquentes avant de s'inscrire ; le reste est dans l'aide.
+const FAQ: { question: string; answer: React.ReactNode }[] = [
+  {
+    question: "Est-ce gratuit ?",
+    answer: (
+      <>
+        Oui, Twichify est gratuit. Seul le widget musique demande un abonnement : <strong className="font-medium text-zinc-200">Spotify Premium</strong>, payé chez Spotify. Les widgets chat et bandeau ne coûtent rien et n'exigent aucun abonnement.
+      </>
+    ),
+  },
+  {
+    question: "Mes clés Spotify sont-elles en sécurité ?",
+    answer: (
+      <>
+        Votre Client Secret et vos jetons sont chiffrés (AES-256-GCM) avant d'être enregistrés. Ils ne sont jamais réaffichés ni inclus dans l'export de vos données, et ils sont supprimés avec votre compte. Détails dans la{" "}
+        <Link href="/privacy#securite" className={`text-purple-300 underline-offset-4 hover:underline ${FOCUS}`}>
+          politique de confidentialité
+        </Link>
+        .
+      </>
+    ),
+  },
+  {
+    question: "Ça marche avec Streamlabs ?",
+    answer:
+      "Oui. Chaque widget est un simple lien à ajouter comme source navigateur : OBS Studio, Streamlabs Desktop, Twitch Studio ou tout logiciel qui en propose une. Comptez 475 × 125 px pour la musique et 1920 × 1080 px pour le chat. Pour le bandeau, la taille recommandée s'affiche sur sa page de réglages.",
+  },
+  {
+    question: "À quoi sert le bandeau d'informations ?",
+    answer:
+      "À faire défiler jusqu'à 10 messages dans votre stream : vos réseaux, vos commandes du chat ou vos partenaires. Chaque message peut avoir son logo (Discord, YouTube, TikTok… ou une image à vous), ses couleurs, et le bandeau se règle avec un aperçu en direct.",
+  },
+  {
+    question: "Puis-je me passer de Spotify ?",
+    answer:
+      "Oui. Le chat et le bandeau d'informations sont indépendants de la musique : ils demandent seulement votre compte Twitch, ni Spotify ni Premium.",
   },
 ];
 
@@ -157,17 +227,17 @@ export default function Home() {
             className="float-in mt-6 max-w-xl text-lg leading-relaxed text-zinc-400"
             style={{ animationDelay: "0.16s" }}
           >
-            Connectez Twitch et Spotify, choisissez un style, puis ajoutez un lien par widget dans OBS. Le chat et la
-            musique fonctionnent indépendamment.
+            Connectez Twitch et Spotify, choisissez un style, puis ajoutez un lien par widget dans OBS. Le chat, la
+            musique et le bandeau d'informations fonctionnent indépendamment.
           </p>
 
           <div className="float-in mt-8 flex flex-wrap items-center gap-3" style={{ animationDelay: "0.24s" }}>
             {!session ? (
               <>
-                <button onClick={() => signIn("twitch")} className={PRIMARY_BUTTON}>
+                <Link href="/auth/connexion" className={PRIMARY_BUTTON}>
                   <Tv size={20} />
                   Se connecter avec Twitch
-                </button>
+                </Link>
                 <a href="#etapes" className={SECONDARY_BUTTON}>
                   Voir comment ça marche
                 </a>
@@ -198,7 +268,11 @@ export default function Home() {
             )}
           </div>
 
-          {/* Les deux aperçus, séparés : chaque widget est une source OBS à part */}
+          <p className="float-in mt-5 max-w-xl text-sm text-zinc-400" style={{ animationDelay: "0.28s" }}>
+            Le widget musique demande un compte Spotify Premium ; les widgets chat et bandeau n'en ont pas besoin.
+          </p>
+
+          {/* Les aperçus, séparés : chaque widget est une source OBS à part */}
           <div className="float-in mt-14 grid gap-6 lg:grid-cols-2" style={{ animationDelay: "0.32s" }}>
             <PreviewPanel
               icon={<Music size={16} className="text-emerald-400" />}
@@ -217,6 +291,64 @@ export default function Home() {
             >
               <ChatWidgetPreview />
             </PreviewPanel>
+
+            <PreviewPanel
+              icon={<Megaphone size={16} className="text-amber-300" />}
+              label="Bandeau d'informations"
+              caption="Vos réseaux et vos messages en rotation, avec un logo et des couleurs par message."
+              href="/dashboard/banner"
+              className="lg:col-span-2"
+              compact
+            >
+              <BannerWidgetPreview />
+            </PreviewPanel>
+          </div>
+        </section>
+
+        {/* AVANT DE COMMENCER : les prérequis, dits avant l'inscription */}
+        <section aria-labelledby="prerequis-title" className="border-t border-white/10">
+          <div className="mx-auto max-w-6xl px-6 py-16">
+            <h2 id="prerequis-title" className={`${displayFont.className} text-2xl font-bold tracking-tight sm:text-3xl`}>
+              Avant de commencer
+            </h2>
+
+            <ul className="mt-10 grid gap-10 md:grid-cols-3 md:gap-0">
+              {PREREQUISITES.map(({ icon: Icon, title, desc, tag, link }, index) => (
+                <li
+                  key={title}
+                  className={`md:px-8 ${index === 0 ? "md:pl-0" : "md:border-l md:border-white/10"} ${
+                    index === PREREQUISITES.length - 1 ? "md:pr-0" : ""
+                  }`}
+                >
+                  <span
+                    className={`flex h-11 w-11 items-center justify-center rounded-xl border bg-white/[0.03] ${
+                      tag ? "border-amber-500/30 text-amber-300" : "border-white/10 text-purple-300"
+                    }`}
+                  >
+                    <Icon size={20} />
+                  </span>
+                  <div className="mt-4 flex flex-wrap items-center gap-2">
+                    <h3 className="text-lg font-semibold text-white">{title}</h3>
+                    {tag && (
+                      <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 text-xs font-semibold text-amber-200">
+                        {tag}
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-2 max-w-xs text-sm leading-relaxed text-zinc-400">{desc}</p>
+                  {link && (
+                    <a
+                      href={link.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`mt-3 inline-block text-sm font-medium text-purple-300 underline-offset-4 hover:underline ${FOCUS}`}
+                    >
+                      {link.label}
+                    </a>
+                  )}
+                </li>
+              ))}
+            </ul>
           </div>
         </section>
 
@@ -316,6 +448,42 @@ export default function Home() {
           </div>
         </section>
 
+        {/* QUESTIONS FRÉQUENTES : les objections, juste avant l'appel à l'action final */}
+        <section aria-labelledby="faq-title" className="border-t border-white/10">
+          <div className="mx-auto grid max-w-6xl gap-12 px-6 py-24 lg:grid-cols-12">
+            <div className="lg:col-span-5">
+              <h2 id="faq-title" className={`${displayFont.className} text-3xl font-bold tracking-tight sm:text-4xl`}>
+                Questions fréquentes
+              </h2>
+              <p className="mt-3 max-w-sm text-sm leading-relaxed text-zinc-400">
+                Une autre question ? Toutes les réponses sont dans{" "}
+                <Link href="/help" className={`text-purple-300 underline-offset-4 hover:underline ${FOCUS}`}>
+                  l'aide
+                </Link>
+                .
+              </p>
+            </div>
+
+            <div className="divide-y divide-white/10 border-y border-white/10 lg:col-span-7">
+              {FAQ.map(({ question, answer }) => (
+                <details key={question} className="group py-5">
+                  <summary
+                    className={`flex cursor-pointer list-none items-center justify-between gap-4 rounded text-base font-semibold text-white [&::-webkit-details-marker]:hidden ${FOCUS}`}
+                  >
+                    {question}
+                    <ChevronDown
+                      size={18}
+                      aria-hidden="true"
+                      className="shrink-0 text-zinc-400 transition-transform group-open:rotate-180"
+                    />
+                  </summary>
+                  <div className="mt-3 max-w-xl text-sm leading-relaxed text-zinc-400">{answer}</div>
+                </details>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* CTA FINAL */}
         <section className="mx-auto max-w-6xl px-6 pb-24">
           <div className="flex flex-col items-start justify-between gap-8 rounded-3xl border border-white/10 bg-zinc-950/70 p-8 sm:p-12 md:flex-row md:items-center">
@@ -329,10 +497,10 @@ export default function Home() {
             </div>
 
             {!session ? (
-              <button onClick={() => signIn("twitch")} className={`${PRIMARY_BUTTON} shrink-0`}>
+              <Link href="/auth/connexion" className={`${PRIMARY_BUTTON} shrink-0`}>
                 <Tv size={20} />
                 Se connecter avec Twitch
-              </button>
+              </Link>
             ) : (
               <Link href="/dashboard" className={`${PRIMARY_BUTTON} shrink-0`}>
                 Ouvrir le dashboard
@@ -356,15 +524,20 @@ function PreviewPanel({
   caption,
   href,
   children,
+  className = "",
+  compact = false,
 }: {
   icon: React.ReactNode;
   label: string;
   caption: string;
   href: string;
   children: React.ReactNode;
+  className?: string;
+  /** Zone de rendu basse, pour un widget en bandeau (pas de hauteur de 420 px). */
+  compact?: boolean;
 }) {
   return (
-    <div className="flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/60">
+    <div className={`flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/60 ${className}`}>
       <div className="flex items-center justify-between gap-3 border-b border-white/10 px-5 py-3.5">
         <span className="flex items-center gap-2.5 text-sm font-semibold text-white">
           <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/[0.03]">
@@ -378,7 +551,11 @@ function PreviewPanel({
         </span>
       </div>
 
-      <div className="flex min-h-[420px] flex-1 items-center justify-center bg-[radial-gradient(ellipse_at_top_left,rgba(88,28,135,0.22),transparent_60%),radial-gradient(ellipse_at_bottom_right,rgba(15,118,110,0.16),transparent_55%)] p-6">
+      <div
+        className={`flex flex-1 items-center justify-center bg-[radial-gradient(ellipse_at_top_left,rgba(88,28,135,0.22),transparent_60%),radial-gradient(ellipse_at_bottom_right,rgba(15,118,110,0.16),transparent_55%)] p-6 ${
+          compact ? "min-h-[200px]" : "min-h-[420px]"
+        }`}
+      >
         {children}
       </div>
 

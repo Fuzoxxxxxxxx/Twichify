@@ -1,13 +1,15 @@
 "use client";
 
 import { useSession, signIn } from "next-auth/react";
-import { useState, useEffect, useCallback, useMemo, useRef, useId } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   Users, UserPlus, UserMinus, Radio, Eye, Video, Film, RefreshCw, ExternalLink, Tv, TrendingUp, AlertTriangle,
   Shield, Gem, Pencil, LayoutDashboard, Clock, CalendarDays, ChevronLeft, ChevronRight, Search,
   Trophy, Timer, Languages, BadgeCheck, Hourglass, Copy, Check, Heart, Zap, Star, Info, MessageSquare,
 } from "lucide-react";
 import { PageHeader } from "@/components/dashboard/DashboardUI";
+import { KpiCard, Panel, EmptyState } from "@/components/dashboard/StatsUI";
+import { ACTION_BTN } from "@/components/dashboard/WidgetUI";
 import type { TwitchStats, FollowersPage, SectionStatus } from "@/lib/twitch-user";
 import type { TeamData, TeamSection, TeamMember, CommunityData } from "@/lib/twitch-community";
 import type { UnfollowState } from "@/lib/twitch-unfollows";
@@ -22,23 +24,7 @@ const nf = new Intl.NumberFormat("fr-FR");
 const SCAN_COOLDOWN_MS = 5 * 60_000;
 const AUTO_SCAN_AFTER_MS = 30 * 60_000;
 
-const TONES = {
-  purple: "border-purple-500/20 bg-purple-500/5",
-  emerald: "border-emerald-500/20 bg-emerald-500/5",
-  amber: "border-amber-500/20 bg-amber-500/5",
-  sky: "border-sky-500/20 bg-sky-500/5",
-  rose: "border-rose-500/20 bg-rose-500/5",
-} as const;
-type Tone = keyof typeof TONES;
-
-// Couleur de la bordure du pictogramme des cartes de chiffres, et couleur de la courbe associée.
-const SPARK_COLORS: Record<Tone, string> = {
-  purple: "#a855f7",
-  emerald: "#10b981",
-  amber: "#f59e0b",
-  sky: "#0ea5e9",
-  rose: "#f43f5e",
-};
+// KpiCard, Panel et EmptyState viennent de StatsUI : une seule définition pour les pages Twitch et Statistiques.
 
 // Podium : or, argent, bronze.
 const RANK_COLORS: Record<number, string> = { 1: "text-amber-300", 2: "text-zinc-300", 3: "text-orange-400" };
@@ -88,6 +74,10 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
 
 const PAGE_SIZES = [10, 25, 50, 100];
 
+// Petit bouton secondaire (pagination, analyse…) : même famille que ACTION_BTN, en plus compact.
+const SMALL_BTN =
+  "inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-white/15 px-3 py-1.5 text-xs font-medium text-zinc-200 transition-colors hover:border-purple-500/50 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400 disabled:cursor-not-allowed disabled:opacity-40";
+
 const TIER_STYLES: Record<1 | 2 | 3, { label: string; badge: string; bar: string }> = {
   1: { label: "Tier 1", badge: "border-purple-500/30 bg-purple-500/10 text-purple-300", bar: "bg-purple-500" },
   2: { label: "Tier 2", badge: "border-sky-500/30 bg-sky-500/10 text-sky-300", bar: "bg-sky-500" },
@@ -124,84 +114,18 @@ function Avatar({ src, name, size = 32, className = "" }: { src: string | null; 
   );
 }
 
-// Mini-courbe d'une série de valeurs (ex. nouveaux followers par jour), sans axe ni légende.
-function Sparkline({ values, color }: { values: number[]; color: string }) {
-  const gradientId = `spark-${useId().replace(/:/g, "")}`;
-  if (values.length < 2) return null;
-
-  const w = 100;
-  const h = 28;
-  const max = Math.max(1, ...values);
-  const points = values.map((v, i) => [(i / (values.length - 1)) * w, h - 3 - (v / max) * (h - 8)] as const);
-  const line = points.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
-
-  return (
-    <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="mt-3 h-8 w-full" aria-hidden="true">
-      <defs>
-        <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.35" />
-          <stop offset="100%" stopColor={color} stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <polygon points={`0,${h} ${line} ${w},${h}`} fill={`url(#${gradientId})`} />
-      <polyline points={line} fill="none" stroke={color} strokeWidth="1.5" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function KpiCard({
-  icon,
-  label,
-  value,
-  sub,
-  tone,
-  spark,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  sub?: string;
-  tone: Tone;
-  spark?: number[];
-}) {
-  return (
-    <div className="twichify-rise rounded-2xl border border-white/10 bg-white/[0.02] p-5">
-      <div className={`mb-4 flex h-9 w-9 items-center justify-center rounded-lg border ${TONES[tone]}`}>{icon}</div>
-      <p className="text-sm text-zinc-400">{label}</p>
-      <p className="mt-1 text-2xl font-bold tabular-nums tracking-tight text-white">{value}</p>
-      {sub && <p className="mt-1 text-xs leading-snug text-zinc-400">{sub}</p>}
-      {spark && <Sparkline values={spark} color={SPARK_COLORS[tone]} />}
-    </div>
-  );
-}
-
-function Panel({ title, icon, right, children }: { title: string; icon: React.ReactNode; right?: React.ReactNode; children: React.ReactNode }) {
-  return (
-    <div className="twichify-rise rounded-2xl border border-white/10 bg-white/[0.02] p-6">
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <p className="flex items-center gap-2.5 text-base font-semibold text-white">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04]">{icon}</span>
-          {title}
-        </p>
-        {right}
-      </div>
-      {children}
-    </div>
-  );
-}
-
 function ReconnectBanner({ expired, onReconnect, compact }: { expired: boolean; onReconnect: () => void; compact?: boolean }) {
   return (
     <div className={`rounded-2xl border border-amber-500/20 bg-amber-500/5 ${compact ? "p-4" : "p-5"}`}>
       {!compact && <p className="text-sm font-bold text-amber-200">{expired ? "Ta connexion Twitch a expiré" : "Autorisation Twitch requise"}</p>}
-      <p className={`${compact ? "" : "mt-1"} text-xs leading-relaxed text-zinc-400`}>
+      <p className={`${compact ? "" : "mt-1"} text-sm leading-relaxed text-zinc-300`}>
         {expired
           ? "Reconnecte-toi pour retrouver ces données."
           : "Twichify a besoin d'une permission Twitch en lecture seule pour afficher ces données. Reconnecte-toi avec Twitch pour l'accorder."}
       </p>
       <button
         onClick={onReconnect}
-        className="mt-3 inline-flex cursor-pointer items-center gap-2 rounded-xl bg-purple-600 px-4 py-2 text-[11px] font-black uppercase tracking-widest text-white transition hover:bg-purple-500"
+        className="mt-3 inline-flex cursor-pointer items-center gap-2 rounded-lg bg-purple-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-purple-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400"
       >
         <Tv size={13} /> Se reconnecter avec Twitch
       </button>
@@ -234,29 +158,20 @@ function SectionNotice({
   return <p className="py-4 text-sm text-zinc-500">Impossible de récupérer ces données pour le moment.</p>;
 }
 
-function EmptyState({ icon, text }: { icon: React.ReactNode; text: string }) {
-  return (
-    <div className="rounded-2xl border border-dashed border-zinc-800 bg-zinc-950/40 p-8 text-center">
-      <div className="mx-auto mb-3 flex w-fit text-zinc-700">{icon}</div>
-      <p className="text-sm text-zinc-600">{text}</p>
-    </div>
-  );
-}
-
 // Squelette affiché pendant le premier chargement : même silhouette que la page, sans saut de mise en page.
 function PageSkeleton() {
   return (
     <div className="space-y-8" aria-busy="true" aria-label="Chargement des statistiques Twitch">
-      <div className="twichify-skeleton h-80 rounded-[32px] border border-zinc-800/60" />
-      <div className="twichify-skeleton h-12 w-full rounded-2xl border border-zinc-800/60 sm:w-[34rem]" />
+      <div className="twichify-skeleton h-80 rounded-2xl border border-white/5" />
+      <div className="twichify-skeleton h-12 w-full rounded-xl border border-white/5 sm:w-[34rem]" />
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="twichify-skeleton h-36 rounded-[24px] border border-zinc-800/60" />
+          <div key={i} className="twichify-skeleton h-36 rounded-2xl border border-white/5" />
         ))}
       </div>
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="twichify-skeleton h-72 rounded-[28px] border border-zinc-800/60 lg:col-span-2" />
-        <div className="twichify-skeleton h-72 rounded-[28px] border border-zinc-800/60" />
+        <div className="twichify-skeleton h-72 rounded-2xl border border-white/5 lg:col-span-2" />
+        <div className="twichify-skeleton h-72 rounded-2xl border border-white/5" />
       </div>
     </div>
   );
@@ -273,12 +188,13 @@ function Loader() {
 function SearchInput({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {
   return (
     <div className="relative">
-      <Search size={12} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" />
+      <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-48 rounded-xl border border-zinc-800 bg-zinc-950/60 py-1.5 pl-8 pr-3 text-xs text-zinc-200 placeholder:text-zinc-600"
+        aria-label={placeholder}
+        className="w-52 rounded-lg border border-white/10 bg-white/[0.02] py-2 pl-9 pr-3 text-sm text-zinc-200 placeholder:text-zinc-500 outline-none transition-colors focus:border-purple-500/60"
       />
     </div>
   );
@@ -660,9 +576,11 @@ export default function DashboardTwitch() {
     }
   }, []);
 
+  // Booléen (et non l'objet `session`, recréé à chaque retour sur l'onglet) : pas de rechargement à chaque focus.
+  const signedIn = !!session;
   useEffect(() => {
-    if (session) load();
-  }, [session, load]);
+    if (signedIn) load();
+  }, [signedIn, load]);
 
   // Les données Twitch bougent lentement et l'API est limitée : une actualisation par minute suffit.
   useEffect(() => {
@@ -783,7 +701,7 @@ export default function DashboardTwitch() {
           <button
             onClick={refreshAll}
             disabled={refreshing || loading}
-            className="flex cursor-pointer items-center gap-2 rounded-2xl border border-zinc-800 bg-zinc-950/60 px-5 py-2.5 text-[11px] font-black uppercase tracking-widest text-zinc-300 transition hover:border-purple-500/40 hover:text-white disabled:opacity-50"
+            className={`${ACTION_BTN} disabled:cursor-not-allowed disabled:opacity-50`}
           >
             <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
             Actualiser
@@ -927,7 +845,7 @@ export default function DashboardTwitch() {
                           {bio.length > 120 && (
                             <button
                               onClick={() => setBioOpen((v) => !v)}
-                              className="mt-1 cursor-pointer text-[10px] font-bold uppercase tracking-widest text-purple-300 hover:text-purple-200"
+                              className="mt-1 cursor-pointer rounded text-sm font-medium text-purple-300 hover:text-purple-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400"
                             >
                               {bioOpen ? "Réduire" : "Lire la suite"}
                             </button>
@@ -1087,7 +1005,7 @@ export default function DashboardTwitch() {
                         title="Nouveaux followers (14 jours)"
                         icon={<TrendingUp size={14} className="text-purple-400" />}
                         right={
-                          <button onClick={() => changeTab("followers")} className="cursor-pointer text-[10px] font-bold uppercase tracking-widest text-purple-300 hover:text-purple-200">
+                          <button onClick={() => changeTab("followers")} className="cursor-pointer rounded text-sm font-medium text-purple-300 hover:text-purple-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400">
                             Détails
                           </button>
                         }
@@ -1164,13 +1082,14 @@ export default function DashboardTwitch() {
                         title="Évolution des followers"
                         icon={<TrendingUp size={14} className="text-purple-400" />}
                         right={
-                          <div className="flex gap-1 rounded-xl border border-zinc-800 bg-zinc-950/60 p-1">
+                          <div className="flex gap-1 rounded-lg border border-white/10 bg-zinc-950/60 p-1">
                             {[7, 14, 30].map((d) => (
                               <button
                                 key={d}
                                 onClick={() => setRange(d)}
-                                className={`cursor-pointer rounded-lg px-3 py-1 text-[10px] font-bold uppercase tracking-wider transition ${
-                                  range === d ? "bg-purple-600/20 text-purple-300" : "text-zinc-500 hover:text-zinc-300"
+                                aria-pressed={range === d}
+                                className={`cursor-pointer rounded-md px-3 py-1 text-sm font-medium transition-colors ${
+                                  range === d ? "bg-purple-600/25 text-purple-200" : "text-zinc-400 hover:text-white"
                                 }`}
                               >
                                 {d} j
@@ -1193,7 +1112,7 @@ export default function DashboardTwitch() {
                                 onClick={() => unfollowAction("scan")}
                                 disabled={!!unfBusy || !canScan}
                                 title={canScan ? "Compare ta liste de followers avec la dernière analyse" : "Une analyse a eu lieu il y a moins de 5 minutes"}
-                                className="flex cursor-pointer items-center gap-1.5 rounded-xl border border-zinc-800 bg-zinc-950/60 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-300 transition hover:text-white disabled:cursor-default disabled:opacity-40"
+                                className={SMALL_BTN}
                               >
                                 <RefreshCw size={11} className={unfBusy === "scan" ? "animate-spin" : ""} />
                                 {unfBusy === "scan" ? "Analyse…" : "Analyser maintenant"}
@@ -1208,7 +1127,7 @@ export default function DashboardTwitch() {
                                   if (ok) unfollowAction("disable");
                                 }}
                                 disabled={!!unfBusy}
-                                className="cursor-pointer rounded-xl border border-zinc-800 bg-zinc-950/60 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-500 transition hover:text-rose-300 disabled:cursor-default disabled:opacity-40"
+                                className="cursor-pointer rounded-lg border border-white/10 px-3 py-1.5 text-xs font-medium text-zinc-400 transition-colors hover:border-rose-500/40 hover:text-rose-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400 disabled:cursor-not-allowed disabled:opacity-40"
                               >
                                 Désactiver
                               </button>
@@ -1242,7 +1161,7 @@ export default function DashboardTwitch() {
                             <button
                               onClick={() => unfollowAction("enable")}
                               disabled={!!unfBusy}
-                              className="mt-4 inline-flex cursor-pointer items-center gap-2 rounded-xl bg-rose-600 px-4 py-2 text-[11px] font-black uppercase tracking-widest text-white transition hover:bg-rose-500 disabled:opacity-60"
+                              className="mt-4 inline-flex cursor-pointer items-center gap-2 rounded-lg bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-rose-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-300 disabled:cursor-not-allowed disabled:opacity-60"
                             >
                               <UserMinus size={13} className={unfBusy === "enable" ? "animate-pulse" : ""} />
                               {unfBusy === "enable" ? "Première analyse en cours…" : "Activer le suivi"}
@@ -1318,7 +1237,7 @@ export default function DashboardTwitch() {
                             <select
                               value={pageSize}
                               onChange={(e) => changePageSize(Number(e.target.value))}
-                              className="cursor-pointer rounded-xl border border-zinc-800 bg-zinc-950/60 px-3 py-1.5 text-xs text-zinc-300"
+                              className="cursor-pointer rounded-lg border border-white/10 bg-zinc-950 px-3 py-2 text-sm text-zinc-200 outline-none transition-colors focus:border-purple-500/60"
                               aria-label="Followers par page"
                             >
                               {PAGE_SIZES.map((s) => (
@@ -1381,21 +1300,21 @@ export default function DashboardTwitch() {
                                 <button
                                   onClick={() => goToPage(0)}
                                   disabled={pageIndex === 0 || pageLoading}
-                                  className="cursor-pointer rounded-xl border border-zinc-800 bg-zinc-950/60 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-400 transition hover:text-white disabled:cursor-default disabled:opacity-40"
+                                  className={SMALL_BTN}
                                 >
                                   Début
                                 </button>
                                 <button
                                   onClick={() => goToPage(pageIndex - 1)}
                                   disabled={pageIndex === 0 || pageLoading}
-                                  className="flex cursor-pointer items-center gap-1 rounded-xl border border-zinc-800 bg-zinc-950/60 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-300 transition hover:text-white disabled:cursor-default disabled:opacity-40"
+                                  className={SMALL_BTN}
                                 >
                                   <ChevronLeft size={12} /> Précédent
                                 </button>
                                 <button
                                   onClick={() => goToPage(pageIndex + 1)}
                                   disabled={!pageData.cursor || pageLoading}
-                                  className="flex cursor-pointer items-center gap-1 rounded-xl border border-purple-500/30 bg-purple-600/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-purple-200 transition hover:bg-purple-600/20 disabled:cursor-default disabled:opacity-40"
+                                  className={`${SMALL_BTN} !border-purple-500/40 !bg-purple-600/10 !text-purple-200`}
                                 >
                                   Suivant <ChevronRight size={12} />
                                 </button>
@@ -1687,7 +1606,7 @@ export default function DashboardTwitch() {
                       href={vs.best.url}
                       target="_blank"
                       rel="noreferrer"
-                      className="group flex items-center gap-4 rounded-[24px] border border-amber-500/20 bg-amber-500/5 p-5 transition hover:border-amber-500/40"
+                      className="group flex items-center gap-4 rounded-2xl border border-amber-500/20 bg-amber-500/5 p-5 transition hover:border-amber-500/40"
                     >
                       <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-950/70">
                         <Trophy size={18} className="text-amber-400" />

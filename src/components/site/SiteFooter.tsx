@@ -4,6 +4,7 @@ import { Music } from "lucide-react";
 // Pied de page unique de toutes les pages publiques (accueil, changelog, aide, mentions légales…).
 const LINKS = [
   { href: "/", label: "Accueil" },
+  { href: "/a-propos", label: "À propos" },
   { href: "/ideas", label: "Idées" },
   { href: "/changelog", label: "Changelog" },
   { href: "/help", label: "Aide" },

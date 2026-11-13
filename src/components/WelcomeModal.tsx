@@ -18,7 +18,7 @@ type Step = {
   title: string;
   description: string;
   bullets?: string[];
-  link?: { href: string; label: string };
+  links?: { href: string; label: string }[];
 };
 
 const FOCUS = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400";
@@ -29,7 +29,7 @@ const STEPS: Step[] = [
     eyebrow: "Bienvenue",
     title: "Bienvenue sur Twichify !",
     description:
-      "Twichify t'aide à afficher ta musique Spotify et ton chat Twitch dans OBS, avec des widgets personnalisables. Ce petit guide te montre l'essentiel en 4 étapes.",
+      "Twichify t'aide à afficher ta musique Spotify, ton chat Twitch et ton bandeau d'informations dans OBS, avec des widgets personnalisables. Ce petit guide te montre l'essentiel en 4 étapes.",
   },
   {
     icon: Music,
@@ -37,27 +37,35 @@ const STEPS: Step[] = [
     title: "Connecte ton compte Spotify",
     description:
       "Rends-toi dans Intégrations → Spotify pour lier ton compte. C'est ce qui permet au widget d'afficher le morceau en cours de lecture.",
-    bullets: ["Renseigne les identifiants de ton application Spotify", "Autorise l'accès à ta lecture en cours"],
-    link: { href: "/dashboard/spotify", label: "Aller à Intégrations → Spotify" },
+    bullets: [
+      "Un compte Spotify Premium est nécessaire (exigence de Spotify) ; le widget chat n'en a pas besoin",
+      "Crée une application Spotify gratuite sur le Dashboard Spotify Developer, puis renseigne son Client ID et son Client Secret",
+      "Autorise l'accès à ta lecture en cours",
+    ],
+    links: [{ href: "/dashboard/spotify", label: "Aller à Intégrations → Spotify" }],
   },
   {
     icon: Palette,
     eyebrow: "Étape 2",
     title: "Personnalise tes widgets",
     description:
-      "Choisis un thème, une couleur d'accent et une position pour le widget musique, puis fais de même pour le widget chat. Un aperçu en direct te montre le rendu à chaque changement.",
-    link: { href: "/dashboard/design", label: "Aller à Widgets → Musique" },
+      "Choisis un thème, une couleur d'accent et une position pour le widget musique, puis fais de même pour le widget chat. Ajoute aussi ton bandeau d'informations : jusqu'à 10 messages (tes réseaux, tes commandes, tes partenaires) qui défilent à l'écran, avec un logo et des couleurs par message. Un aperçu en direct te montre le rendu à chaque changement.",
+    links: [
+      { href: "/dashboard/design", label: "Aller à Widgets → Musique" },
+      { href: "/dashboard/banner", label: "Aller à Widgets → Bandeau" },
+    ],
   },
   {
     icon: MonitorPlay,
     eyebrow: "Étape 3",
-    title: "Ajoute le widget dans OBS",
+    title: "Ajoute tes widgets dans OBS",
     description:
       "Chaque widget a son propre lien, personnel à ton compte. Ajoute-le comme Source Navigateur dans OBS (ou tout autre logiciel de stream compatible) pour le faire apparaître à l'écran.",
     bullets: [
-      "Widget musique et widget chat ont des liens séparés, à copier depuis l'Accueil du dashboard",
+      "Les liens sont sur l'Accueil du dashboard : masqués par défaut (l'œil les affiche 20 secondes), et Copier copie toujours le lien complet",
+      "Le bouton Tester ouvre le widget avec de fausses données, pour régler la taille et la position avant ton live",
       "Ne montre jamais ces liens à l'écran : s'ils fuitent, régénère-les depuis l'Accueil",
-      "Redimensionne la source pour l'ajuster à ta scène",
+      "Tailles conseillées : 475 × 125 px pour la musique, 1920 × 1080 px pour le chat. Pour le bandeau, la taille dépend de ton design et s'affiche sur sa page de réglages",
     ],
   },
   {
@@ -66,7 +74,7 @@ const STEPS: Step[] = [
     title: "Configure ton chat et ton bot",
     description:
       "Depuis Widgets → Chat et Intégrations → Bot, choisis quels messages afficher, mets en avant certains rôles, et personnalise le message que ton bot peut annoncer dans le chat Twitch.",
-    link: { href: "/dashboard/chat", label: "Aller à Widgets → Chat" },
+    links: [{ href: "/dashboard/chat", label: "Aller à Widgets → Chat" }],
   },
   {
     icon: Rocket,
@@ -74,7 +82,7 @@ const STEPS: Step[] = [
     title: "Tu es prêt à streamer !",
     description:
       "Tu peux revenir sur ce guide à tout moment depuis le Centre d'aide. En cas de blocage, la boîte à idées et le support sont toujours à un clic.",
-    link: { href: "/help", label: "Voir le Centre d'aide" },
+    links: [{ href: "/help", label: "Voir le Centre d'aide" }],
   },
 ];
 
@@ -166,15 +174,20 @@ export default function WelcomeModal({ isOpen, onFinish }: WelcomeModalProps) {
             </ul>
           )}
 
-          {current.link && (
-            <Link
-              href={current.link.href}
-              onClick={onFinish}
-              className={`group mb-6 flex items-center justify-between rounded-xl border border-white/10 px-4 py-3 text-sm font-medium text-zinc-200 transition-colors hover:border-purple-500/40 hover:text-white ${FOCUS}`}
-            >
-              <span>{current.link.label}</span>
-              <ExternalLink size={14} aria-hidden="true" className="text-zinc-500 transition-colors group-hover:text-purple-300" />
-            </Link>
+          {current.links && (
+            <div className="mb-6 space-y-2">
+              {current.links.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={onFinish}
+                  className={`group flex items-center justify-between rounded-xl border border-white/10 px-4 py-3 text-sm font-medium text-zinc-200 transition-colors hover:border-purple-500/40 hover:text-white ${FOCUS}`}
+                >
+                  <span>{link.label}</span>
+                  <ExternalLink size={14} aria-hidden="true" className="text-zinc-500 transition-colors group-hover:text-purple-300" />
+                </Link>
+              ))}
+            </div>
           )}
 
           {/* Progression */}

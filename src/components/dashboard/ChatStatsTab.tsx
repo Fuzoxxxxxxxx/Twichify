@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import type { ChatStatsData, ChatSessionSummary, ChatRankRow } from "@/lib/chat-stats";
 import { useDialog } from "@/components/DialogProvider";
+import { KpiCard, Panel, EmptyState } from "@/components/dashboard/StatsUI";
 
 /**
  * Onglet « Chat » de la page Twitch : statistiques du chat collectées par le widget chat (optionnel).
@@ -16,24 +17,11 @@ import { useDialog } from "@/components/DialogProvider";
 
 const nf = new Intl.NumberFormat("fr-FR");
 
-const TONES = {
-  purple: "border-purple-500/20 bg-purple-500/5",
-  emerald: "border-emerald-500/20 bg-emerald-500/5",
-  amber: "border-amber-500/20 bg-amber-500/5",
-  sky: "border-sky-500/20 bg-sky-500/5",
-  rose: "border-rose-500/20 bg-rose-500/5",
-} as const;
-type Tone = keyof typeof TONES;
-
-const GLOWS: Record<Tone, string> = {
-  purple: "bg-purple-500/25",
-  emerald: "bg-emerald-500/25",
-  amber: "bg-amber-500/25",
-  sky: "bg-sky-500/25",
-  rose: "bg-rose-500/25",
-};
-
 const RANK_COLORS: Record<number, string> = { 1: "text-amber-300", 2: "text-zinc-300", 3: "text-orange-400" };
+
+// Petit bouton secondaire : même famille que celui de la page Twitch.
+const SMALL_BTN =
+  "inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-white/15 px-3 py-1.5 text-xs font-medium text-zinc-200 transition-colors hover:border-purple-500/50 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400 disabled:cursor-not-allowed disabled:opacity-40";
 
 function fmtDuration(min: number) {
   const h = Math.floor(min / 60);
@@ -47,37 +35,11 @@ const fmtDateTime = (iso: string) =>
 const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
 
 /* ------------------------------------------------------------------ */
-/* Petits composants (même style que le reste de la page Twitch)       */
+/* Petits composants (même style que le reste du dashboard : cartes de StatsUI)  */
 /* ------------------------------------------------------------------ */
 
-function Panel({ title, icon, right, children }: { title: string; icon: React.ReactNode; right?: React.ReactNode; children: React.ReactNode }) {
-  return (
-    <div className="twichify-rise rounded-[28px] border border-zinc-800/80 bg-gradient-to-b from-zinc-900/50 to-zinc-950/60 p-6 shadow-2xl shadow-black/30">
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <p className="flex items-center gap-2.5 text-xs font-bold text-white">
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-950/70">{icon}</span>
-          {title}
-        </p>
-        {right}
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function Kpi({ icon, label, value, sub, tone }: { icon: React.ReactNode; label: string; value: string; sub?: React.ReactNode; tone: Tone }) {
-  return (
-    <div className={`twichify-rise group relative overflow-hidden rounded-[24px] border ${TONES[tone]} p-5 shadow-xl shadow-black/20 transition duration-300 hover:-translate-y-0.5 hover:shadow-2xl`}>
-      <div className={`pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full opacity-60 blur-2xl transition-opacity duration-300 group-hover:opacity-100 ${GLOWS[tone]}`} />
-      <div className="relative">
-        <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-950/70">{icon}</div>
-        <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-zinc-500">{label}</p>
-        <p className="mt-2 text-2xl font-black tracking-tighter text-white">{value}</p>
-        {sub && <div className="mt-1 text-[11px] leading-snug text-zinc-500">{sub}</div>}
-      </div>
-    </div>
-  );
-}
+// Panel et KpiCard viennent de StatsUI (même définition que pour les pages Twitch et Statistiques).
+const Kpi = KpiCard;
 
 function Delta({ value, sample }: { value: number | null | undefined; sample: number }) {
   if (value == null) return <span>pas encore de comparaison</span>;
@@ -97,8 +59,8 @@ function Delta({ value, sample }: { value: number | null | undefined; sample: nu
 
 function MiniStat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-zinc-800 bg-gradient-to-br from-zinc-900/70 to-zinc-950/40 px-4 py-3">
-      <p className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.2em] text-zinc-500">
+    <div className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
+      <p className="flex items-center gap-1.5 text-xs text-zinc-400">
         {icon} {label}
       </p>
       <p className="mt-1 text-lg font-black tracking-tight text-white">{value}</p>
@@ -136,10 +98,10 @@ function Skeleton() {
     <div className="space-y-6" aria-busy="true" aria-label="Chargement des statistiques de chat">
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="twichify-skeleton h-36 rounded-[24px] border border-zinc-800/60" />
+          <div key={i} className="twichify-skeleton h-36 rounded-2xl border border-white/5" />
         ))}
       </div>
-      <div className="twichify-skeleton h-72 rounded-[28px] border border-zinc-800/60" />
+      <div className="twichify-skeleton h-72 rounded-2xl border border-white/5" />
     </div>
   );
 }
@@ -365,12 +327,7 @@ export default function ChatStatsTab() {
   if (loading && !data) return <Skeleton />;
 
   if (error && !data) {
-    return (
-      <div className="rounded-2xl border border-dashed border-zinc-800 bg-zinc-950/40 p-8 text-center">
-        <AlertTriangle size={26} className="mx-auto mb-3 text-zinc-700" />
-        <p className="text-sm text-zinc-600">Impossible de charger les statistiques de chat pour le moment.</p>
-      </div>
-    );
+    return <EmptyState icon={<AlertTriangle size={26} />} text="Impossible de charger les statistiques de chat pour le moment." />;
   }
   if (!data) return null;
 
@@ -379,12 +336,12 @@ export default function ChatStatsTab() {
     return (
       <Panel title="Statistiques de chat" icon={<MessageSquare size={14} className="text-purple-400" />}>
         <div className="rounded-2xl border border-purple-500/20 bg-purple-500/5 p-5">
-          <p className="text-sm font-bold text-purple-200">Découvre ce qui se passe dans ton chat</p>
-          <p className="mt-2 text-xs leading-relaxed text-zinc-400">
+          <p className="text-sm font-semibold text-purple-200">Découvre ce qui se passe dans ton chat</p>
+          <p className="mt-2 text-sm leading-relaxed text-zinc-300">
             Une fois activées, ces statistiques sont calculées par ton widget chat pendant tes streams (il doit donc être actif dans OBS) :
             messages, chatteurs uniques, pic d'activité minute par minute, chatteurs les plus actifs, emotes et commandes les plus utilisées.
           </p>
-          <ul className="mt-3 space-y-1 text-[11px] leading-relaxed text-zinc-500">
+          <ul className="mt-3 space-y-1 text-sm leading-relaxed text-zinc-400">
             <li>· Le texte des messages n'est jamais envoyé ni enregistré : seulement des compteurs.</li>
             <li>· Les pseudos publics des chatteurs les plus actifs sont conservés {data.retentionDays} jours.</li>
             <li>· Les statistiques démarrent à l'activation : elles ne remontent pas dans le passé.</li>
@@ -393,7 +350,7 @@ export default function ChatStatsTab() {
           <button
             onClick={() => setEnabled(true)}
             disabled={busy === "toggle"}
-            className="mt-4 inline-flex cursor-pointer items-center gap-2 rounded-xl bg-purple-600 px-4 py-2 text-[11px] font-black uppercase tracking-widest text-white transition hover:bg-purple-500 disabled:opacity-60"
+            className="mt-4 inline-flex cursor-pointer items-center gap-2 rounded-lg bg-purple-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-purple-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Power size={13} /> Activer les statistiques de chat
           </button>
@@ -406,11 +363,11 @@ export default function ChatStatsTab() {
   const live = !!data.lastDataAt && Date.now() - new Date(data.lastDataAt).getTime() < 5 * 60_000;
 
   const controls = (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-800 bg-zinc-950/60 px-4 py-3">
-      <div className="flex flex-wrap items-center gap-3 text-xs">
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.02] px-4 py-3">
+      <div className="flex flex-wrap items-center gap-3 text-sm">
         <span
-          className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-black uppercase tracking-widest ${
-            data.enabled ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300" : "border-zinc-700 bg-zinc-900 text-zinc-500"
+          className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium ${
+            data.enabled ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300" : "border-zinc-700 bg-zinc-900 text-zinc-400"
           }`}
         >
           <span className={`h-1.5 w-1.5 rounded-full ${data.enabled ? "animate-pulse bg-emerald-400" : "bg-zinc-600"}`} />
@@ -423,21 +380,21 @@ export default function ChatStatsTab() {
       <div className="flex flex-wrap items-center gap-2">
         <button
           onClick={() => load(sessionId, true)}
-          className="flex cursor-pointer items-center gap-1.5 rounded-xl border border-zinc-800 bg-zinc-950/60 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-300 transition hover:text-white"
+          className={SMALL_BTN}
         >
           <RefreshCw size={11} /> Actualiser
         </button>
         <button
           onClick={() => setEnabled(!data.enabled)}
           disabled={busy === "toggle"}
-          className="flex cursor-pointer items-center gap-1.5 rounded-xl border border-zinc-800 bg-zinc-950/60 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-300 transition hover:text-white disabled:opacity-50"
+          className={SMALL_BTN}
         >
           <Power size={11} /> {data.enabled ? "Mettre en pause" : "Reprendre"}
         </button>
         <button
           onClick={deleteAll}
           disabled={busy === "delete" || data.sessions.length === 0}
-          className="flex cursor-pointer items-center gap-1.5 rounded-xl border border-zinc-800 bg-zinc-950/60 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-500 transition hover:text-rose-300 disabled:cursor-default disabled:opacity-40"
+          className={`${SMALL_BTN} hover:!border-rose-500/40 hover:!text-rose-300`}
         >
           <Trash2 size={11} /> Supprimer l'historique
         </button>
@@ -450,14 +407,11 @@ export default function ChatStatsTab() {
     return (
       <div className="space-y-6">
         {controls}
-        <div className="rounded-2xl border border-dashed border-zinc-800 bg-zinc-950/40 p-10 text-center">
-          <MessageSquare size={26} className="mx-auto mb-3 text-zinc-700" />
-          <p className="text-sm font-semibold text-zinc-400">En attente des premiers messages</p>
-          <p className="mx-auto mt-2 max-w-md text-xs leading-relaxed text-zinc-600">
-            Les statistiques sont envoyées par ton widget chat toutes les 30 secondes. Vérifie qu'il est bien actif dans OBS pendant ton stream :
-            la première session apparaît dès qu'un message est reçu.
-          </p>
-        </div>
+        <EmptyState
+          icon={<MessageSquare size={26} />}
+          text="En attente des premiers messages"
+          hint="Les statistiques sont envoyées par ton widget chat toutes les 30 secondes. Vérifie qu'il est bien actif dans OBS pendant ton stream : la première session apparaît dès qu'un message est reçu."
+        />
       </div>
     );
   }
@@ -474,14 +428,14 @@ export default function ChatStatsTab() {
       {/* ── Choix de la session ── */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
-          <label htmlFor="chat-session" className="text-[10px] font-bold uppercase tracking-[0.25em] text-zinc-500">
+          <label htmlFor="chat-session" className="text-sm font-medium text-zinc-300">
             Session
           </label>
           <select
             id="chat-session"
             value={s.id}
             onChange={(e) => setSessionId(e.target.value)}
-            className="cursor-pointer rounded-xl border border-zinc-800 bg-zinc-950/60 px-3 py-1.5 text-xs text-zinc-200"
+            className="cursor-pointer rounded-lg border border-white/10 bg-zinc-950 px-3 py-2 text-sm text-zinc-200 outline-none transition-colors focus:border-purple-500/60"
           >
             {data.sessions.map((x, i) => (
               <option key={x.id} value={x.id}>
@@ -491,7 +445,7 @@ export default function ChatStatsTab() {
             ))}
           </select>
           {isLive && (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-red-500/30 bg-red-500/10 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-widest text-red-300">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-red-500/30 bg-red-500/10 px-2.5 py-0.5 text-xs font-medium text-red-300">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-400" /> En cours
             </span>
           )}
@@ -580,7 +534,7 @@ export default function ChatStatsTab() {
         <div className="twichify-scroll max-h-96 overflow-auto">
           <table className="w-full min-w-[34rem] text-left text-xs">
             <thead>
-              <tr className="text-[9px] font-bold uppercase tracking-[0.2em] text-zinc-600">
+              <tr className="text-xs font-medium text-zinc-400">
                 <th className="pb-3 pr-3 font-bold">Début</th>
                 <th className="pb-3 pr-3 font-bold">Durée</th>
                 <th className="pb-3 pr-3 text-right font-bold">Messages</th>

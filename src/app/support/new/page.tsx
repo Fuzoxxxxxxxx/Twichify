@@ -3,19 +3,15 @@
 import { useState } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Send, Music, Tv, Key, User as UserIcon, HelpCircle, AlertCircle } from "lucide-react";
+import { Send, HelpCircle, AlertCircle } from "lucide-react";
 import PublicShell from "@/components/site/PublicShell";
 import PageIntro from "@/components/site/PageIntro";
+import { FAQ_CATEGORIES, faqCategoryDescription } from "@/lib/faq-categories";
+import { faqCategoryIcon } from "@/components/faq-category-icons";
 
 const FOCUS = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400";
 
-const categories = [
-  { id: "spotify", label: "Spotify", icon: Music },
-  { id: "obs", label: "OBS / Widget", icon: Tv },
-  { id: "api", label: "API / Clés", icon: Key },
-  { id: "compte", label: "Compte", icon: UserIcon },
-  { id: "autre", label: "Autre", icon: HelpCircle },
-];
+// Mêmes catégories que le centre d'aide : un problème de chat, de bot ou de stats Twitch arrive directement dans la bonne file.
 
 export default function NewTicketPage() {
   const { data: session, status } = useSession();
@@ -95,15 +91,16 @@ export default function NewTicketPage() {
             Catégorie du problème
           </p>
           <div role="group" aria-labelledby="ticket-category-label" className="flex flex-wrap gap-2">
-            {categories.map(({ id, label, icon: Icon }) => {
-              const isSelected = category === id;
+            {FAQ_CATEGORIES.map(({ key, label }) => {
+              const Icon = faqCategoryIcon(key);
+              const isSelected = category === key;
               return (
                 <button
-                  key={id}
+                  key={key}
                   type="button"
-                  onClick={() => setCategory(id)}
+                  onClick={() => setCategory(key)}
                   aria-pressed={isSelected}
-                  className={`flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors ${FOCUS} ${
+                  className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3.5 py-2 text-sm font-medium transition-colors ${FOCUS} ${
                     isSelected
                       ? "border-purple-500/50 bg-purple-500/15 text-purple-200"
                       : "border-white/10 text-zinc-400 hover:border-white/20 hover:text-white"
@@ -115,6 +112,7 @@ export default function NewTicketPage() {
               );
             })}
           </div>
+          <p className="text-sm text-zinc-400">{faqCategoryDescription(category)}</p>
         </div>
 
         {/* SUJET */}

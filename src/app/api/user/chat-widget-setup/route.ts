@@ -4,6 +4,7 @@ import { authOptions } from "../../auth/[...nextauth]/route"; // À ajuster selo
 import mongoose from "mongoose";
 import User from "@/models/User";
 import { isValidFontId, DEFAULT_FONT_ID } from "@/lib/widget-fonts";
+import { sanitizeBotList } from "@/lib/known-bots";
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
@@ -31,6 +32,7 @@ export async function POST(req: Request) {
       moderationMode,
       messageLifetime,
       ignoredUsers,
+      hiddenBots,
       showReplies,
       highlightFirstMessage,
     } = await req.json();
@@ -63,6 +65,8 @@ export async function POST(req: Request) {
           "chatWidgetSettings.moderationMode": moderationMode,
           "chatWidgetSettings.messageLifetime": messageLifetime,
           "chatWidgetSettings.ignoredUsers": ignoredUsers,
+          // Absent chez un ancien client du dashboard : on ne touche alors pas à la liste enregistrée.
+          ...(Array.isArray(hiddenBots) ? { "chatWidgetSettings.hiddenBots": sanitizeBotList(hiddenBots) } : {}),
           "chatWidgetSettings.showReplies": showReplies,
           "chatWidgetSettings.highlightFirstMessage": highlightFirstMessage,
         } 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, CheckCircle2, ExternalLink, Loader2, Megaphone, Plus, Send, Trash2, X } from "lucide-react";
 import {
@@ -17,8 +17,7 @@ import {
 } from "@/lib/incidents";
 import { useDialog } from "@/components/DialogProvider";
 import { PageHeader } from "@/components/dashboard/DashboardUI";
-
-const FOCUS = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400";
+import { AccessDenied, FOCUS, INPUT, LoadingPanel } from "@/components/admin/AdminUI";
 
 interface Incident {
   _id: string;
@@ -67,8 +66,7 @@ const chip = (active: boolean) =>
       : "border-white/10 text-zinc-400 hover:border-white/20 hover:text-white"
   }`;
 
-const inputCls =
-  "w-full rounded-lg border border-white/10 bg-white/[0.02] px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none transition-colors focus:border-purple-500/60";
+const inputCls = INPUT;
 
 async function api(
   url: string,
@@ -313,6 +311,18 @@ export default function AdminStatusPage() {
     setCreating(true);
   };
 
+  // Lien direct depuis l'accueil admin (/admin/status?service=Nom) : ouvre le formulaire prérempli pour ce service,
+  // une seule fois, quand les données sont chargées et que le service est toujours en panne sans incident publié.
+  const deepLinkHandled = useRef(false);
+  useEffect(() => {
+    if (loading || deepLinkHandled.current) return;
+    deepLinkHandled.current = true;
+    const wanted = new URLSearchParams(window.location.search).get("service");
+    const match = wanted ? uncovered.find((s) => s.name === wanted) : undefined;
+    if (match) startFromService(match);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, uncovered]);
+
   const createIncident = async () => {
     if (saving || !form.title.trim() || !form.message.trim()) return;
     setSaving(true);
@@ -358,21 +368,14 @@ export default function AdminStatusPage() {
     load();
   };
 
-  if (denied) {
-    return (
-      <div role="alert" className="mx-auto mt-10 max-w-md rounded-2xl border border-red-500/25 bg-white/[0.02] p-8 text-center">
-        <AlertTriangle className="mx-auto text-red-400 mb-3" size={32} />
-        <h2 className="mb-2 text-lg font-bold">Accès refusé</h2>
-        <p className="text-sm text-zinc-400">Ton rôle ne permet pas de gérer les incidents.</p>
-      </div>
-    );
-  }
+  if (denied) return <AccessDenied>Ton rôle ne permet pas de gérer les incidents.</AccessDenied>;
 
   return (
     <div className="space-y-8">
       <PageHeader
         eyebrow="Page de statut"
         title="Incidents"
+        description="Ce que les utilisateurs voient sur la page de statut. Un service en panne sans incident publié est signalé ici."
         action={
           <div className="flex shrink-0 flex-wrap items-center gap-3">
             <Link
@@ -534,13 +537,11 @@ export default function AdminStatusPage() {
       )}
 
       {loading ? (
-        <div className="rounded-2xl border border-white/10 bg-white/[0.02] py-16 text-center" aria-busy="true">
-          <Loader2 className="mx-auto h-5 w-5 animate-spin text-purple-400" />
-        </div>
+        <LoadingPanel label="Chargement des incidents..." />
       ) : (
         <>
           <section className="space-y-3">
-            <h2 className="font-display text-lg font-bold text-amber-300">
+            <h2 className="font-display text-xl font-bold text-amber-300">
               En cours ({active.length})
             </h2>
             {active.length === 0 ? (
@@ -557,7 +558,7 @@ export default function AdminStatusPage() {
 
           {resolved.length > 0 && (
             <section className="space-y-3">
-              <h2 className="font-display text-lg font-bold text-zinc-300">
+              <h2 className="font-display text-xl font-bold text-zinc-300">
                 Résolus (30 derniers jours)
               </h2>
               {resolved.map((i) => (

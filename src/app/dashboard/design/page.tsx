@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { PageHeader, SliderRow, DashboardLoading, DashboardLoadError } from "@/components/dashboard/DashboardUI";
 import { useToast, ToastDisplay } from "@/components/dashboard/useToast";
+import UnsavedChangesBar, { useUnsavedChangesGuard } from "@/components/dashboard/UnsavedChangesBar";
 import { useWidgetToken } from "@/components/dashboard/useWidgetToken";
 import {
   WIDGET_ENTRY_KEYFRAMES,
@@ -151,35 +152,35 @@ export default function DashboardDesign() {
     if (loadTick > 0) setSavedSnapshot(snapshot);
   }, [loadTick]);
 
-  // Fermeture ou rechargement de l'onglet.
-  useEffect(() => {
-    if (!isDirty) return;
-    const onBeforeUnload = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = "";
-    };
-    window.addEventListener("beforeunload", onBeforeUnload);
-    return () => window.removeEventListener("beforeunload", onBeforeUnload);
-  }, [isDirty]);
+  // Fermeture de l'onglet ou navigation interne : confirmation avant de perdre les modifications.
+  useUnsavedChangesGuard(isDirty);
 
-  // Navigation interne (liens du menu) : on demande confirmation avant de perdre les modifications.
-  useEffect(() => {
-    if (!isDirty) return;
-    const onClick = (e: MouseEvent) => {
-      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-      const link = (e.target as Element | null)?.closest?.("a[href]") as HTMLAnchorElement | null;
-      if (!link || link.target === "_blank" || link.hasAttribute("download")) return;
-      const url = new URL(link.href, window.location.href);
-      if (url.origin !== window.location.origin) return;
-      if (url.pathname === window.location.pathname && url.search === window.location.search) return;
-      if (!window.confirm("Tu as des modifications non enregistrées. Quitter la page sans sauvegarder ?")) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    };
-    document.addEventListener("click", onClick, true);
-    return () => document.removeEventListener("click", onClick, true);
-  }, [isDirty]);
+  // Annuler : remet tous les réglages dans leur dernier état enregistré (l'instantané).
+  const discard = () => {
+    if (!savedSnapshot) return;
+    const s = JSON.parse(savedSnapshot);
+    setLayout(s.layout);
+    setFontFamily(s.fontFamily);
+    setShowCover(s.showCover);
+    setShowProgress(s.showProgress);
+    setShowTimestamp(s.showTimestamp);
+    setShowArtist(s.showArtist);
+    setIsRotating(s.isRotating);
+    setEnableGlow(s.enableGlow);
+    setEnableBlurBg(s.enableBlurBg);
+    setAccentColor(s.accentColor);
+    setBorderRadius(s.borderRadius);
+    setBgOpacity(s.bgOpacity);
+    setBlurAmount(s.blurAmount);
+    setShowEqualizer(s.showEqualizer);
+    setAutoHide(s.autoHide);
+    setAutoHideSeconds(s.autoHideSeconds);
+    setAnimationStyle(s.animationStyle);
+    setAnimationSpeed(s.animationSpeed);
+    setTrackChangeAnimation(s.trackChangeAnimation);
+    setGlowPulse(s.glowPulse);
+    setReplayKey((n) => n + 1);
+  };
 
   // Polices : la police choisie est toujours chargée ; toute la bibliothèque seulement quand l'onglet Apparence est ouvert.
   const resolvedFont = resolveFont(fontFamily);
@@ -230,12 +231,15 @@ export default function DashboardDesign() {
     }
   }, []);
 
+  // Booléen (et non l'objet `session`, recréé à chaque retour sur l'onglet) : sinon les réglages seraient rechargés,
+  // et les modifications non enregistrées écrasées, chaque fois qu'on revient sur la page.
+  const signedIn = !!session;
   useEffect(() => {
-    if (session) loadUserData();
-  }, [session, loadUserData]);
+    if (signedIn) loadUserData();
+  }, [signedIn, loadUserData]);
 
   useEffect(() => {
-    if (!session || !widgetToken) return;
+    if (!signedIn || !widgetToken) return;
     const fetchPreview = async () => {
       try {
         const res = await fetch(`/api/spotify/now-playing/${widgetToken}`);
@@ -250,7 +254,7 @@ export default function DashboardDesign() {
     fetchPreview();
     const interval = setInterval(fetchPreview, 5000);
     return () => clearInterval(interval);
-  }, [session, widgetToken]);
+  }, [signedIn, widgetToken]);
 
   const saveDesign = async () => {
     setLoading(true);
@@ -806,6 +810,8 @@ export default function DashboardDesign() {
           </p>
         </div>
       </div>
+
+      <UnsavedChangesBar isDirty={isDirty} saving={loading} onSave={saveDesign} onDiscard={discard} />
 
       <ToastDisplay toast={toast} />
     </div>

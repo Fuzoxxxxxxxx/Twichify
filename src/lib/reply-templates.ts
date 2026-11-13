@@ -21,6 +21,7 @@ export const TEMPLATE_CATEGORY_LABELS: Record<string, string> = {
   general: "Général",
   spotify: "Spotify",
   obs: "OBS & overlays",
+  bot: "Bot & commandes",
   chat: "Widget de chat",
   twitch: "Twitch & stats",
   compte: "Compte & données",
@@ -125,6 +126,26 @@ export const TICKET_TEMPLATES: ReplyTemplate[] = [
     "Erreur 429 (trop de requêtes)",
     "spotify",
     "Spotify limite le nombre de requêtes par application. Twichify réutilise les jetons et regroupe les requêtes rapprochées pour limiter les appels. Évitez de laisser le widget ouvert dans plusieurs onglets ou sources en même temps, puis patientez quelques instants : la situation se rétablit d'elle-même. Si l'erreur revient en continu, répondez-nous ici."
+  ),
+
+  /* ------------------------------- Bot & commandes ------------------------------- */
+  ticket(
+    "bot_commande",
+    "Créer la commande !song",
+    "bot",
+    "Pour afficher le morceau en cours dans votre chat :\n1. Dans Intégrations → Bot, choisissez votre plateforme (Nightbot, Wizebot ou StreamElements).\n2. Copiez le script affiché : le jeton y est masqué par défaut, mais le bouton Copier copie bien le lien complet.\n3. Dans les commandes personnalisées de votre bot, créez une commande (par exemple !song) et collez le script comme réponse.\n4. Personnalisez le message avec {artist}, {title} ou {song}, puis enregistrez."
+  ),
+  ticket(
+    "bot_timer",
+    "Annonce automatique (timer)",
+    "bot",
+    "Pour annoncer la musique toute seule, créez un Timer chez votre bot (répondre toutes les X minutes) et collez exactement le même script que pour la commande. C'est le timer qui rend l'annonce automatique : il n'y a rien d'autre à configurer côté Twichify."
+  ),
+  ticket(
+    "bot_aucune_musique",
+    "Le bot répond « Aucune musique en cours »",
+    "bot",
+    "Cette réponse signifie que Spotify ne renvoie aucun morceau en lecture. Vérifiez qu'un morceau joue bien, que votre compte est associé dans Intégrations → Spotify (Spotify Premium requis) et que le script de votre bot est à jour : si vous avez régénéré vos liens, remplacez-le par le nouveau script affiché dans Intégrations → Bot."
   ),
 
   /* ------------------------------- OBS ------------------------------- */
@@ -278,4 +299,18 @@ export function fillTemplate(text: string, vars: { pseudo?: string | null; agent
     .replace(/\{signature\}/g, agent ? `${agent}, équipe Twichify` : "L'équipe Twichify")
     .replace(/\{pseudo\}/g, pseudo)
     .replace(/Bonjour ,/g, "Bonjour,");
+}
+
+/**
+ * Catégories de modèles mises en avant pour une catégorie de ticket. Les tickets suivent les catégories de la FAQ
+ * (lib/faq-categories.ts), alors que certains modèles sont regroupés autrement : « stats » pioche dans « twitch », etc.
+ */
+const TEMPLATE_CATEGORIES_FOR_TICKET: Record<string, string[]> = {
+  demarrage: ["spotify", "obs"],
+  stats: ["twitch"],
+  securite: ["compte", "obs"],
+};
+
+export function suggestedTemplateCategories(ticketCategory: string): string[] {
+  return Array.from(new Set(["general", ticketCategory, ...(TEMPLATE_CATEGORIES_FOR_TICKET[ticketCategory] ?? [])]));
 }

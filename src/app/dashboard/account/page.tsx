@@ -30,9 +30,13 @@ import {
   XCircle,
   AlertCircle,
   Activity,
+  History,
+  UserMinus,
+  BarChart3,
 } from "lucide-react";
 import { PageHeader } from "@/components/dashboard/DashboardUI";
 import { useToast, ToastDisplay } from "@/components/dashboard/useToast";
+import { useDialog } from "@/components/DialogProvider";
 import { ROLE_LABELS } from "@/lib/roles";
 import { describeUserAgent } from "@/lib/user-agent";
 
@@ -54,6 +58,9 @@ interface Summary {
     totalTracks: number;
     lastTrack: { title: string; artist: string } | null;
   };
+  listeningHistory: { entries: number; oldestAt: string | null };
+  followerTracking: boolean;
+  chatStats: { enabled: boolean; sessions: number };
 }
 
 interface SessionRow {
@@ -184,6 +191,10 @@ function useModalBehavior(open: boolean, onClose: () => void, focusRef: React.Re
 export default function DashboardAccount() {
   const { data: session } = useSession();
   const { toast, showToast } = useToast();
+  const { confirm } = useDialog();
+  // Booléen (et non l'objet `session`, recréé à chaque retour sur l'onglet) : le résumé et les sessions ne sont
+  // rechargés qu'à l'arrivée sur la page, pas à chaque changement de fenêtre.
+  const signedIn = !!session;
 
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loadingSummary, setLoadingSummary] = useState(true);
@@ -222,7 +233,7 @@ export default function DashboardAccount() {
   };
 
   useEffect(() => {
-    if (!session) return;
+    if (!signedIn) return;
     loadSummary();
     fetch("/api/user/sessions")
       .then((res) => (res.ok ? res.json() : null))
@@ -230,7 +241,7 @@ export default function DashboardAccount() {
       .catch(() => {})
       .finally(() => setLoadingSessions(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session]);
+  }, [signedIn]);
 
 
   useModalBehavior(showDeleteModal, () => !deleting && setShowDeleteModal(false), deleteCancelRef);
@@ -274,13 +285,28 @@ export default function DashboardAccount() {
   };
 
   const handleResetStats = async () => {
+    // L'action efface aussi l'historique détaillé (jusqu'à 180 jours d'écoutes) : elle ne se défait pas.
+    const ok = await confirm({
+      title: "Réinitialiser tes statistiques d'écoute ?",
+      description:
+        "Le cumul d'écoute et tout l'historique détaillé de tes morceaux seront effacés définitivement. Si tu veux les garder, télécharge d'abord tes données.",
+      confirmLabel: "Réinitialiser",
+    });
+    if (!ok) return;
+
     setResettingStats(true);
     try {
       const res = await fetch("/api/user/listening-stats", { method: "DELETE" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
       setSummary((prev) =>
-        prev ? { ...prev, listening: { totalMs: 0, totalTracks: 0, lastTrack: null } } : prev
+        prev
+          ? {
+              ...prev,
+              listening: { totalMs: 0, totalTracks: 0, lastTrack: null },
+              listeningHistory: { entries: 0, oldestAt: null },
+            }
+          : prev
       );
       showToast("Statistiques d'écoute réinitialisées.");
     } catch (error) {
@@ -346,6 +372,10 @@ export default function DashboardAccount() {
     setRunningDiag(true);
     try {
       const res = await fetch("/api/user/diagnostics", { method: "POST" });
+      if (res.status === 429) {
+        showToast("Patiente quelques secondes avant de relancer le diagnostic.", "error");
+        return;
+      }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setDiagChecks(data.checks);
@@ -506,6 +536,31 @@ export default function DashboardAccount() {
               }
             />
             <SummaryCard
+              icon={<History size={15} />}
+              label="Historique détaillé"
+              value={`${summary.listeningHistory.entries} écoute${summary.listeningHistory.entries > 1 ? "s" : ""}`}
+              tone="purple"
+              sub={
+                summary.listeningHistory.oldestAt
+                  ? `La plus ancienne : il y a ${Math.max(0, Math.floor((Date.now() - new Date(summary.listeningHistory.oldestAt).getTime()) / 86400000))} j. Effacées après 180 j.`
+                  : "Rien d'enregistré"
+              }
+            />
+            <SummaryCard
+              icon={<UserMinus size={15} />}
+              label="Suivi des départs"
+              value={summary.followerTracking ? "Activé" : "Désactivé"}
+              tone={summary.followerTracking ? "sky" : "zinc"}
+              sub={summary.followerTracking ? "Liste des followers enregistrée" : "Aucune donnée enregistrée"}
+            />
+            <SummaryCard
+              icon={<BarChart3 size={15} />}
+              label="Statistiques de chat"
+              value={summary.chatStats.enabled ? "Activées" : "Désactivées"}
+              tone={summary.chatStats.enabled ? "sky" : "zinc"}
+              sub={`${summary.chatStats.sessions} session${summary.chatStats.sessions > 1 ? "s" : ""} enregistrée${summary.chatStats.sessions > 1 ? "s" : ""}`}
+            />
+            <SummaryCard
               icon={<Ticket size={15} />}
               label="Tickets de support"
               value={String(summary.tickets)}
@@ -528,10 +583,10 @@ export default function DashboardAccount() {
                 <RotateCcw size={15} />
               </div>
               <div>
-                <p className="text-sm text-zinc-400">Stats d'écoute</p>
+                <p className="text-sm text-zinc-400">Cumul et historique d'écoute</p>
                 <button
                   onClick={handleResetStats}
-                  disabled={resettingStats || summary.listening.totalTracks === 0}
+                  disabled={resettingStats || (summary.listening.totalTracks === 0 && summary.listeningHistory.entries === 0)}
                   className="mt-1 cursor-pointer rounded text-base font-semibold text-purple-300 transition-colors hover:text-purple-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400 disabled:cursor-not-allowed disabled:text-zinc-500"
                 >
                   {resettingStats ? "Réinitialisation..." : "Réinitialiser"}
@@ -630,7 +685,7 @@ export default function DashboardAccount() {
             </div>
             <div>
               <h3 className="text-base font-semibold text-white">Réglages des widgets</h3>
-              <p className="text-sm text-zinc-400">Remet musique, chat et bot à leurs valeurs par défaut.</p>
+              <p className="text-sm text-zinc-400">Remet musique, chat, bandeau et bot à leurs valeurs par défaut.</p>
             </div>
           </div>
           <button
@@ -719,8 +774,8 @@ export default function DashboardAccount() {
           <ul className="space-y-2.5 text-sm text-zinc-300">
             {[
               "Ton profil Twitch : pseudo, email, avatar, rôle, date d'acceptation des CGU",
-              "Les réglages de tes widgets (musique, chat, bot, canvas)",
-              "Tes statistiques d'écoute",
+              "Les réglages de tes widgets (musique, chat, bandeau d'informations, bot, canvas)",
+              "Tes statistiques d'écoute et ton historique détaillé (les 500 écoutes les plus récentes, conservées 180 jours au total)",
               "L'état de ton suivi des départs de followers (décomptes et dates uniquement, jamais la liste de tes followers)",
               "L'état de tes statistiques de chat (activation, nombre de sessions), sans les classements de chatteurs",
               "Tes tickets de support et leurs messages",
@@ -776,7 +831,7 @@ export default function DashboardAccount() {
             <p className="font-semibold text-zinc-200">Ce qui est supprimé</p>
             <ul className="list-disc space-y-1 pl-5">
               <li>Ton compte, ta connexion Twitch (jeton révoqué) et toutes tes sessions</li>
-              <li>Tes clés et jetons Spotify, tes réglages de widgets et tes statistiques d'écoute</li>
+              <li>Tes clés et jetons Spotify, tes réglages de widgets, tes statistiques d'écoute et ton historique d'écoute détaillé</li>
               <li>Ton suivi des départs de followers (liste enregistrée et historique), si tu l'avais activé</li>
               <li>Tes statistiques de chat (sessions enregistrées), si tu les avais activées</li>
               <li>Tes tickets de support</li>
@@ -914,7 +969,7 @@ export default function DashboardAccount() {
               Réinitialiser les widgets ?
             </h2>
             <p className="mt-2 text-sm leading-relaxed text-zinc-400">
-              Les couleurs, la mise en page, les filtres du chat et le message du bot reviennent à leurs valeurs par défaut. Tes statistiques d'écoute et ton compte ne sont pas touchés.
+              Les couleurs, la mise en page, les filtres du chat, les messages du bandeau d'informations et le message du bot reviennent à leurs valeurs par défaut. Tes statistiques d'écoute et ton compte ne sont pas touchés.
             </p>
 
             <div className="mt-6 flex gap-3">

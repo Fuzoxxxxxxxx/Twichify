@@ -9,23 +9,27 @@ import { ExternalLink, AlertTriangle, RotateCw } from "lucide-react";
 const FOCUS = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400";
 
 // `eyebrow` = la section du menu à laquelle la page appartient (Widgets, Analyse…) : un repère de lieu, pas un décor.
+// `description` (facultative) : une phrase qui dit à quoi sert la page.
 export function PageHeader({
   eyebrow,
   title,
+  description,
   action,
 }: {
   eyebrow: string;
   title: string;
+  description?: string;
   action?: React.ReactNode;
 }) {
   return (
-    <div className="mb-10 flex flex-col justify-between gap-4 md:flex-row md:items-end">
-      <div>
-        <p className="mb-2 text-sm text-zinc-500">{eyebrow}</p>
-        <h1 className="font-display text-4xl font-extrabold tracking-tight text-white">{title}</h1>
+    <header className="mb-8 flex flex-col justify-between gap-4 border-b border-white/[0.06] pb-6 md:flex-row md:items-end">
+      <div className="min-w-0">
+        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">{eyebrow}</p>
+        <h1 className="font-display text-3xl font-extrabold tracking-tight text-white sm:text-4xl">{title}</h1>
+        {description && <p className="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-400">{description}</p>}
       </div>
       {action}
-    </div>
+    </header>
   );
 }
 

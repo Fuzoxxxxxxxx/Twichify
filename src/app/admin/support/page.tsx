@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, BarChart3, Clock, CheckCircle2, Hourglass, LifeBuoy, Loader2, Tag, Users, Inbox, ThumbsUp, ThumbsDown } from "lucide-react";
+import { BarChart3, Clock, CheckCircle2, Hourglass, LifeBuoy, Tag, Users, Inbox, ThumbsUp, ThumbsDown } from "lucide-react";
 import { PageHeader } from "@/components/dashboard/DashboardUI";
 import { KpiCard, Panel, EmptyState } from "@/components/dashboard/StatsUI";
+import { AccessDenied, FOCUS, LoadingPanel } from "@/components/admin/AdminUI";
 import type { Backlog, DailyPoint, NegativeFeedback, PeriodStats, StaffActivity } from "@/lib/support-stats";
 
 interface StatsResponse {
@@ -23,8 +24,6 @@ interface StatsResponse {
   staff: StaffActivity[];
   negativeFeedback: NegativeFeedback[];
 }
-
-const FOCUS = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400";
 
 const PERIODS = [
   { value: 7, label: "7 jours" },
@@ -175,13 +174,7 @@ export default function AdminSupportStatsPage() {
   }, [days, load]);
 
   if (error === "forbidden") {
-    return (
-      <div role="alert" className="mx-auto mt-10 max-w-md rounded-2xl border border-red-500/25 bg-white/[0.02] p-8 text-center">
-        <AlertTriangle className="mx-auto mb-3 text-red-400" size={32} />
-        <h2 className="mb-2 text-lg font-bold">Accès refusé</h2>
-        <p className="text-sm text-zinc-400">Ton rôle ne permet pas de consulter les statistiques du support.</p>
-      </div>
-    );
+    return <AccessDenied>Ton rôle ne permet pas de consulter les statistiques du support.</AccessDenied>;
   }
 
   const periodPicker = (
@@ -201,16 +194,20 @@ export default function AdminSupportStatsPage() {
     </div>
   );
 
-  const header = <PageHeader eyebrow="Support" title="Statistiques" action={periodPicker} />;
+  const header = (
+    <PageHeader
+      eyebrow="Support"
+      title="Statistiques"
+      description="Volume, délais de réponse et satisfaction, comparés à la période précédente."
+      action={periodPicker}
+    />
+  );
 
   if (!data && loading) {
     return (
-      <div className="space-y-8" aria-busy="true">
+      <div className="space-y-8">
         {header}
-        <div className="rounded-2xl border border-white/10 bg-white/[0.02] py-16 text-center">
-          <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin text-purple-400" />
-          <p className="text-sm text-zinc-400">Calcul des statistiques...</p>
-        </div>
+        <LoadingPanel label="Calcul des statistiques..." />
       </div>
     );
   }

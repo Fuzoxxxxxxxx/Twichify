@@ -61,6 +61,8 @@ export async function exportUserData(user: any) {
   ]);
   const u = user.toObject();
 
+  // Champ exclu par défaut du modèle (il peut contenir des logos personnalisés) : lu explicitement pour l'export.
+  const bannerDoc: any = await User.findById(userId).select("+bannerWidgetSettings").lean();
   return {
     exportedAt: new Date().toISOString(),
     notice:
@@ -86,6 +88,7 @@ export async function exportUserData(user: any) {
     },
     widgetSettings: u.widgetSettings ?? null,
     chatWidgetSettings: u.chatWidgetSettings ?? null,
+    bannerWidgetSettings: bannerDoc?.bannerWidgetSettings ?? null,
     botSettings: u.botSettings ?? null,
     canvasSettings: u.canvasSettings ?? null,
     listeningStats: u.listeningStats ?? null,
@@ -318,11 +321,15 @@ export async function getDataSummary(user: any) {
   await ensureDb();
   const userId = user._id.toString();
 
-  const [tickets, ideas, upvoted, downvoted] = await Promise.all([
+  const [tickets, ideas, upvoted, downvoted, historyEntries, oldestEntry, trackingDoc, chatSessions] = await Promise.all([
     SupportTicket.countDocuments({ userId }),
     Idea.countDocuments({ authorId: userId }),
     Idea.countDocuments({ upvotes: userId }),
     Idea.countDocuments({ downvotes: userId }),
+    TrackHistory.countDocuments({ user: userId }),
+    TrackHistory.findOne({ user: userId }, "playedAt").sort({ playedAt: 1 }).lean(),
+    FollowerTracking.exists({ user: userId }),
+    ChatSession.countDocuments({ user: userId }),
   ]);
 
   const stats = user.listeningStats || {};
@@ -338,6 +345,16 @@ export async function getDataSummary(user: any) {
     ideas,
     upvoted,
     downvoted,
+    // Ce que l'export contient aussi : historique d'écoute détaillé (180 jours), suivi des départs et statistiques de chat.
+    listeningHistory: {
+      entries: historyEntries,
+      oldestAt: (oldestEntry as any)?.playedAt ?? null,
+    },
+    followerTracking: !!trackingDoc,
+    chatStats: {
+      enabled: !!user.chatStats?.enabled,
+      sessions: chatSessions,
+    },
     listening: {
       totalMs: stats.totalMsListened || 0,
       totalTracks: stats.totalTracksPlayed || 0,

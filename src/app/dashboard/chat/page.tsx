@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession } from "next-auth/react";
+import { useSession, signIn } from "next-auth/react";
 import { useState, useEffect, useCallback } from "react";
 import {
   Palette, Sliders, Shield, Bot, Layout, Sparkles, Zap, Eye, EyeOff, Check,
@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { PageHeader, SliderRow, DashboardLoading, DashboardLoadError } from "@/components/dashboard/DashboardUI";
 import { useToast, ToastDisplay } from "@/components/dashboard/useToast";
+import UnsavedChangesBar, { useUnsavedChangesGuard } from "@/components/dashboard/UnsavedChangesBar";
 import { useWidgetToken } from "@/components/dashboard/useWidgetToken";
 import { getChatThemeClasses } from "@/lib/chat-widget-theme";
 import {
@@ -19,6 +20,7 @@ import {
   resolveFont,
   type FontCategory,
 } from "@/lib/widget-fonts";
+import { KNOWN_BOTS, sanitizeBotList } from "@/lib/known-bots";
 
 export default function DashboardChat() {
   const { data: session } = useSession();
@@ -58,6 +60,42 @@ export default function DashboardChat() {
   const [showReplies, setShowReplies] = useState(false);
   const [highlightFirstMessage, setHighlightFirstMessage] = useState(false);
   const [ignoredUsersText, setIgnoredUsersText] = useState("");
+  const [hiddenBotsText, setHiddenBotsText] = useState("");
+
+  // Détection des bots présents dans le chat (GET /api/user/chat-bots/detect, permission Twitch moderator:read:chatters).
+  type BotScan = {
+    state: "idle" | "loading" | "ok" | "missing_scope" | "expired" | "error";
+    scanned: number;
+    capped: boolean;
+    known: string[];
+    suggestions: string[];
+  };
+  const EMPTY_SCAN: BotScan = { state: "idle", scanned: 0, capped: false, known: [], suggestions: [] };
+  const [botScan, setBotScan] = useState<BotScan>(EMPTY_SCAN);
+
+  const runBotScan = useCallback(async () => {
+    setBotScan((s) => ({ ...s, state: "loading" }));
+    try {
+      const res = await fetch("/api/user/chat-bots/detect", { cache: "no-store" });
+      if (!res.ok) throw new Error(String(res.status));
+      const data = await res.json();
+      setBotScan({
+        state: data.status ?? "error",
+        scanned: data.scanned ?? 0,
+        capped: !!data.capped,
+        known: data.known ?? [],
+        suggestions: data.suggestions ?? [],
+      });
+    } catch {
+      setBotScan({ state: "error", scanned: 0, capped: false, known: [], suggestions: [] });
+    }
+  }, []);
+
+  // Suggestions pas encore dans la liste (y compris les ajouts non enregistrés).
+  const hiddenBotSet = new Set(sanitizeBotList(hiddenBotsText.split(",")));
+  const pendingBotSuggestions = botScan.suggestions.filter((login) => !hiddenBotSet.has(login));
+  const addHiddenBots = (logins: string[]) =>
+    setHiddenBotsText((prev) => sanitizeBotList([...prev.split(","), ...logins]).join(", "));
   const [fontCategory, setFontCategory] = useState<FontCategory | "all">("all");
   // Modifications non enregistrées : on compare les réglages actuels à un instantané pris au chargement puis à chaque sauvegarde.
   const [savedSnapshot, setSavedSnapshot] = useState<string | null>(null);
@@ -103,6 +141,7 @@ export default function DashboardChat() {
           setShowReplies(!!c.showReplies);
           setHighlightFirstMessage(!!c.highlightFirstMessage);
           setIgnoredUsersText((c.ignoredUsers || []).join(", "));
+          setHiddenBotsText((c.hiddenBots || []).join(", "));
         }
         setLoadTick((t) => t + 1);
         setLoadState("ready");
@@ -115,9 +154,12 @@ export default function DashboardChat() {
     }
   }, []);
 
+  // Booléen (et non l'objet `session`, recréé à chaque retour sur l'onglet) : sinon les réglages seraient rechargés,
+  // et les modifications non enregistrées écrasées, chaque fois qu'on revient sur la page.
+  const signedIn = !!session;
   useEffect(() => {
-    if (session) loadUserData();
-  }, [session, loadUserData]);
+    if (signedIn) loadUserData();
+  }, [signedIn, loadUserData]);
 
   useEffect(() => {
     if (!twitchLogin) return;
@@ -132,6 +174,7 @@ export default function DashboardChat() {
     chatTheme, chatFontFamily, chatFontSize, showBadges, hideBots, chatAnimation, hideCommands, maxMessages,
     chatPosition, chatWidgetWidth, showTimestamps, showColors, compactMode, charLimit, roleHighlights,
     moderationWordsText, moderationMode, messageLifetime, showReplies, highlightFirstMessage, ignoredUsersText,
+    hiddenBotsText,
   });
   const isDirty = savedSnapshot !== null && snapshot !== savedSnapshot;
 
@@ -140,35 +183,36 @@ export default function DashboardChat() {
     if (loadTick > 0) setSavedSnapshot(snapshot);
   }, [loadTick]);
 
-  // Fermeture ou rechargement de l'onglet.
-  useEffect(() => {
-    if (!isDirty) return;
-    const onBeforeUnload = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = "";
-    };
-    window.addEventListener("beforeunload", onBeforeUnload);
-    return () => window.removeEventListener("beforeunload", onBeforeUnload);
-  }, [isDirty]);
+  // Fermeture de l'onglet ou navigation interne : confirmation avant de perdre les modifications.
+  useUnsavedChangesGuard(isDirty);
 
-  // Navigation interne (liens du menu) : on demande confirmation avant de perdre les modifications.
-  useEffect(() => {
-    if (!isDirty) return;
-    const onClick = (e: MouseEvent) => {
-      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-      const link = (e.target as Element | null)?.closest?.("a[href]") as HTMLAnchorElement | null;
-      if (!link || link.target === "_blank" || link.hasAttribute("download")) return;
-      const url = new URL(link.href, window.location.href);
-      if (url.origin !== window.location.origin) return;
-      if (url.pathname === window.location.pathname && url.search === window.location.search) return;
-      if (!window.confirm("Tu as des modifications non enregistrées. Quitter la page sans sauvegarder ?")) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    };
-    document.addEventListener("click", onClick, true);
-    return () => document.removeEventListener("click", onClick, true);
-  }, [isDirty]);
+  // Annuler : remet tous les réglages dans leur dernier état enregistré (l'instantané).
+  const discard = () => {
+    if (!savedSnapshot) return;
+    const s = JSON.parse(savedSnapshot);
+    setChatTheme(s.chatTheme);
+    setChatFontFamily(s.chatFontFamily);
+    setChatFontSize(s.chatFontSize);
+    setShowBadges(s.showBadges);
+    setHideBots(s.hideBots);
+    setChatAnimation(s.chatAnimation);
+    setHideCommands(s.hideCommands);
+    setMaxMessages(s.maxMessages);
+    setChatPosition(s.chatPosition);
+    setChatWidgetWidth(s.chatWidgetWidth);
+    setShowTimestamps(s.showTimestamps);
+    setShowColors(s.showColors);
+    setCompactMode(s.compactMode);
+    setCharLimit(s.charLimit);
+    setRoleHighlights(s.roleHighlights);
+    setModerationWordsText(s.moderationWordsText);
+    setModerationMode(s.moderationMode);
+    setMessageLifetime(s.messageLifetime);
+    setShowReplies(s.showReplies);
+    setHighlightFirstMessage(s.highlightFirstMessage);
+    setIgnoredUsersText(s.ignoredUsersText);
+    setHiddenBotsText(s.hiddenBotsText);
+  };
 
   // Polices : la police choisie est toujours chargée ; toute la bibliothèque seulement quand l'onglet Apparence est ouvert.
   const resolvedFont = resolveFont(chatFontFamily);
@@ -207,6 +251,7 @@ export default function DashboardChat() {
             .split(",")
             .map((u) => u.trim().replace(/^@/, ""))
             .filter(Boolean),
+          hiddenBots: sanitizeBotList(hiddenBotsText.split(",")),
           roleHighlights,
           moderationWords: moderationWordsText
             .split(",")
@@ -594,7 +639,12 @@ export default function DashboardChat() {
                 </button>
 
                 <button
-                  onClick={() => setHideBots(!hideBots)}
+                  onClick={() => {
+                    const next = !hideBots;
+                    setHideBots(next);
+                    // On active le masquage : on cherche tout de suite les bots présents dans le chat.
+                    if (next && botScan.state === "idle") runBotScan();
+                  }}
                   aria-pressed={hideBots}
                   className={`flex items-center justify-between rounded-xl border p-4 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 ${
                     hideBots
@@ -632,6 +682,122 @@ export default function DashboardChat() {
                   {showTimestamps ? <Check size={16} className="text-amber-400" /> : <Eye size={16} />}
                 </button>
               </div>
+
+              {hideBots && (
+                <div className="space-y-5 rounded-xl border border-white/10 p-5">
+                  <h3 className="flex items-center gap-2 text-sm font-semibold text-zinc-200">
+                    <Bot size={14} className="text-violet-400" /> Bots masqués
+                  </h3>
+
+                  <div className="space-y-2">
+                    <p className="text-sm leading-relaxed text-zinc-400">Toujours masqués, sans rien à faire :</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {Array.from(KNOWN_BOTS).map((bot) => (
+                        <span
+                          key={bot}
+                          className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 font-mono text-xs text-zinc-300"
+                        >
+                          {bot}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-3 border-t border-white/10 pt-5">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <p className="text-sm font-medium text-zinc-200">Bots présents dans ton chat</p>
+                      <button
+                        type="button"
+                        onClick={runBotScan}
+                        disabled={botScan.state === "loading"}
+                        className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-white/15 px-3 py-1.5 text-sm text-zinc-200 transition-colors hover:border-violet-500/50 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <RefreshCw size={13} className={botScan.state === "loading" ? "animate-spin" : ""} />
+                        {botScan.state === "idle" ? "Détecter" : "Relancer"}
+                      </button>
+                    </div>
+
+                    {botScan.state === "idle" && (
+                      <p className="text-sm text-zinc-400">Trouve les bots connectés à ton chat en ce moment.</p>
+                    )}
+
+                    {(botScan.state === "missing_scope" || botScan.state === "expired") && (
+                      <div className="space-y-3 rounded-lg border border-amber-500/25 bg-amber-500/[0.06] p-4">
+                        <p className="text-sm leading-relaxed text-zinc-300">
+                          {botScan.state === "expired"
+                            ? "Ta connexion Twitch a expiré. Reconnecte-toi pour relancer la détection."
+                            : "La détection a besoin d'une permission Twitch en lecture seule (liste des spectateurs connectés à ton chat). Reconnecte-toi à Twitch pour l'accorder."}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => signIn("twitch", { callbackUrl: "/dashboard/chat" })}
+                          className="cursor-pointer rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-violet-500"
+                        >
+                          Reconnecter Twitch
+                        </button>
+                      </div>
+                    )}
+
+                    {botScan.state === "error" && (
+                      <p className="text-sm text-zinc-400">Twitch est momentanément indisponible. Réessaie dans un instant.</p>
+                    )}
+
+                    {botScan.state === "ok" && (
+                      <div className="space-y-3 text-sm text-zinc-400">
+                        <p>
+                          {botScan.scanned} spectateur(s) connecté(s) analysé(s){botScan.capped ? " (liste tronquée)" : ""}.{" "}
+                          {botScan.known.length > 0
+                            ? `Bots connus présents, déjà masqués : ${botScan.known.join(", ")}.`
+                            : "Aucun bot connu présent."}
+                        </p>
+                        {pendingBotSuggestions.length > 0 ? (
+                          <div className="space-y-2">
+                            <p className="text-zinc-300">Autres bots possibles (pseudo finissant par « bot ») :</p>
+                            <div className="flex flex-wrap items-center gap-2">
+                              {pendingBotSuggestions.map((login) => (
+                                <button
+                                  key={login}
+                                  type="button"
+                                  onClick={() => addHiddenBots([login])}
+                                  className="cursor-pointer rounded-full border border-violet-500/30 bg-violet-500/10 px-2.5 py-1 font-mono text-xs text-violet-200 transition-colors hover:bg-violet-500/20"
+                                >
+                                  + {login}
+                                </button>
+                              ))}
+                              <button
+                                type="button"
+                                onClick={() => addHiddenBots(pendingBotSuggestions)}
+                                className="cursor-pointer rounded-md px-2 py-1 text-sm text-zinc-300 underline underline-offset-2 hover:text-white"
+                              >
+                                Tout ajouter
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <p>Aucun autre bot détecté.</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <label htmlFor="hidden-bots" className="text-sm font-medium text-zinc-200">
+                      Tes autres bots
+                    </label>
+                    <textarea
+                      id="hidden-bots"
+                      value={hiddenBotsText}
+                      onChange={(e) => setHiddenBotsText(e.target.value)}
+                      placeholder="ex: monbot, mabotmusique"
+                      rows={2}
+                      className="w-full resize-none rounded-lg border border-white/10 bg-white/[0.02] p-4 text-sm text-zinc-100 placeholder-zinc-500 outline-none transition-colors focus:border-violet-500/60"
+                    />
+                    <p className="text-xs leading-relaxed text-zinc-400">
+                      {sanitizeBotList(hiddenBotsText.split(",")).length} bot(s) ajouté(s). Sois exact sur le pseudo, séparé par des virgules : un viewer dont le pseudo contient seulement « bot » n'est plus masqué.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               <SliderRow label="Messages affichés max" value={maxMessages} onChange={setMaxMessages} suffix="" max={20} />
 
@@ -1010,6 +1176,8 @@ export default function DashboardChat() {
           )}
         </div>
       </div>
+
+      <UnsavedChangesBar isDirty={isDirty} saving={loading} onSave={saveChatDesign} onDiscard={discard} />
 
       <ToastDisplay toast={toast} />
     </div>

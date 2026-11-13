@@ -148,6 +148,14 @@ export default function ChangelogModal() {
           // Visiteur non connecté : pas de compte auquel rattacher l'état, on garde le
           // comportement par navigateur.
           seen = localStorage.getItem(STORAGE_KEY);
+
+          // Première visite (aucune version mémorisée) : il n'y a rien de « nouveau » pour quelqu'un qui découvre
+          // le site. On mémorise la version courante sans rien afficher ; la pop-up ne s'ouvrira qu'à la prochaine
+          // version, pour les visiteurs qui reviennent.
+          if (seen === null) {
+            localStorage.setItem(STORAGE_KEY, LATEST_VERSION);
+            return;
+          }
         }
 
         if (seen === LATEST_VERSION) return;

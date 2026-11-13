@@ -5,6 +5,7 @@ import User from "@/models/User";
 import { requirePermission } from "@/lib/auth-helpers";
 import { canActOn, hasPermission, PERMISSIONS } from "@/lib/roles";
 import { TRANSFER_REASON_MAX } from "@/lib/ticket-admin";
+import { logAudit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -106,6 +107,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         { status: 409 }
       );
     }
+
+    // Le motif n'est pas copié dans le journal : il reste dans les notes internes du ticket.
+    await logAudit({
+      actor: staff,
+      action: "ticket.transfer",
+      target: { id, name: String(ticket.subject ?? "").slice(0, 120) },
+      details: `${fromName} → ${targetName}`,
+    });
 
     return NextResponse.json({ ticket: updated });
   } catch (error) {

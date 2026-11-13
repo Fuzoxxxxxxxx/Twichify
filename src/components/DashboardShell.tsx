@@ -1,16 +1,17 @@
 "use client";
 
-import { useSession, signOut } from "next-auth/react";
-import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import TermsModal, { type TermsUpdateInfo } from "@/components/TermsModal";
 import WelcomeModal from "@/components/WelcomeModal";
 import { hasPermission, PERMISSIONS } from "@/lib/roles";
 import { LATEST_VERSION } from "@/lib/changelog";
+import ProfileMenu from "@/components/shell/ProfileMenu";
 import {
-  LayoutDashboard, Music, Palette, LogOut, MessageSquare, Shield, Bot,
-  BarChart3, MessageSquareText, ChevronRight, Activity, LifeBuoy, Lightbulb, History, Tv,
+  LayoutDashboard, Music, Palette, MessageSquare, Shield, Bot,
+  BarChart3, MessageSquareText, ChevronRight, Tv, Megaphone,
 } from "lucide-react";
 import { SidebarBrand, SidebarNav, MobileNav, type NavGroup } from "@/components/shell/ShellNav";
 import NotificationBell from "@/components/notifications/NotificationBell";
@@ -33,6 +34,7 @@ const navGroups: NavGroup[] = [
     items: [
       { href: "/dashboard/design", label: "Musique", icon: Palette },
       { href: "/dashboard/chat", label: "Chat", icon: MessageSquare },
+      { href: "/dashboard/banner", label: "Bandeau", icon: Megaphone },
     ],
   },
   {
@@ -44,8 +46,18 @@ const navGroups: NavGroup[] = [
   },
 ];
 
+// Pastille du lien d'état de la barre latérale : elle suit l'état réel des services essentiels (lib/status-checker, groupe « core »).
+type SystemState = "unknown" | "ok" | "degraded" | "down";
+const SYSTEM_LINK: Record<SystemState, { dot: string; label: string }> = {
+  ok: { dot: "bg-emerald-400", label: "Système en ligne" },
+  degraded: { dot: "bg-amber-400", label: "Service dégradé" },
+  down: { dot: "bg-red-400", label: "Panne en cours" },
+  unknown: { dot: "bg-zinc-500", label: "État des services" },
+};
+
 export default function DashboardShell({ children }: { children: React.ReactNode }) {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
+  const router = useRouter();
   const pathname = usePathname();
 
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -55,6 +67,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [userRole, setUserRole] = useState<string>("user");
   const [reduceMotion, setReduceMotion] = useState(false);
+  const [systemState, setSystemState] = useState<SystemState>("unknown");
 
   useEffect(() => {
     if (!session) return;
@@ -116,17 +129,65 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     if (savedMotion === "true") setReduceMotion(true);
   }, []);
 
+  // État des services essentiels (Spotify, Twitch, serveur) pour le lien de la barre latérale. Les services d'emotes ne
+  // comptent pas ici : leur panne gêne le chat mais pas le fonctionnement du site (elle reste visible sur la page État).
+  useEffect(() => {
+    if (!session) return;
+    let cancelled = false;
+
+    const loadSystemState = async () => {
+      if (document.visibilityState !== "visible") return;
+      try {
+        const res = await fetch("/api/status");
+        if (!res.ok) throw new Error(String(res.status));
+        const data = await res.json();
+        if (cancelled) return;
+        const states: string[] = (data.services ?? [])
+          .filter((s: { group: string }) => s.group === "core")
+          .map((s: { status: string }) => s.status);
+        setSystemState(
+          states.includes("Down")
+            ? "down"
+            : states.includes("Degraded")
+              ? "degraded"
+              : states.length > 0 && states.every((s) => s === "Operational")
+                ? "ok"
+                : "unknown"
+        );
+      } catch {
+        if (!cancelled) setSystemState("unknown");
+      }
+    };
+
+    loadSystemState();
+    const id = setInterval(loadSystemState, 60_000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [session]);
+
+  // Session absente : on distingue le chargement (spinner) de la déconnexion (retour vers l'écran de connexion),
+  // au lieu de laisser un spinner indéfini.
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.replace(`/auth/connexion?callbackUrl=${encodeURIComponent(pathname || "/dashboard")}`);
+    }
+  }, [status, router, pathname]);
+
   if (!session) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-[#08090b] text-white gap-4">
         <div className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-zinc-500 font-bold uppercase tracking-[0.3em] text-[10px]">Chargement du Dashboard...</p>
+        <p role="status" className="text-sm text-zinc-400">
+          {status === "unauthenticated" ? "Redirection vers la connexion..." : "Chargement du Dashboard..."}
+        </p>
       </div>
     );
   }
 
   return (
-    <main className={`min-h-screen bg-[#08090b] text-white font-sans selection:bg-purple-500/30 flex ${reduceMotion ? "[&_*]:!transition-none [&_*]:!animate-none" : ""}`}>
+    <main className={`isolate min-h-screen bg-[#08090b] text-white font-sans selection:bg-purple-500/30 flex ${reduceMotion ? "[&_*]:!transition-none [&_*]:!animate-none" : ""}`}>
       <style jsx global>{`
         button:focus-visible,
         input:focus-visible,
@@ -160,10 +221,14 @@ export default function DashboardShell({ children }: { children: React.ReactNode
         .msg-out-instant { animation: none; display: none; }
       `}</style>
 
-      <div className="pointer-events-none fixed left-1/2 top-0 -z-10 h-[420px] w-[900px] -translate-x-1/2 bg-purple-600/10 blur-[160px]" />
+      {/* Ambiance : deux lueurs très douces en haut de page. `isolate` sur <main> les garde visibles (sans lui, le fond de <main> les recouvrait). */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-x-0 top-0 -z-10 h-[520px] bg-[radial-gradient(55%_70%_at_18%_0%,rgba(147,51,234,0.14),transparent_70%),radial-gradient(40%_55%_at_92%_0%,rgba(56,189,248,0.06),transparent_70%)]"
+      />
 
       {/* SIDEBAR — desktop */}
-      <aside className="hidden md:flex w-64 shrink-0 border-r border-white/5 bg-zinc-950/40 backdrop-blur-xl flex-col h-screen sticky top-0 z-30">
+      <aside className="hidden md:flex w-64 shrink-0 border-r border-white/[0.06] bg-zinc-950/70 backdrop-blur-xl flex-col h-screen sticky top-0 z-30">
         <SidebarBrand action={<NotificationBell />} />
 
         <SidebarNav groups={navGroups} pathname={pathname} />
@@ -183,82 +248,27 @@ export default function DashboardShell({ children }: { children: React.ReactNode
             href="/status"
             className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-zinc-400 transition-colors hover:bg-white/[0.04] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400"
           >
-            <span aria-hidden="true" className="mx-[5px] h-1.5 w-1.5 rounded-full bg-emerald-400" />
-            Système en ligne
+            <span aria-hidden="true" className={`mx-[5px] h-1.5 w-1.5 rounded-full ${SYSTEM_LINK[systemState].dot}`} />
+            {SYSTEM_LINK[systemState].label}
           </Link>
 
           <div className="relative">
             <button
+              type="button"
               onClick={() => setShowProfileMenu((prev) => !prev)}
-              className="flex w-full cursor-pointer items-center gap-3 rounded-xl border border-white/10 bg-white/[0.02] p-2.5 transition-colors hover:border-white/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400"
+              aria-expanded={showProfileMenu}
+              aria-haspopup="true"
+              className="flex w-full cursor-pointer items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-2.5 transition-colors hover:border-white/20 hover:bg-white/[0.05] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400"
             >
-              <img src={session.user.image || ""} className="w-8 h-8 rounded-full border border-zinc-700 object-cover" alt="Profile" />
+              <img src={session.user.image || ""} className="h-9 w-9 rounded-full border border-white/10 object-cover" alt="" />
               <div className="text-left min-w-0 flex-1">
                 <p className="text-xs text-zinc-500">Compte</p>
-                <p className="text-xs font-bold text-white truncate">{session.user.name}</p>
+                <p className="truncate text-sm font-semibold text-white">{session.user.name}</p>
               </div>
-              <ChevronRight size={14} className={`text-zinc-500 transition-transform ${showProfileMenu ? "-rotate-90" : "rotate-90"}`} />
+              <ChevronRight size={14} aria-hidden="true" className={`text-zinc-500 transition-transform ${showProfileMenu ? "-rotate-90" : "rotate-90"}`} />
             </button>
 
-            {showProfileMenu && (
-              <div className="absolute left-0 bottom-full z-50 mb-3 w-full rounded-xl border border-white/10 bg-zinc-950/95 p-2 shadow-2xl shadow-black/50 backdrop-blur-xl">
-                <p className="px-3 pb-1 pt-1 text-xs font-medium text-zinc-500">Communauté</p>
-                <Link
-                  href="/ideas"
-                  onClick={() => setShowProfileMenu(false)}
-                  className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-xs text-zinc-200 transition hover:bg-zinc-900/80"
-                >
-                  <span>Boîte à idées</span>
-                  <Lightbulb size={13} className="text-amber-400" />
-                </Link>
-                <Link
-                  href="/changelog"
-                  onClick={() => setShowProfileMenu(false)}
-                  className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-xs text-zinc-200 transition hover:bg-zinc-900/80"
-                >
-                  <span>Changelog</span>
-                  <History size={13} className="text-blue-400" />
-                </Link>
-
-                <div className="my-1.5 h-px bg-zinc-800" />
-
-                <p className="px-3 pb-1 pt-1 text-xs font-medium text-zinc-500">Compte & support</p>
-                <Link
-                  href="/dashboard/account"
-                  onClick={() => setShowProfileMenu(false)}
-                  className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-xs text-zinc-200 transition hover:bg-zinc-900/80"
-                >
-                  <span>Compte &amp; données</span>
-                  <Shield size={13} className="text-sky-400" />
-                </Link>
-                <Link
-                  href="/help"
-                  onClick={() => setShowProfileMenu(false)}
-                  className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-xs text-zinc-200 transition hover:bg-zinc-900/80"
-                >
-                  <span>Aide</span>
-                  <LifeBuoy size={13} className="text-purple-400" />
-                </Link>
-                <Link
-                  href="/status"
-                  onClick={() => setShowProfileMenu(false)}
-                  className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-xs text-zinc-200 transition hover:bg-zinc-900/80"
-                >
-                  <span>État des services</span>
-                  <Activity size={13} className="text-emerald-400" />
-                </Link>
-
-                <div className="my-1.5 h-px bg-zinc-800" />
-
-                <button
-                  onClick={() => signOut()}
-                  className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-xs text-red-300 transition hover:bg-red-500/10"
-                >
-                  <span>Déconnexion</span>
-                  <LogOut size={13} />
-                </button>
-              </div>
-            )}
+            {showProfileMenu && <ProfileMenu onClose={() => setShowProfileMenu(false)} />}
           </div>
         </div>
       </aside>
@@ -269,7 +279,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
 
       {/* CONTENU */}
       <div className="flex-1 min-w-0">
-        <div className="max-w-5xl mx-auto px-6 md:px-8 py-8 md:py-10 pb-24 md:pb-10">
+        <div className="max-w-6xl mx-auto px-5 sm:px-8 lg:px-10 py-8 md:py-10 pb-28 md:pb-12">
           <div key={pathname} className="animate-in fade-in duration-200">
             {children}
           </div>

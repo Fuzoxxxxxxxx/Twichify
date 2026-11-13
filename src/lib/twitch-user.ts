@@ -1,6 +1,16 @@
 import { ObjectId } from "mongodb";
 import clientPromise from "@/lib/mongodb";
 import { getAppAccessToken } from "@/lib/twitch";
+import {
+  FOLLOWERS_SCOPE,
+  MODERATORS_SCOPE,
+  VIPS_SCOPE,
+  EDITORS_SCOPE,
+  SUBSCRIPTIONS_SCOPE,
+  BITS_SCOPE,
+  CHATTERS_SCOPE,
+  TWITCH_LOGIN_SCOPES,
+} from "@/lib/twitch-scopes";
 
 /**
  * Statistiques de chaîne Twitch d'un utilisateur connecté.
@@ -17,23 +27,18 @@ import { getAppAccessToken } from "@/lib/twitch";
 
 const HELIX = "https://api.twitch.tv/helix";
 
-export const FOLLOWERS_SCOPE = "moderator:read:followers";
-export const MODERATORS_SCOPE = "moderation:read";
-export const VIPS_SCOPE = "channel:read:vips";
-export const EDITORS_SCOPE = "channel:read:editors";
-export const SUBSCRIPTIONS_SCOPE = "channel:read:subscriptions";
-export const BITS_SCOPE = "bits:read";
-// Toutes en lecture seule, sur la propre chaîne de l'utilisateur.
-export const TWITCH_LOGIN_SCOPES = [
-  "openid",
-  "user:read:email",
+// Les permissions (et leur explication en langage clair) sont définies dans lib/twitch-scopes.ts, sans dépendance serveur,
+// pour que l'écran de consentement puisse les lire. Réexportées ici : les autres modules les importent toujours d'ici.
+export {
   FOLLOWERS_SCOPE,
   MODERATORS_SCOPE,
   VIPS_SCOPE,
   EDITORS_SCOPE,
   SUBSCRIPTIONS_SCOPE,
   BITS_SCOPE,
-].join(" ");
+  CHATTERS_SCOPE,
+  TWITCH_LOGIN_SCOPES,
+};
 
 const DAY_MS = 24 * 3600 * 1000;
 const CACHE_TTL_MS = 30_000;

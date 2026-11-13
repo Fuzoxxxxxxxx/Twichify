@@ -25,6 +25,7 @@ const DEFAULT_CHAT_SETTINGS = {
   showReplies: false,
   highlightFirstMessage: false,
   ignoredUsers: [] as string[],
+  hiddenBots: [] as string[],
   roleHighlights: {
     moderator: { enabled: false, color: "#22c55e" },
     subscriber: { enabled: false, color: "#a855f7" },

@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import SupportTicket from "@/models/SupportTicket";
 import { requirePermission } from "@/lib/auth-helpers";
 import { getRoleLevel, ROLE_LABELS, PERMISSIONS } from "@/lib/roles";
+import { logAudit } from "@/lib/audit";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const staff = await requirePermission(PERMISSIONS.MANAGE_TICKETS);
@@ -30,6 +31,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const staffId = staff._id.toString();
     const currentAssignee = ticket.assignedTo?.userId;
+    // Renseigné seulement en cas de reprise forcée d'un ticket déjà pris : c'est la seule prise en charge journalisée.
+    let takeoverFrom: string | null = null;
 
     // Déjà pris en charge par ce même membre du staff : rien à faire
     if (currentAssignee === staffId) {
@@ -65,6 +68,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
       // Niveau strictement supérieur : reprise autorisée
       const previousAssigneeName = ticket.assignedTo.userName;
+      takeoverFrom = previousAssigneeName;
       ticket.assignedTo = {
         userId: staffId,
         userName: staff.name,
@@ -99,6 +103,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     ticket.updatedAt = new Date();
     await ticket.save();
+
+    if (takeoverFrom) {
+      await logAudit({
+        actor: staff,
+        action: "ticket.takeover",
+        target: { id, name: String(ticket.subject ?? "").slice(0, 120) },
+        details: `Reprise du ticket de ${takeoverFrom}`,
+      });
+    }
 
     return NextResponse.json({ ticket });
   } catch (error) {

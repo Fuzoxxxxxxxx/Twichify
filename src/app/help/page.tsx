@@ -6,28 +6,19 @@ import {
   Search,
   ChevronDown,
   MessageSquarePlus,
-  Music,
-  Tv,
-  Key,
-  User as UserIcon,
   HelpCircle,
   X,
   LucideProps,
   Ticket,
   Rocket,
-  Bot,
-  MessageSquare,
-  Radio,
-  TrendingUp,
-  Activity,
-  ShieldCheck,
-  Lightbulb,
 } from "lucide-react";
 import PublicShell from "@/components/site/PublicShell";
 import PageIntro from "@/components/site/PageIntro";
 import WelcomeModal from "@/components/WelcomeModal";
+import FaqAnswer from "@/components/FaqAnswer";
 import Pagination, { usePagination } from "@/components/Pagination";
 import { FAQ_CATEGORIES, faqCategoryDescription, faqCategoryOrder } from "@/lib/faq-categories";
+import { faqCategoryIcon } from "@/components/faq-category-icons";
 
 interface FaqArticle {
   _id: string;
@@ -38,67 +29,13 @@ interface FaqArticle {
 
 const FOCUS = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400";
 
-// Icône par catégorie ; libellés, ordre et descriptions viennent de lib/faq-categories.ts.
-const CATEGORY_ICONS: Record<string, ComponentType<LucideProps>> = {
-  demarrage: Rocket,
-  spotify: Music,
-  bot: Bot,
-  obs: Tv,
-  chat: MessageSquare,
-  twitch: Radio,
-  stats: TrendingUp,
-  statut: Activity,
-  compte: UserIcon,
-  securite: ShieldCheck,
-  api: Key,
-  communaute: Lightbulb,
-  autre: HelpCircle,
-};
-
+// Libellés, ordre et descriptions viennent de lib/faq-categories.ts, les icônes de components/faq-category-icons.ts.
 const categoryMeta: Record<string, { label: string; icon: ComponentType<LucideProps> }> = Object.fromEntries(
-  FAQ_CATEGORIES.map((c) => [c.key, { label: c.label, icon: CATEGORY_ICONS[c.key] ?? HelpCircle }])
+  FAQ_CATEGORIES.map((c) => [c.key, { label: c.label, icon: faqCategoryIcon(c.key) }])
 );
 
 // Nombre d'articles de FAQ affichés par page.
 const PAGE_SIZE = 8;
-
-/**
- * Fonction utilitaire pour traiter le texte de la réponse :
- * - Gestion du gras avec **texte**
- * - Mise en valeur des lignes "Note :"
- */
-function renderFormattedAnswer(text: string) {
-  return text.split("\n").map((line, lineIndex) => {
-    // Traitement du gras via des regex simples
-    const parts = line.split(/(\*\*.*?\*\*)/g);
-
-    const formattedLine = parts.map((part, i) => {
-      if (part.startsWith("**") && part.endsWith("**")) {
-        return (
-          <strong key={i} className="font-semibold text-zinc-100">
-            {part.slice(2, -2)}
-          </strong>
-        );
-      }
-      return part;
-    });
-
-    const isNote = line.trim().toLowerCase().startsWith("note");
-
-    return (
-      <p
-        key={lineIndex}
-        className={`leading-relaxed ${
-          isNote
-            ? "mt-3 rounded-lg border border-purple-500/25 bg-purple-500/10 p-3 text-sm text-purple-100"
-            : "mb-2 last:mb-0"
-        }`}
-      >
-        {formattedLine}
-      </p>
-    );
-  });
-}
 
 export default function HelpPage() {
   const [articles, setArticles] = useState<FaqArticle[]>([]);
@@ -211,8 +148,8 @@ export default function HelpPage() {
           <div>
             <h2 className="text-base font-semibold text-white">Guide de bienvenue</h2>
             <p className="mt-1 text-sm leading-relaxed text-zinc-400">
-              Les étapes essentielles pour afficher votre musique et votre chat dans OBS : Spotify, widgets, OBS et bot.
-              À revoir autant de fois que nécessaire.
+              Les étapes essentielles pour afficher votre musique, votre chat et votre bandeau d'informations dans OBS : Spotify,
+              widgets, OBS et bot. À revoir autant de fois que nécessaire.
             </p>
           </div>
         </div>
@@ -268,7 +205,7 @@ export default function HelpPage() {
 
                   {isOpen && (
                     <div id={panelId} className="pb-6 pl-7 pr-8 text-[15px] text-zinc-300">
-                      {renderFormattedAnswer(article.answer)}
+                      <FaqAnswer text={article.answer} />
                     </div>
                   )}
                 </li>

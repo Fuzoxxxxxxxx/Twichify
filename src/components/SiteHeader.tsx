@@ -1,6 +1,6 @@
 "use client";
 
-import { signIn, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BellRing, History, LifeBuoy, Music, Tv } from "lucide-react";
@@ -20,6 +20,11 @@ const NAV_LINKS = [
 export default function SiteHeader() {
   const { data: session } = useSession();
   const pathname = usePathname();
+  // Retour sur la page d'où l'on vient après la connexion (sauf depuis l'accueil et les pages de connexion elles-mêmes).
+  const connectHref =
+    pathname && pathname !== "/" && !pathname.startsWith("/auth")
+      ? `/auth/connexion?callbackUrl=${encodeURIComponent(pathname)}`
+      : "/auth/connexion";
 
   return (
     <header className="sticky top-0 z-40 border-b border-white/5 bg-black/60 backdrop-blur-xl">
@@ -52,14 +57,14 @@ export default function SiteHeader() {
           })}
 
           {!session ? (
-            <button
-              onClick={() => signIn("twitch")}
+            <Link
+              href={connectHref}
               className="flex items-center gap-2 rounded-full border border-zinc-700/80 bg-zinc-950/60 px-4 sm:px-5 py-2 text-sm font-semibold text-zinc-200 transition-all hover:border-purple-500/60 hover:text-white hover:bg-purple-500/10 shadow-sm"
             >
               <Tv size={16} className="text-purple-400" />
               <span className="sm:hidden">Connexion</span>
               <span className="hidden sm:inline">Connexion Twitch</span>
-            </button>
+            </Link>
           ) : (
             <Link
               href="/dashboard"

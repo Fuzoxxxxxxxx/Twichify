@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import mongoose from "mongoose";
 import SupportTicket from "@/models/SupportTicket";
 import { getSessionUser } from "@/lib/auth-helpers";
+import { isFaqCategory } from "@/lib/faq-categories";
 
 export async function POST(req: Request) {
   const user = await getSessionUser();
@@ -22,7 +23,8 @@ export async function POST(req: Request) {
       userId: user._id.toString(),
       userName: user.name,
       subject,
-      category: category || "autre",
+      // Une catégorie inconnue (ancien client, valeur modifiée) retombe sur « autre » au lieu de faire échouer la création.
+      category: isFaqCategory(category) ? category : "autre",
       status: "en_attente",
       messages: [
         {

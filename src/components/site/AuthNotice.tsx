@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef, type ReactNode } from "react";
 import Link from "next/link";
-import { signIn } from "next-auth/react";
 import { RefreshCw, Home, HelpCircle, X, type LucideIcon } from "lucide-react";
 import PublicShell from "@/components/site/PublicShell";
 
@@ -70,13 +69,14 @@ export default function AuthNotice({
         <div className="mt-4 max-w-md space-y-3 text-base leading-relaxed text-zinc-400">{children}</div>
 
         <div className="mt-8 flex w-full flex-col items-center justify-center gap-3 sm:w-auto sm:flex-row">
-          <button
-            onClick={() => signIn("twitch", { callbackUrl: "/dashboard" })}
+          {/* Retour par l'écran qui explique les permissions : utile surtout après un refus. */}
+          <Link
+            href="/auth/connexion?callbackUrl=%2Fdashboard"
             className={`flex w-full cursor-pointer items-center justify-center gap-2.5 rounded-xl bg-purple-600 px-6 py-3.5 text-base font-semibold text-white transition-colors hover:bg-purple-500 sm:w-auto ${FOCUS}`}
           >
             <RefreshCw size={18} />
             Réessayer avec Twitch
-          </button>
+          </Link>
 
           <Link
             href="/"

@@ -4,9 +4,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import {
   Lightbulb,
-  AlertTriangle,
   Loader2,
-  Search,
   Edit2,
   X,
   Save,
@@ -24,6 +22,7 @@ import {
 } from "lucide-react";
 import IdeaStatusBadge from "@/components/IdeaStatusBadge";
 import { PageHeader } from "@/components/dashboard/DashboardUI";
+import { AccessDenied, EmptyPanel, FilterPills, LoadingPanel, NoticePanel, SearchField } from "@/components/admin/AdminUI";
 import ReplyTemplatePicker from "@/components/ReplyTemplatePicker";
 import { useDialog } from "@/components/DialogProvider";
 import { IDEA_TEMPLATES, type ReplyTemplate } from "@/lib/reply-templates";
@@ -608,35 +607,12 @@ export default function AdminIdeasPage() {
   }, [ideas]);
 
   if (denied) {
-    return (
-      <div role="alert" className="mx-auto mt-10 max-w-md rounded-2xl border border-red-500/25 bg-white/[0.02] p-8 text-center">
-        <AlertTriangle className="mx-auto text-red-400 mb-3" size={32} />
-        <h2 className="mb-2 text-lg font-bold">Accès refusé</h2>
-        <p className="text-sm text-zinc-400">
-          Ton rôle ne dispose pas de la permission de gestion de la boîte à idées.
-        </p>
-      </div>
-    );
+    return <AccessDenied>Ton rôle ne dispose pas de la permission de gestion de la boîte à idées.</AccessDenied>;
   }
 
   if (error) {
-    return (
-      <div role="alert" className="mx-auto mt-10 max-w-md rounded-2xl border border-red-500/25 bg-white/[0.02] p-8 text-center">
-        <AlertTriangle className="mx-auto text-red-400 mb-3" size={32} />
-        <h2 className="mb-2 text-lg font-bold">Chargement impossible</h2>
-        <p className="text-sm text-zinc-400">Impossible de récupérer les idées. Réessaie dans un instant.</p>
-      </div>
-    );
+    return <NoticePanel title="Chargement impossible">Impossible de récupérer les idées. Réessaie dans un instant.</NoticePanel>;
   }
-
-  const pill = (active: boolean, accent: "purple" | "cyan" = "purple") =>
-    `cursor-pointer rounded-full border px-4 py-2 text-sm font-medium transition-colors ${FOCUS} ${
-      active
-        ? accent === "purple"
-          ? "border-purple-500/50 bg-purple-500/15 text-purple-200"
-          : "border-cyan-500/50 bg-cyan-500/15 text-cyan-200"
-        : "border-white/10 text-zinc-400 hover:border-white/20 hover:text-white"
-    }`;
 
   const sortBtn = (id: Sort, label: string, Icon: typeof Clock) => (
     <button
@@ -695,17 +671,12 @@ export default function AdminIdeasPage() {
 
       {/* RECHERCHE + TRI */}
       <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Rechercher par titre, description ou auteur..."
-            aria-label="Rechercher une idée"
-            className="w-full rounded-lg border border-white/10 bg-white/[0.02] py-3 pl-10 pr-4 text-sm text-white placeholder-zinc-500 outline-none transition-colors focus:border-purple-500/60"
-          />
-        </div>
+        <SearchField
+          value={search}
+          onChange={setSearch}
+          placeholder="Rechercher par titre, description ou auteur..."
+          label="Rechercher une idée"
+        />
 
         <div role="group" aria-label="Trier les idées" className="flex shrink-0 items-center rounded-lg border border-white/10 p-1">
           {sortBtn("recent", "Récentes", Clock)}
@@ -715,48 +686,34 @@ export default function AdminIdeasPage() {
       </div>
 
       {/* FILTRES STATUT */}
-      <div role="group" aria-label="Filtrer par statut" className="flex flex-wrap items-center gap-2">
-        {statusFilters.map(({ id, label }) => (
-          <button key={id} onClick={() => setFilter(id)} aria-pressed={filter === id} className={pill(filter === id)}>
-            {label} {counts[id] !== undefined && <span className="tabular-nums opacity-70">{counts[id] || 0}</span>}
-          </button>
-        ))}
-      </div>
+      <FilterPills
+        label="Filtrer par statut"
+        options={statusFilters.map((s) => ({ ...s, count: counts[s.id] || 0 }))}
+        value={filter}
+        onChange={setFilter}
+      />
 
       {/* FILTRES CATÉGORIE */}
-      <div role="group" aria-label="Filtrer par catégorie" className="-mt-4 flex flex-wrap items-center gap-2">
-        <button
-          onClick={() => setCategoryFilter("tous")}
-          aria-pressed={categoryFilter === "tous"}
-          className={pill(categoryFilter === "tous", "cyan")}
-        >
-          Toutes catégories
-        </button>
-        {Object.entries(CATEGORY_LABELS).map(([id, label]) => (
-          <button
-            key={id}
-            onClick={() => setCategoryFilter(id)}
-            aria-pressed={categoryFilter === id}
-            className={pill(categoryFilter === id, "cyan")}
-          >
-            {label}
-          </button>
-        ))}
+      <div className="-mt-4">
+        <FilterPills
+          label="Filtrer par catégorie"
+          options={[
+            { id: "tous", label: "Toutes catégories" },
+            ...Object.entries(CATEGORY_LABELS).map(([id, label]) => ({ id, label })),
+          ]}
+          value={categoryFilter}
+          onChange={setCategoryFilter}
+          tone="cyan"
+        />
       </div>
 
       {/* LISTE DES IDÉES */}
       {loading ? (
-        <div className="rounded-2xl border border-white/10 bg-white/[0.02] py-16 text-center" aria-busy="true">
-          <Loader2 className="w-5 h-5 text-purple-400 animate-spin mx-auto mb-2" />
-          <p className="text-sm text-zinc-400">Chargement des idées...</p>
-        </div>
+        <LoadingPanel label="Chargement des idées..." />
       ) : filtered.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.02] py-16 text-center">
-          <Lightbulb size={28} className="mx-auto mb-3 text-zinc-600" />
-          <p className="text-sm text-zinc-300">
-            {queue === "todo" ? "Rien à traiter : toutes les idées à l'étude ont une réponse." : "Aucune idée pour ces filtres."}
-          </p>
-        </div>
+        <EmptyPanel icon={Lightbulb}>
+          {queue === "todo" ? "Rien à traiter : toutes les idées à l'étude ont une réponse." : "Aucune idée pour ces filtres."}
+        </EmptyPanel>
       ) : (
         <div className="space-y-3">
           {filtered.map((idea) => (

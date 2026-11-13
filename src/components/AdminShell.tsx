@@ -89,11 +89,20 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     .filter((group) => group.items.length > 0);
 
   return (
-    <main className="flex min-h-screen bg-[#08090b] font-sans text-white selection:bg-purple-500/30">
-      <div className="pointer-events-none fixed left-1/2 top-0 -z-10 h-[420px] w-[900px] -translate-x-1/2 bg-purple-600/10 blur-[160px]" />
+    <main className="isolate flex min-h-screen bg-[#08090b] font-sans text-white selection:bg-purple-500/30">
+      {/* Ambiance : lueur ambre (la couleur de l'administration) et fin liseré en haut de page, pour ne jamais confondre
+          cet espace avec le dashboard utilisateur. `isolate` sur <main> les garde visibles au-dessus de son fond. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-x-0 top-0 -z-10 h-[520px] bg-[radial-gradient(55%_70%_at_18%_0%,rgba(245,158,11,0.10),transparent_70%),radial-gradient(40%_55%_at_92%_0%,rgba(147,51,234,0.08),transparent_70%)]"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-x-0 top-0 z-40 h-0.5 bg-gradient-to-r from-transparent via-amber-400/70 to-transparent"
+      />
 
       {/* SIDEBAR — desktop */}
-      <aside className="sticky top-0 z-30 hidden h-screen w-64 shrink-0 flex-col border-r border-white/5 bg-zinc-950/40 backdrop-blur-xl md:flex">
+      <aside className="sticky top-0 z-30 hidden h-screen w-64 shrink-0 flex-col border-r border-white/[0.06] bg-zinc-950/70 backdrop-blur-xl md:flex">
         <SidebarBrand
           action={<NotificationBell />}
           tag={
@@ -107,7 +116,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 
         <SidebarNav groups={visibleGroups} pathname={pathname} />
 
-        <div className="border-t border-white/5 p-3">
+        <div className="border-t border-white/[0.06] p-3">
           <Link
             href="/dashboard"
             className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-zinc-400 transition-colors hover:bg-white/[0.04] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400"
@@ -124,7 +133,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 
       {/* CONTENU */}
       <div className="min-w-0 flex-1">
-        <div className="mx-auto max-w-5xl px-6 py-8 pb-24 md:px-8 md:py-10 md:pb-10">{children}</div>
+        <div className="mx-auto max-w-6xl px-5 py-8 pb-28 sm:px-8 md:py-10 md:pb-12 lg:px-10">{children}</div>
       </div>
     </main>
   );

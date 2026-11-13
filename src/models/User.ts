@@ -64,6 +64,13 @@ const UserSchema = new Schema({
     customMessage: { type: String, default: "Now playing: {artist} - {title}" },
   },
 
+  // Widget bandeau d'informations (messages qui défilent) : champ libre, validé et complété par défaut par
+  // lib/info-banner (sanitizeInfoBanner) à chaque lecture et écriture. Une seule source de vérité pour les valeurs par défaut.
+  // `select: false` : les logos personnalisés du bandeau (images en data URI, jusqu'à ~200 Ko) ne doivent pas être chargés avec
+  // le compte à chaque requête (cloche, widgets interrogés chaque seconde…). Les routes du bandeau, l'export et la
+  // réinitialisation les demandent explicitement : `.select("+bannerWidgetSettings")`.
+  bannerWidgetSettings: { type: Schema.Types.Mixed, default: null, select: false },
+
   chatWidgetSettings: {
     theme: { type: String, default: "glass" },
     fontFamily: { type: String, default: "font-sans" }, // "font-sans" | "font-mono" | "font-serif" | "google:<Famille>" (lib/widget-fonts)
@@ -85,6 +92,7 @@ const UserSchema = new Schema({
     // Fonctionnalités du widget chat
     messageLifetime: { type: Number, default: 15 }, // secondes avant disparition, 0 = permanent
     ignoredUsers: { type: [String], default: [] }, // pseudos dont les messages sont masqués
+    hiddenBots: { type: [String], default: [] }, // bots du streamer, masqués avec « Masquer Bots » (en plus des bots connus, voir lib/known-bots)
     showReplies: { type: Boolean, default: false }, // affiche le message auquel un viewer répond
     highlightFirstMessage: { type: Boolean, default: false }, // met en avant le tout premier message d'un viewer
 

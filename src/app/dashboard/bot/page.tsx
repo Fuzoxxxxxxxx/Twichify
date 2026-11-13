@@ -1,13 +1,23 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useState, useEffect, useCallback } from "react";
-import { Copy, MessageSquareText, Timer } from "lucide-react";
+import Link from "next/link";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { ExternalLink, Save } from "lucide-react";
 import { PageHeader, DashboardLoading, DashboardLoadError } from "@/components/dashboard/DashboardUI";
 import { useToast, ToastDisplay } from "@/components/dashboard/useToast";
+import UnsavedChangesBar, { useUnsavedChangesGuard } from "@/components/dashboard/UnsavedChangesBar";
 import { useWidgetToken } from "@/components/dashboard/useWidgetToken";
+import { StepRail } from "@/components/dashboard/StepRail";
+import { ACTION_BTN, MaskedField, StatusPill } from "@/components/dashboard/WidgetUI";
 
 const FOCUS = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400";
+
+// Même message que celui que la route du bot envoie tant que rien n'est enregistré.
+const DEFAULT_MESSAGE = "Musique en cours : {song}";
+// Limite d'un message Twitch.
+const TWITCH_MAX = 500;
+const LIVE_POLL_MS = 8000;
 
 const chatbotProviders = [
   {
@@ -27,18 +37,22 @@ const chatbotProviders = [
   },
 ] as const;
 
-// Numéro d'étape : la configuration d'un bot est une vraie séquence.
-function StepNumber({ n, tone = "purple" }: { n: number; tone?: "purple" | "emerald" }) {
-  const toneClass =
-    tone === "emerald"
-      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
-      : "border-purple-500/30 bg-purple-500/10 text-purple-200";
-  return (
-    <span
-      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border font-display text-sm font-bold ${toneClass}`}
-    >
-      {n}
-    </span>
+const SCRIPT_MODES = [
+  { id: "command", title: "Commande", desc: "Répond quand un viewer tape la commande dans le chat" },
+  { id: "timer", title: "Timer", desc: "Annonce la musique toute seule, toutes les X minutes" },
+] as const;
+
+const VARIABLES = [
+  { tag: "{artist}", label: "Artiste" },
+  { tag: "{title}", label: "Titre" },
+  { tag: "{song}", label: "Artiste - Titre" },
+] as const;
+
+// Un seul passage, et une fonction de remplacement : un titre contenant « $& » ou « $$ » n'est pas altéré,
+// et une variable utilisée deux fois est remplacée partout (comme dans la vraie réponse du bot).
+function renderTemplate(template: string, artist: string, title: string): string {
+  return template.replace(/\{(artist|title|song)\}/g, (_match, key: string) =>
+    key === "artist" ? artist : key === "title" ? title : `${artist} - ${title}`
   );
 }
 
@@ -47,16 +61,18 @@ export default function DashboardBot() {
   const { toast, showToast } = useToast();
   const { token: widgetToken, loading: tokenLoading } = useWidgetToken(!!session);
 
-  const [selectedBot, setSelectedBot] = useState("nightbot");
-  const [customBotMessage, setCustomBotMessage] = useState("Now playing: {artist} - {title}");
+  const [selectedBot, setSelectedBot] = useState<(typeof chatbotProviders)[number]["id"]>("nightbot");
+  const [scriptMode, setScriptMode] = useState<(typeof SCRIPT_MODES)[number]["id"]>("command");
+  const [customBotMessage, setCustomBotMessage] = useState(DEFAULT_MESSAGE);
+  const [savedMessage, setSavedMessage] = useState(DEFAULT_MESSAGE);
   const [liveTrack, setLiveTrack] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
-  const [copiedCommand, setCopiedCommand] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   // Message du bot et état Spotify viennent du serveur : rien n'est affiché avant leur arrivée.
   const [loadState, setLoadState] = useState<"loading" | "ready" | "error">("loading");
   // Première réponse de la route now-playing (utilisée seulement si Spotify est connecté) : évite d'afficher un morceau d'exemple d'abord.
   const [liveLoaded, setLiveLoaded] = useState(false);
+  const messageRef = useRef<HTMLTextAreaElement>(null);
 
   const loadUserData = useCallback(async () => {
     setLoadState("loading");
@@ -65,7 +81,9 @@ export default function DashboardBot() {
       if (!res.ok) throw new Error(String(res.status));
       const data = await res.json();
       setIsConnected(!!data.hasSpotifyToken);
-      if (data.botSettings?.customMessage) setCustomBotMessage(data.botSettings.customMessage);
+      const message = data.botSettings?.customMessage || DEFAULT_MESSAGE;
+      setCustomBotMessage(message);
+      setSavedMessage(message);
       setLoadState("ready");
     } catch (e) {
       console.error("Erreur de chargement profil", e);
@@ -73,14 +91,21 @@ export default function DashboardBot() {
     }
   }, []);
 
+  // Booléen (et non l'objet `session`, recréé à chaque retour sur l'onglet) : sinon le message serait rechargé,
+  // et les modifications non enregistrées écrasées, chaque fois qu'on revient sur la page.
+  const signedIn = !!session;
   useEffect(() => {
-    if (session) loadUserData();
-  }, [session, loadUserData]);
+    if (signedIn) loadUserData();
+  }, [signedIn, loadUserData]);
+
+  // Confirmation avant de quitter la page avec un message non enregistré.
+  useUnsavedChangesGuard(customBotMessage !== savedMessage);
 
   useEffect(() => {
-    if (!session || !isConnected || !widgetToken) return;
+    if (!signedIn || !isConnected || !widgetToken) return;
 
     const fetchLiveTrack = async () => {
+      if (document.visibilityState !== "visible") return;
       try {
         const res = await fetch(`/api/spotify/now-playing/${widgetToken}`);
         if (res.ok) setLiveTrack(await res.json());
@@ -92,47 +117,45 @@ export default function DashboardBot() {
     };
 
     fetchLiveTrack();
-    const interval = setInterval(fetchLiveTrack, 5000);
+    const interval = setInterval(fetchLiveTrack, LIVE_POLL_MS);
     return () => clearInterval(interval);
-  }, [session, isConnected, widgetToken]);
-
-  const handleCopyCommand = async (command: string) => {
-    try {
-      await navigator.clipboard.writeText(command);
-      setCopiedCommand(command);
-      setTimeout(() => setCopiedCommand(null), 1800);
-    } catch (e) {
-      console.error("Erreur lors de la copie de commande", e);
-    }
-  };
+  }, [signedIn, isConnected, widgetToken]);
 
   const saveBotMessage = async () => {
-    setLoading(true);
+    setSaving(true);
     try {
       const res = await fetch("/api/user/bot-settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ customMessage: customBotMessage }),
       });
-      if (res.ok) showToast("Message personnalisé enregistré !");
-      else showToast("Erreur lors de la sauvegarde.", "error");
+      if (res.ok) {
+        setSavedMessage(customBotMessage);
+        showToast("Message enregistré.");
+      } else showToast("Erreur lors de la sauvegarde.", "error");
     } catch (e) {
       console.error("Erreur sauvegarde message bot", e);
       showToast("Erreur lors de la sauvegarde du message.", "error");
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
-  const getBotPreviewText = () => {
-    const template = customBotMessage || "{artist} - {title}";
-    const artist = liveTrack?.artist || "The Weeknd";
-    const title = liveTrack?.title || "Blinding Lights";
-
-    return template
-      .replace("{artist}", artist)
-      .replace("{title}", title)
-      .replace("{song}", `${artist} - ${title}`);
+  // Insère une variable à l'endroit du curseur (ou remplace la sélection) puis remet le curseur juste après.
+  const insertVariable = (tag: string) => {
+    const el = messageRef.current;
+    if (!el) {
+      setCustomBotMessage((m) => m + tag);
+      return;
+    }
+    const start = el.selectionStart ?? customBotMessage.length;
+    const end = el.selectionEnd ?? customBotMessage.length;
+    setCustomBotMessage(customBotMessage.slice(0, start) + tag + customBotMessage.slice(end));
+    requestAnimationFrame(() => {
+      el.focus();
+      const pos = start + tag.length;
+      el.setSelectionRange(pos, pos);
+    });
   };
 
   const getBotCommand = (providerId: string) => {
@@ -150,205 +173,201 @@ export default function DashboardBot() {
   if (loadState === "loading" || tokenLoading) return <DashboardLoading eyebrow="Intégrations" title="Bot" />;
   if (loadState === "error") return <DashboardLoadError eyebrow="Intégrations" title="Bot" onRetry={loadUserData} />;
 
-  // Connecté : on attend la vraie musique avant d'afficher l'aperçu (sinon on verrait d'abord un titre d'exemple).
-  const previewPending = isConnected && !!widgetToken && !liveLoaded;
-
   const selectedProvider = chatbotProviders.find((provider) => provider.id === selectedBot) ?? chatbotProviders[0];
   const command = getBotCommand(selectedProvider.id);
-  const previewText = getBotPreviewText();
+
+  // Connecté : on attend la vraie musique avant d'afficher l'aperçu (sinon on verrait d'abord un titre d'exemple).
+  const previewPending = isConnected && !!widgetToken && !liveLoaded;
+  const hasLive = isConnected && !!liveTrack?.isPlaying && !!liveTrack?.title;
+  const previewArtist = hasLive ? liveTrack.artist || "" : "The Weeknd";
+  const previewTitle = hasLive ? liveTrack.title : "Blinding Lights";
+  const previewText = renderTemplate(customBotMessage || DEFAULT_MESSAGE, previewArtist, previewTitle);
+
+  const dirty = customBotMessage !== savedMessage;
+  const canSave = dirty && customBotMessage.trim() !== "" && !saving;
+  const mode = SCRIPT_MODES.find((m) => m.id === scriptMode) ?? SCRIPT_MODES[0];
 
   return (
     <div className="space-y-8">
       <PageHeader eyebrow="Intégrations" title="Bot" />
 
-      {/* Plateforme du bot */}
-      <div className="flex flex-col gap-3">
-        <p id="bot-provider-label" className="text-sm font-medium text-zinc-200">
-          Plateforme du bot
-        </p>
-        <div
-          role="group"
-          aria-labelledby="bot-provider-label"
-          className="flex w-fit flex-wrap gap-1 rounded-xl border border-white/10 p-1"
-        >
-          {chatbotProviders.map((provider) => {
-            const isActive = selectedBot === provider.id;
-            return (
-              <button
-                key={provider.id}
-                onClick={() => setSelectedBot(provider.id)}
-                aria-pressed={isActive}
-                className={`cursor-pointer rounded-lg px-5 py-2.5 text-sm font-medium transition-colors ${FOCUS} ${
-                  isActive ? "bg-white/[0.08] text-white" : "text-zinc-400 hover:bg-white/[0.04] hover:text-white"
-                }`}
-              >
-                {provider.name}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <ol className="space-y-4">
-        {/* 1 */}
-        <li className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
-          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-            <div className="flex items-start gap-3.5">
-              <StepNumber n={1} />
-              <div>
-                <h2 className="text-base font-semibold text-white">Accéder au tableau de bord</h2>
-                <p className="mt-1 text-sm leading-relaxed text-zinc-400">
-                  Rendez-vous dans la rubrique <strong className="font-semibold text-zinc-200">Commandes personnalisées</strong> sur le site de {selectedProvider.name}.
-                </p>
-              </div>
+      <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 sm:p-8">
+        <StepRail index={1} state="plain" title="Choisis ta plateforme">
+          <div className="flex flex-wrap items-center gap-3">
+            <div role="group" aria-label="Plateforme du bot" className="flex flex-wrap gap-1 rounded-xl border border-white/10 p-1">
+              {chatbotProviders.map((provider) => {
+                const isActive = selectedBot === provider.id;
+                return (
+                  <button
+                    key={provider.id}
+                    type="button"
+                    onClick={() => setSelectedBot(provider.id)}
+                    aria-pressed={isActive}
+                    className={`cursor-pointer rounded-lg px-4 py-2 text-sm font-medium transition-colors ${FOCUS} ${
+                      isActive ? "bg-white/[0.08] text-white" : "text-zinc-400 hover:bg-white/[0.04] hover:text-white"
+                    }`}
+                  >
+                    {provider.name}
+                  </button>
+                );
+              })}
             </div>
-            <button
-              onClick={() => window.open(selectedProvider.docsUrl, "_blank", "noopener,noreferrer")}
-              className={`flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-lg border border-white/15 px-4 py-2.5 text-sm font-semibold text-zinc-200 transition-colors hover:border-white/30 hover:text-white ${FOCUS}`}
-            >
-              <MessageSquareText size={15} />
-              Ouvrir {selectedProvider.name}
-            </button>
+            <a href={selectedProvider.docsUrl} target="_blank" rel="noopener noreferrer" className={ACTION_BTN}>
+              Ouvrir les commandes de {selectedProvider.name}
+              <ExternalLink size={14} />
+            </a>
           </div>
-        </li>
+        </StepRail>
 
-        {/* 2 */}
-        <li className="space-y-4 rounded-2xl border border-white/10 bg-white/[0.02] p-5">
-          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-            <div className="flex items-start gap-3.5">
-              <StepNumber n={2} />
-              <div>
-                <h2 className="flex items-center gap-2 text-base font-semibold text-white">
-                  <MessageSquareText size={15} className="text-purple-300" />
-                  Réponse à la demande
-                </h2>
-                <p className="mt-1 text-sm leading-relaxed text-zinc-400">
-                  Créez une <strong className="font-semibold text-zinc-200">Commande</strong> (ex :{" "}
-                  <code className="rounded border border-purple-500/25 bg-purple-500/10 px-1.5 py-0.5 font-mono text-purple-200">!song</code>) : elle ne répond que quand un viewer la tape dans le chat. Collez ce script dans le champ de réponse :
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={() => handleCopyCommand(command)}
-              className={`flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-lg bg-purple-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-purple-500 ${FOCUS}`}
-            >
-              <Copy size={14} />
-              {copiedCommand === command ? "Copié !" : "Copier le script"}
-            </button>
+        <StepRail index={2} state="plain" title={`Colle le script dans ${selectedProvider.name}`}>
+          <div role="group" aria-label="Type de réponse" className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {SCRIPT_MODES.map((m) => {
+              const isActive = scriptMode === m.id;
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => setScriptMode(m.id)}
+                  aria-pressed={isActive}
+                  className={`flex cursor-pointer flex-col items-start rounded-xl border p-4 text-left transition-colors ${FOCUS} ${
+                    isActive
+                      ? "border-purple-500/60 bg-purple-500/10"
+                      : "border-white/10 hover:border-white/20 hover:bg-white/[0.03]"
+                  }`}
+                >
+                  <span className={`text-sm font-semibold ${isActive ? "text-purple-200" : "text-zinc-200"}`}>{m.title}</span>
+                  <span className="mt-0.5 text-sm text-zinc-400">{m.desc}</span>
+                </button>
+              );
+            })}
           </div>
 
-          <div className="overflow-x-auto rounded-lg border border-white/10 bg-black/40 p-4 font-mono text-sm text-purple-200">
-            <code>{command}</code>
-          </div>
-        </li>
-
-        {/* 3 */}
-        <li className="space-y-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.03] p-5">
-          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-            <div className="flex items-start gap-3.5">
-              <StepNumber n={3} tone="emerald" />
-              <div>
-                <h2 className="flex items-center gap-2 text-base font-semibold text-white">
-                  <Timer size={15} className="text-emerald-300" />
-                  Réponse automatique <span className="font-normal text-zinc-400">(optionnel)</span>
-                </h2>
-                <p className="mt-1 text-sm leading-relaxed text-zinc-400">
-                  Pour que le bot annonce la musique <strong className="font-semibold text-zinc-200">tout seul</strong>, sans qu'un viewer ait besoin de taper quoi que ce soit, créez plutôt un <strong className="font-semibold text-zinc-200">Timer</strong> (répondre toutes les X minutes) chez {selectedProvider.name}, avec exactement le même script :
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={() => handleCopyCommand(command)}
-              className="flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-2.5 text-sm font-semibold text-emerald-100 transition-colors hover:bg-emerald-500/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-300"
-            >
-              <Copy size={14} />
-              {copiedCommand === command ? "Copié !" : "Copier le même script"}
-            </button>
-          </div>
-
-          <div className="overflow-x-auto rounded-lg border border-emerald-500/20 bg-black/40 p-4 font-mono text-sm text-emerald-200">
-            <code>{command}</code>
-          </div>
-
-          <p className="text-sm leading-relaxed text-zinc-400">
-            C'est le fait de le mettre dans un <strong className="font-semibold text-zinc-300">Timer</strong> plutôt qu'une <strong className="font-semibold text-zinc-300">Commande</strong> qui rend l'annonce automatique : le script est identique, rien d'autre à configurer chez nous.
+          <p>
+            {mode.id === "command" ? (
+              <>
+                Dans la rubrique <strong className="font-semibold text-zinc-200">Commandes personnalisées</strong> de{" "}
+                {selectedProvider.name}, crée une commande (par exemple{" "}
+                <code className="rounded border border-purple-500/25 bg-purple-500/10 px-1.5 py-0.5 font-mono text-purple-200">!song</code>
+                ) et colle ce script comme réponse.
+              </>
+            ) : (
+              <>
+                Crée un <strong className="font-semibold text-zinc-200">Timer</strong> chez {selectedProvider.name} (répondre toutes
+                les X minutes) et colle exactement le même script. C'est le timer qui rend l'annonce automatique : rien d'autre à
+                configurer chez nous.
+              </>
+            )}
           </p>
-        </li>
 
-        {/* 4 */}
-        <li className="space-y-4 rounded-2xl border border-white/10 bg-white/[0.02] p-5">
-          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-            <div className="flex items-start gap-3.5">
-              <StepNumber n={4} />
-              <div>
-                <h2 className="text-base font-semibold text-white">Message de réponse</h2>
-                <p className="mt-1 text-sm text-zinc-400">Personnalisez le texte utilisé à la fois pour la commande et le timer.</p>
-              </div>
-            </div>
-            <button
-              onClick={saveBotMessage}
-              disabled={loading}
-              className={`flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-lg bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-purple-500 disabled:opacity-50 ${FOCUS}`}
-            >
-              {loading ? "Enregistrement..." : "Enregistrer le message"}
-            </button>
+          <MaskedField
+            value={command}
+            secret={widgetToken}
+            label={`Script ${selectedProvider.name}`}
+            tone={mode.id === "timer" ? "emerald" : "purple"}
+            wrap
+          />
+          <p className="text-sm text-zinc-400">
+            Le lien contient ton jeton personnel : il est masqué par défaut et copié en entier.
+          </p>
+        </StepRail>
+
+        <StepRail index={3} state="plain" title="Personnalise le message" last>
+          <div className="space-y-2">
+            <label htmlFor="bot-message" className="text-sm font-medium text-zinc-200">
+              Message envoyé dans le chat
+            </label>
+            <textarea
+              id="bot-message"
+              ref={messageRef}
+              value={customBotMessage}
+              onChange={(e) => setCustomBotMessage(e.target.value)}
+              placeholder={DEFAULT_MESSAGE}
+              rows={2}
+              className="w-full resize-none rounded-lg border border-white/10 bg-white/[0.02] p-4 text-base text-zinc-100 placeholder-zinc-500 outline-none transition-colors focus:border-purple-500/60"
+            />
           </div>
 
-          <textarea
-            value={customBotMessage}
-            onChange={(e) => setCustomBotMessage(e.target.value)}
-            aria-label="Message de réponse du bot"
-            placeholder="Musique en cours : {song}"
-            className="w-full resize-none rounded-lg border border-white/10 bg-white/[0.02] p-4 text-base text-zinc-100 placeholder-zinc-500 outline-none transition-colors focus:border-purple-500/60"
-            rows={3}
-          />
-
-          <div className="flex flex-wrap items-center gap-2 pt-1">
-            <span className="text-sm text-zinc-400">Variables dynamiques :</span>
-            {[
-              { tag: "{artist}", label: "Artiste" },
-              { tag: "{title}", label: "Titre" },
-              { tag: "{song}", label: "Artiste - Titre" },
-            ].map((v) => (
-              <span
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm text-zinc-400">Insérer :</span>
+            {VARIABLES.map((v) => (
+              <button
                 key={v.tag}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-purple-500/25 bg-purple-500/10 px-2.5 py-1 font-mono text-sm text-purple-200"
+                type="button"
+                onClick={() => insertVariable(v.tag)}
+                title={`Insère ${v.tag} à l'endroit du curseur`}
+                className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-purple-500/25 bg-purple-500/10 px-2.5 py-1 font-mono text-sm text-purple-200 transition-colors hover:bg-purple-500/20 ${FOCUS}`}
               >
                 <strong>{v.tag}</strong>
-                <span className="font-sans text-xs text-zinc-400">({v.label})</span>
-              </span>
+                <span className="font-sans text-xs text-zinc-400">{v.label}</span>
+              </button>
             ))}
+            {customBotMessage !== DEFAULT_MESSAGE && (
+              <button
+                type="button"
+                onClick={() => setCustomBotMessage(DEFAULT_MESSAGE)}
+                className={`ml-auto cursor-pointer rounded-md px-2 py-1 text-sm text-zinc-400 transition-colors hover:text-white ${FOCUS}`}
+              >
+                Rétablir le message par défaut
+              </button>
+            )}
           </div>
-        </li>
-      </ol>
 
-      {/* Aperçu */}
-      <section className="space-y-3 rounded-2xl border border-white/10 bg-white/[0.02] p-5">
-        <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold text-white">Rendu dans votre chat Twitch</h2>
-          <span className="flex items-center gap-1.5 text-sm text-zinc-400">
-            <span aria-hidden="true" className="h-2 w-2 rounded-full bg-emerald-400" />
-            Aperçu
-          </span>
-        </div>
+          <div className="space-y-3 rounded-xl border border-white/10 bg-black/30 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-medium text-zinc-200">Rendu dans ton chat Twitch</p>
+              {hasLive ? (
+                <StatusPill tone="live">Ta musique en direct</StatusPill>
+              ) : (
+                <StatusPill tone="idle">{isConnected ? "Exemple, rien en lecture" : "Exemple"}</StatusPill>
+              )}
+            </div>
 
-        <div className="flex items-start gap-3 rounded-xl border border-white/10 bg-black/30 p-4">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-purple-600 text-white">
-            <MessageSquareText size={16} />
-          </div>
-          <div className="min-w-0 flex-1 space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-white">{selectedProvider.name}</span>
-              <span className="rounded border border-purple-500/30 bg-purple-500/15 px-1.5 py-0.5 text-xs font-semibold text-purple-200">
+            <div className="flex items-baseline gap-2 text-sm leading-relaxed">
+              <span className="shrink-0 rounded border border-white/15 px-1.5 py-0.5 text-[11px] font-semibold leading-none text-zinc-300">
                 BOT
               </span>
+              <p className="min-w-0 break-words text-zinc-100">
+                {previewPending ? (
+                  <span className="twichify-skeleton inline-block h-3 w-56 rounded align-middle" />
+                ) : (
+                  <>
+                    <span className="font-bold text-sky-400">{selectedProvider.name}</span>: {previewText}
+                  </>
+                )}
+              </p>
             </div>
-            <p className="break-words text-sm leading-relaxed text-zinc-200">
-              {previewPending ? <span className="twichify-skeleton inline-block h-3 w-48 rounded align-middle" /> : previewText}
-            </p>
+
+            <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-zinc-400">
+              <span className={previewText.length > 400 ? "text-amber-300" : ""}>
+                {previewText.length}/{TWITCH_MAX} caractères
+              </span>
+              {!isConnected && (
+                <Link href="/dashboard/spotify" className="text-zinc-300 underline decoration-white/30 underline-offset-2 hover:text-white">
+                  Relie Spotify pour voir ta vraie musique
+                </Link>
+              )}
+            </div>
           </div>
-        </div>
+
+          <button
+            type="button"
+            onClick={saveBotMessage}
+            disabled={!canSave}
+            className={`inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-purple-600 px-6 py-3 text-base font-semibold text-white transition-colors hover:bg-purple-500 disabled:cursor-not-allowed disabled:opacity-50 ${FOCUS}`}
+          >
+            <Save size={16} />
+            {saving ? "Enregistrement..." : dirty ? "Enregistrer le message" : "Message enregistré"}
+          </button>
+        </StepRail>
       </section>
+
+      <UnsavedChangesBar
+        isDirty={dirty}
+        saving={saving}
+        canSave={customBotMessage.trim() !== ""}
+        onSave={saveBotMessage}
+        onDiscard={() => setCustomBotMessage(savedMessage)}
+      />
 
       <ToastDisplay toast={toast} />
     </div>

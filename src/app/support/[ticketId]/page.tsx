@@ -10,6 +10,7 @@ import LinkifiedText from "@/components/LinkifiedText";
 import PublicShell from "@/components/site/PublicShell";
 import PageIntro from "@/components/site/PageIntro";
 import { SATISFACTION_COMMENT_MAX, type SatisfactionRating, type TicketSatisfaction } from "@/lib/support-satisfaction";
+import { faqCategoryLabel } from "@/lib/faq-categories";
 
 interface Message {
   authorId: string;
@@ -347,7 +348,7 @@ export default function TicketThreadPage() {
         backLabel="Mes tickets"
         action={<TicketStatusBadge status={ticket.status} />}
       >
-        Ticket #{ticket._id.slice(-6)}, catégorie {ticket.category}
+        Ticket #{ticket._id.slice(-6)}, catégorie {faqCategoryLabel(ticket.category)}
       </PageIntro>
 
       {/* LISTE DES MESSAGES */}

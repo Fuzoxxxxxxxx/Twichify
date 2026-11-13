@@ -6,6 +6,7 @@ import tmi from "tmi.js";
 import { getChatThemeClasses, getChatAnimationClass, renderMessageSegments } from "@/lib/chat-widget-theme";
 import { createStatsBuffer } from "@/lib/chat-stats-client";
 import { resolveFont, ensureStylesheet } from "@/lib/widget-fonts";
+import { isBotLogin } from "@/lib/known-bots";
 
 interface ChatMessage {
   id: string;
@@ -175,11 +176,9 @@ export default function ChatWidget() {
       if (!currentSettings) return;
 
       const lowerUser = tags.username?.toLowerCase() || "";
-      const isBot =
-        lowerUser.includes("bot") ||
-        lowerUser === "nightbot" ||
-        lowerUser === "wizebot" ||
-        lowerUser === "streamelements";
+      // Bots connus + liste du streamer (hiddenBots). Plus de détection par « bot » dans le pseudo :
+      // elle masquait aussi de vrais viewers (ex. « RobotFan ») et les comptait comme bots dans les statistiques.
+      const isBot = isBotLogin(lowerUser, currentSettings.hiddenBots);
       const isCommand = message.trim().startsWith("!");
 
       // Statistiques de chat (si activées) : comptées AVANT les filtres d'affichage, pour que masquer les bots,

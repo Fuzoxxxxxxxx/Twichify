@@ -16,10 +16,7 @@ import {
   type AnnouncementRecord,
 } from "@/lib/announcement-types";
 import { ROLE_LABELS } from "@/lib/roles";
-
-const FOCUS = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400";
-const INPUT =
-  "w-full rounded-lg border border-white/10 bg-white/[0.02] px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none transition-colors focus:border-purple-500/60";
+import { CARD, EmptyPanel, FOCUS, INPUT, LoadingPanel } from "@/components/admin/AdminUI";
 
 const fmtDate = (iso: string) =>
   new Date(iso).toLocaleString("fr-FR", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
@@ -116,11 +113,11 @@ export default function AdminAnnouncementsPage() {
 
   return (
     <div className="space-y-8">
-      <PageHeader eyebrow="Communauté" title="Annonces" />
-      <p className="-mt-6 max-w-2xl text-sm leading-relaxed text-zinc-400">
-        Envoie une notification à tous les utilisateurs ou à un groupe. Elle apparaît dans leur cloche de notifications et sur leur page Notifications.
-        Réservé au Créateur et aux Co-créateurs.
-      </p>
+      <PageHeader
+        eyebrow="Communauté"
+        title="Annonces"
+        description="Envoie une notification à tous les utilisateurs ou à un groupe. Elle apparaît dans leur cloche de notifications et sur leur page Notifications. Réservé au Créateur et aux Co-créateurs."
+      />
 
       {feedback && (
         <div
@@ -135,7 +132,7 @@ export default function AdminAnnouncementsPage() {
       )}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
-        <section className="space-y-6 rounded-2xl border border-white/10 bg-white/[0.02] p-6 lg:col-span-3">
+        <section className={`space-y-6 ${CARD} p-6 lg:col-span-3`}>
           {/* Destinataires */}
           <div className="space-y-3">
             <p id="audience-label" className="text-sm font-semibold text-zinc-200">
@@ -274,7 +271,7 @@ export default function AdminAnnouncementsPage() {
 
       {/* Historique */}
       <section>
-        <h2 className="mb-4 flex items-center gap-2.5 font-display text-lg font-bold tracking-tight text-white">
+        <h2 className="mb-4 flex items-center gap-2.5 font-display text-xl font-bold tracking-tight text-white">
           <Megaphone size={18} className="text-purple-300" aria-hidden="true" />
           Dernières annonces envoyées
         </h2>
@@ -287,14 +284,9 @@ export default function AdminAnnouncementsPage() {
             </button>
           </div>
         ) : history === null ? (
-          <div className="rounded-2xl border border-white/10 bg-white/[0.02] py-12 text-center" aria-busy="true">
-            <Loader2 className="mx-auto h-5 w-5 animate-spin text-purple-400" />
-          </div>
+          <LoadingPanel label="Chargement de l'historique..." />
         ) : history.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.02] py-12 text-center">
-            <Megaphone size={26} className="mx-auto mb-2 text-zinc-600" aria-hidden="true" />
-            <p className="text-sm text-zinc-300">Aucune annonce envoyée pour le moment.</p>
-          </div>
+          <EmptyPanel icon={Megaphone}>Aucune annonce envoyée pour le moment.</EmptyPanel>
         ) : (
           <ul className="divide-y divide-white/10 overflow-hidden rounded-2xl border border-white/10">
             {history.map((a) => (

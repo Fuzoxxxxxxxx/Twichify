@@ -1,4 +1,5 @@
 import mongoose, { Schema, model, models } from "mongoose";
+import { FAQ_CATEGORY_KEYS } from "@/lib/faq-categories";
 
 const MessageSchema = new Schema({
   authorId: { type: String, required: true },
@@ -27,9 +28,10 @@ const SupportTicketSchema = new Schema({
   userId: { type: String, required: true },
   userName: { type: String, required: true },
   subject: { type: String, required: true },
+  // Mêmes catégories que la FAQ (lib/faq-categories.ts) : les anciennes clés des tickets (spotify, obs, api, compte, autre) y existent toutes.
   category: {
     type: String,
-    enum: ["spotify", "obs", "api", "compte", "autre"],
+    enum: FAQ_CATEGORY_KEYS,
     default: "autre",
   },
   status: {

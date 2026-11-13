@@ -1,11 +1,9 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import {
-  AlertTriangle,
   Loader2,
-  Search,
   CheckCircle2,
   XCircle,
   Trash2,
@@ -22,12 +20,13 @@ import {
   HelpCircle,
   KeyRound,
   ChevronDown,
+  Eye,
 } from "lucide-react";
 import { ROLE_LABELS, canActOn, assignableRoles, hasPermission, PERMISSIONS, getRoleLevel, ALL_ROLES, PERMISSION_LABELS } from "@/lib/roles";
 import { useDialog } from "@/components/DialogProvider";
 import { PageHeader } from "@/components/dashboard/DashboardUI";
-
-const FOCUS = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400";
+import { AccessDenied, CARD, EmptyPanel, FilterPills, FOCUS, LoadingPanel, SearchField } from "@/components/admin/AdminUI";
+import UserProfilePanel from "@/components/admin/UserProfilePanel";
 
 interface AdminUser {
   _id: string;
@@ -74,10 +73,14 @@ export default function AdminUsersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState("tous");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [myRole, setMyRole] = useState<string>("user");
   const [sortBy, setSortBy] = useState<"name" | "role" | "date" | "spotify">("date");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  // Fiche ouverte (panneau latéral en lecture seule) ; callback stable pour que le panneau ne reprenne pas le focus à chaque rendu.
+  const [profileUser, setProfileUser] = useState<AdminUser | null>(null);
+  const closeProfile = useCallback(() => setProfileUser(null), []);
 
   const currentUserId = (session?.user as any)?.id;
 
@@ -102,9 +105,25 @@ export default function AdminUsersPage() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return users;
-    return users.filter((u) => u.name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q));
-  }, [users, search]);
+    return users.filter(
+      (u) =>
+        (roleFilter === "tous" || u.role === roleFilter) &&
+        (!q || u.name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q))
+    );
+  }, [users, search, roleFilter]);
+
+  // Puces de filtre par rôle : seulement les rôles présents, du plus élevé au plus bas, avec leur effectif.
+  const roleOptions = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const u of users) counts[u.role] = (counts[u.role] || 0) + 1;
+    return [
+      { id: "tous", label: "Tous", count: users.length },
+      ...ALL_ROLES.slice()
+        .reverse()
+        .filter((r) => counts[r])
+        .map((r) => ({ id: r as string, label: ROLE_LABELS[r] || r, count: counts[r] })),
+    ];
+  }, [users]);
 
   const sorted = useMemo(() => {
     const list = [...filtered];
@@ -178,23 +197,14 @@ export default function AdminUsersPage() {
     }
   };
 
-  if (error) {
-    return (
-      <div role="alert" className="mx-auto mt-10 max-w-md rounded-2xl border border-red-500/25 bg-white/[0.02] p-8 text-center">
-        <AlertTriangle className="mx-auto text-red-400 mb-3" size={32} />
-        <h2 className="mb-2 text-lg font-bold">Accès refusé</h2>
-        <p className="text-sm text-zinc-400">
-          Cette section est réservée au staff.
-        </p>
-      </div>
-    );
-  }
+  if (error) return <AccessDenied />;
 
   return (
     <div className="space-y-6">
       <PageHeader
         eyebrow="Administration"
         title="Utilisateurs"
+        description="Les comptes inscrits, leurs rôles et ce que chaque rôle peut faire."
         action={
           <div className="flex items-center gap-2 self-start rounded-lg border border-white/10 px-3.5 py-2.5 sm:self-auto">
             <Users size={15} className="text-purple-300" />
@@ -206,7 +216,7 @@ export default function AdminUsersPage() {
       />
 
       {/* MATRICE DES PERMISSIONS PAR RÔLE */}
-      <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]">
+      <div className={`overflow-hidden ${CARD}`}>
         <button
           onClick={() => setShowPermMatrix((v) => !v)}
           aria-expanded={showPermMatrix}
@@ -287,17 +297,12 @@ export default function AdminUsersPage() {
 
       {/* BARRE DE RECHERCHE ET TRI */}
       <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Rechercher par nom ou e-mail..."
-            aria-label="Rechercher un utilisateur"
-            className="w-full rounded-lg border border-white/10 bg-white/[0.02] py-3 pl-10 pr-4 text-sm text-white placeholder-zinc-500 outline-none transition-colors focus:border-purple-500/60"
-          />
-        </div>
+        <SearchField
+          value={search}
+          onChange={setSearch}
+          placeholder="Rechercher par nom ou e-mail..."
+          label="Rechercher un utilisateur"
+        />
 
         <div className="flex items-center gap-2">
           <select
@@ -324,17 +329,13 @@ export default function AdminUsersPage() {
         </div>
       </div>
 
+      <FilterPills label="Filtrer par rôle" options={roleOptions} value={roleFilter} onChange={setRoleFilter} small />
+
       {/* LISTE DES UTILISATEURS */}
       {loading ? (
-        <div className="rounded-2xl border border-white/10 bg-white/[0.02] py-16 text-center" aria-busy="true">
-          <Loader2 className="w-5 h-5 text-purple-400 animate-spin mx-auto mb-2" />
-          <p className="text-sm text-zinc-400">Chargement des utilisateurs...</p>
-        </div>
+        <LoadingPanel label="Chargement des utilisateurs..." />
       ) : filtered.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.02] py-16 text-center">
-          <UserIcon size={28} className="mx-auto mb-3 text-zinc-600" />
-          <p className="text-sm text-zinc-300">Aucun utilisateur trouvé.</p>
-        </div>
+        <EmptyPanel icon={UserIcon}>Aucun utilisateur trouvé.</EmptyPanel>
       ) : (
         <div className="space-y-3">
           {sorted.map((u) => {
@@ -390,6 +391,16 @@ export default function AdminUsersPage() {
                 </div>
 
                 <div className="flex shrink-0 items-center gap-2 border-t border-white/10 pt-3 sm:border-t-0 sm:pt-0">
+                  <button
+                    type="button"
+                    onClick={() => setProfileUser(u)}
+                    className={`flex cursor-pointer items-center gap-1.5 rounded-lg border border-white/15 px-3 py-2.5 text-sm font-medium text-zinc-200 transition-colors hover:border-white/30 hover:text-white ${FOCUS}`}
+                    aria-label={`Voir la fiche de ${u.name}`}
+                  >
+                    <Eye size={14} aria-hidden="true" />
+                    Fiche
+                  </button>
+
                   {isLocked ? (
                     <span
                       className="flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-2 text-sm font-medium text-zinc-400"
@@ -446,6 +457,8 @@ export default function AdminUsersPage() {
           })}
         </div>
       )}
+
+      {profileUser && <UserProfilePanel user={profileUser} onClose={closeProfile} />}
     </div>
   );
 }

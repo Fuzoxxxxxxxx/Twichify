@@ -14,16 +14,14 @@
  */
 
 // Date de la dernière révision matérielle. Les acceptations antérieures ne sont plus valables.
-export const TERMS_REVISED_AT = new Date("2026-10-04T00:00:00.000Z");
+export const TERMS_REVISED_AT = new Date("2026-10-29T00:00:00.000Z");
 
 // Même date, formulée pour l'affichage (page /privacy et fenêtre d'acceptation).
-export const TERMS_REVISED_LABEL = "4 octobre 2026";
+export const TERMS_REVISED_LABEL = "29 octobre 2026";
 
 // Ce qui a changé lors de la dernière révision, affiché dans la fenêtre aux utilisateurs qui avaient déjà accepté.
 export const TERMS_CHANGES: string[] = [
-  "Nouvelles permissions Twitch en lecture seule (followers, modérateurs, éditeurs, VIPs, abonnés, bits) pour afficher les statistiques de votre chaîne.",
-  "Suivi des départs de followers : fonction facultative qui enregistre la liste de vos followers pour détecter qui part.",
-  "Statistiques de chat : fonction facultative qui enregistre des compteurs d'activité de votre chat (jamais le texte des messages) pendant 90 jours.",
+  "Nouvelle permission Twitch en lecture seule (spectateurs connectés au chat de votre chaîne) pour détecter les bots de votre chat à la demande. La liste n'est pas enregistrée ; seuls les pseudos de bots que vous ajoutez à vos réglages le sont.",
 ];
 
 /** Vrai si l'acceptation date d'après la dernière révision. */

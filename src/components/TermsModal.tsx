@@ -101,7 +101,7 @@ export default function TermsModal({ isOpen, onAccept, update }: TermsModalProps
           )}
 
           <div className="mb-6 space-y-2">
-            <Link href="/privacy" target="_blank" className={LEGAL_LINK}>
+            <Link href="/privacy#confidentialite" target="_blank" className={LEGAL_LINK}>
               <span className="flex items-center gap-3">
                 <FileText size={16} className="text-purple-300" aria-hidden="true" />
                 Politique de confidentialité
@@ -109,7 +109,7 @@ export default function TermsModal({ isOpen, onAccept, update }: TermsModalProps
               <ExternalLink size={14} aria-hidden="true" className="text-zinc-500 transition-colors group-hover:text-purple-300" />
             </Link>
 
-            <Link href="/privacy" target="_blank" className={LEGAL_LINK}>
+            <Link href="/privacy#conditions" target="_blank" className={LEGAL_LINK}>
               <span className="flex items-center gap-3">
                 <FileText size={16} className="text-purple-300" aria-hidden="true" />
                 Conditions Générales d'Utilisation

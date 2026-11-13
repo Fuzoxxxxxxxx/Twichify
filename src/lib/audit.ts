@@ -10,7 +10,12 @@ export type AuditAction =
   | "incident.delete"
   | "idea.update"
   | "idea.comment.delete"
-  | "announcement.send";
+  | "announcement.send"
+  | "ticket.transfer"
+  | "ticket.takeover"
+  | "faq.create"
+  | "faq.update"
+  | "faq.delete";
 
 type AuditEntry = {
   actor: { _id: unknown; name?: string | null; role?: string | null };
