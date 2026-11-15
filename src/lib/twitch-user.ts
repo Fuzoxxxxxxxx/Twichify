@@ -622,6 +622,9 @@ export async function getTwitchStats(userId: string): Promise<TwitchStats | null
   const me = profile.data?.[0];
   if (!me) throw new Error("Profil Twitch introuvable");
 
+  // Le profil est déjà lu ici : on en profite pour garder le pseudo et l'avatar du compte à jour (renommage sur Twitch).
+  void saveTwitchIdentity(userId, me.display_name, me.profile_image_url).catch(() => {});
+
   const live = stream.data?.[0];
   const info = channel.data?.[0];
 
@@ -695,4 +698,76 @@ export async function getTwitchStats(userId: string): Promise<TwitchStats | null
   if (!needsReauth) cache.set(userId, { at: Date.now(), data: stats });
 
   return stats;
+}
+
+/* ------------------------------------------------------------------ */
+/* Identité Twitch : pseudo affiché et avatar                          */
+/* ------------------------------------------------------------------ */
+
+// NextAuth v4 ne renseigne le nom et l'avatar du compte qu'à sa création : après un renommage sur Twitch, `users.name`
+// resterait l'ancien pseudo et le widget chat rejoindrait la mauvaise chaîne. L'identifiant Twitch (`providerAccountId`),
+// lui, ne change jamais : on relit le profil avec cet identifiant.
+const IDENTITY_TTL_MS = 6 * 3600 * 1000;
+const IDENTITY_RETRY_MS = 15 * 60 * 1000;
+const IDENTITY_CACHE_MAX = 5000;
+const identityCheckedAt = new Map<string, number>();
+
+/**
+ * Enregistre le pseudo et l'avatar Twitch d'un compte, seulement s'ils ont changé (le filtre `$ne` rend l'écriture sans effet
+ * sinon). Valeurs vérifiées : un nom de 60 caractères au plus, un avatar en https. Renvoie true si le compte a été modifié.
+ */
+export async function saveTwitchIdentity(userId: string, displayName: unknown, imageUrl: unknown): Promise<boolean> {
+  const set: Record<string, string> = {};
+  if (typeof displayName === "string" && displayName.trim() && displayName.trim().length <= 60) set.name = displayName.trim();
+  if (typeof imageUrl === "string" && imageUrl.startsWith("https://")) set.image = imageUrl;
+  const keys = Object.keys(set);
+  if (keys.length === 0 || !ObjectId.isValid(userId)) return false;
+
+  const client = await clientPromise;
+  const result = await client
+    .db()
+    .collection("users")
+    .updateOne({ _id: new ObjectId(userId), $or: keys.map((k) => ({ [k]: { $ne: set[k] } })) }, { $set: set });
+  return result.modifiedCount > 0;
+}
+
+/**
+ * Relit le profil Twitch du compte (au plus une fois toutes les 6 h par instance, 15 min après un échec) et met le pseudo
+ * à jour. Renvoie le pseudo affiché actuel, ou null si la vérification n'a pas eu lieu (le pseudo enregistré fait alors foi).
+ * Ne lève jamais d'erreur : un problème Twitch ne doit pas empêcher un widget de se charger.
+ */
+export async function syncTwitchIdentity(user: { _id: unknown }): Promise<string | null> {
+  const userId = String(user._id);
+  const now = Date.now();
+  if (now - (identityCheckedAt.get(userId) ?? 0) < IDENTITY_TTL_MS) return null;
+
+  // Un échec ne doit pas relancer l'appel à chaque chargement : on réessaie dans 15 minutes.
+  identityCheckedAt.set(userId, now - (IDENTITY_TTL_MS - IDENTITY_RETRY_MS));
+  if (identityCheckedAt.size > IDENTITY_CACHE_MAX) {
+    for (const key of identityCheckedAt.keys()) {
+      identityCheckedAt.delete(key);
+      if (identityCheckedAt.size <= IDENTITY_CACHE_MAX * 0.8) break;
+    }
+  }
+
+  try {
+    if (!ObjectId.isValid(userId)) return null;
+    const client = await clientPromise;
+    const account = await client
+      .db()
+      .collection("accounts")
+      .findOne({ userId: new ObjectId(userId), provider: "twitch" }, { projection: { providerAccountId: 1 } });
+    if (!account?.providerAccountId) return null;
+
+    const json = await helixApp<{ data: any[] }>(`/users?id=${encodeURIComponent(String(account.providerAccountId))}`);
+    const me = json.data?.[0];
+    if (!me) return null;
+
+    identityCheckedAt.set(userId, Date.now());
+    await saveTwitchIdentity(userId, me.display_name, me.profile_image_url);
+    return typeof me.display_name === "string" && me.display_name.trim() ? me.display_name.trim() : null;
+  } catch (error) {
+    console.error("Erreur synchronisation du pseudo Twitch :", error);
+    return null;
+  }
 }

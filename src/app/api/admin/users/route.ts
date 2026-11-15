@@ -6,6 +6,7 @@ import SupportTicket from "@/models/SupportTicket";
 import clientPromise from "@/lib/mongodb";
 import { requirePermission } from "@/lib/auth-helpers";
 import { hasPermission, PERMISSIONS } from "@/lib/roles";
+import { hasAcceptedCurrentTerms } from "@/lib/terms";
 
 export const dynamic = "force-dynamic";
 
@@ -57,10 +58,16 @@ async function getUserProfile(id: string, staffRole: string) {
       createdAt: user._id.getTimestamp(),
       hasAcceptedTerms: !!user.hasAcceptedTerms,
       acceptedTermsAt: user.acceptedTermsAt ?? null,
+      // Vrai si l'acceptation date d'après la dernière révision des CGU (sinon la fenêtre d'acceptation réapparaît).
+      termsCurrent: hasAcceptedCurrentTerms(user.acceptedTermsAt),
       lastActivityAt,
       activeSessions: sessions.length,
       spotify: { credentialsSet: !!user.spotifyClientId, connected: !!user.spotifyRefreshToken },
-      widgets: { musicSeenAt: user.widgetSeen?.musicAt ?? null, chatSeenAt: user.widgetSeen?.chatAt ?? null },
+      widgets: {
+        musicSeenAt: user.widgetSeen?.musicAt ?? null,
+        chatSeenAt: user.widgetSeen?.chatAt ?? null,
+        bannerSeenAt: user.widgetSeen?.bannerAt ?? null,
+      },
       chatStatsEnabled: !!user.chatStats?.enabled,
     },
     tickets,

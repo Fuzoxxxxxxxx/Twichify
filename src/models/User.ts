@@ -26,6 +26,7 @@ const UserSchema = new Schema({
   widgetSeen: {
     musicAt: { type: Date, default: null },
     chatAt: { type: Date, default: null },
+    bannerAt: { type: Date, default: null },
   },
 
   // Widget Settings

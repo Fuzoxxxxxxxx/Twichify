@@ -2,11 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, ChevronRight, Loader2, MinusCircle, X } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ChevronRight, Loader2, MinusCircle, X } from "lucide-react";
 import TicketStatusBadge from "@/components/TicketStatusBadge";
 import { ROLE_LABELS } from "@/lib/roles";
 import { BTN_ICON, FOCUS, STATUS_RAIL, timeAgo } from "@/components/admin/AdminUI";
 import { faqCategoryLabel } from "@/lib/faq-categories";
+import { TERMS_REVISED_LABEL } from "@/lib/terms";
 
 interface Profile {
   id: string;
@@ -17,10 +18,11 @@ interface Profile {
   createdAt: string;
   hasAcceptedTerms: boolean;
   acceptedTermsAt: string | null;
+  termsCurrent: boolean;
   lastActivityAt: string | null;
   activeSessions: number;
   spotify: { credentialsSet: boolean; connected: boolean };
-  widgets: { musicSeenAt: string | null; chatSeenAt: string | null };
+  widgets: { musicSeenAt: string | null; chatSeenAt: string | null; bannerSeenAt: string | null };
   chatStatsEnabled: boolean;
 }
 
@@ -56,6 +58,15 @@ function No({ children }: { children: React.ReactNode }) {
   return (
     <span className="inline-flex items-center gap-1.5 text-zinc-400">
       <MinusCircle size={14} aria-hidden="true" />
+      {children}
+    </span>
+  );
+}
+
+function Warn({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 text-amber-300">
+      <AlertTriangle size={14} aria-hidden="true" />
       {children}
     </span>
   );
@@ -200,8 +211,19 @@ export default function UserProfilePanel({
                   <Row label="E-mail">{profile.email ? <span className="break-all">{profile.email}</span> : "—"}</Row>
                   <Row label="Inscription">{fmtDate(profile.createdAt)}</Row>
                   <Row label="Conditions acceptées">
-                    {profile.hasAcceptedTerms ? (
-                      <Yes>{profile.acceptedTermsAt ? fmtDate(profile.acceptedTermsAt) : "Oui"}</Yes>
+                    {/* On se fie à la date d'acceptation, pas au booléen : une acceptation antérieure à la dernière révision
+                        existe bien en base, mais la fenêtre d'acceptation réapparaît pour l'utilisateur. */}
+                    {profile.acceptedTermsAt && profile.termsCurrent ? (
+                      <Yes>{fmtDate(profile.acceptedTermsAt)}</Yes>
+                    ) : profile.acceptedTermsAt ? (
+                      <>
+                        <Warn>À reconfirmer</Warn>
+                        <span className="mt-0.5 block text-xs font-normal text-zinc-400">
+                          Acceptées le {fmtDate(profile.acceptedTermsAt)}, avant la révision du {TERMS_REVISED_LABEL}
+                        </span>
+                      </>
+                    ) : profile.hasAcceptedTerms ? (
+                      <Yes>Oui (date inconnue)</Yes>
                     ) : (
                       <No>Pas encore</No>
                     )}
@@ -227,6 +249,13 @@ export default function UserProfilePanel({
                   <Row label="Widget chat">
                     {profile.widgets.chatSeenAt ? (
                       <Yes>Vu {timeAgo(profile.widgets.chatSeenAt)}</Yes>
+                    ) : (
+                      <No>Jamais chargé dans OBS</No>
+                    )}
+                  </Row>
+                  <Row label="Widget bandeau">
+                    {profile.widgets.bannerSeenAt ? (
+                      <Yes>Vu {timeAgo(profile.widgets.bannerSeenAt)}</Yes>
                     ) : (
                       <No>Jamais chargé dans OBS</No>
                     )}

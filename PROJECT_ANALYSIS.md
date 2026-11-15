@@ -1,10 +1,10 @@
 # Twichify/Spotify-Now-Playing - Project Analysis
 
-_Dernière mise à jour : 09/10/2026 — alignée sur la version **3.13.0** du changelog (`src/lib/changelog.ts`)._
+_Dernière mise à jour : 15/11/2026 — alignée sur la version **3.19.0** du changelog (`src/lib/changelog.ts`)._
 
 ## Executive Summary
 
-**Twichify** is a comprehensive Twitch streamer ecosystem platform that integrates Spotify music playback with multiple streaming overlays and chat management tools. Built with Next.js, React 19, TypeScript, and MongoDB, it provides real-time music widget display, chat overlays, chatbot integrations, a feature-request box with votes, a public changelog, and comprehensive admin/support infrastructure built on a six-level role and permission system.
+**Twichify** is a comprehensive Twitch streamer ecosystem platform that integrates Spotify music playback with multiple streaming overlays and chat management tools. Built with Next.js, React 19, TypeScript, and MongoDB, it provides real-time music widget display, chat overlays, a rotating information-banner overlay, chatbot integrations, an in-app notification center, a feature-request box with votes, a public changelog, and comprehensive admin/support infrastructure (ticket statistics, satisfaction survey, targeted announcements) built on a six-level role and permission system.
 
 **Primary Purpose**: Enable Twitch streamers to display currently playing Spotify tracks in OBS, manage chat with custom widgets, integrate with multiple chatbot platforms, and provide viewer support infrastructure.
 
@@ -19,6 +19,7 @@ _Dernière mise à jour : 09/10/2026 — alignée sur la version **3.13.0** du c
 - **Authentication**: NextAuth 4.24.7 (Twitch OAuth), MongoDB Adapter
 - **External APIs**: Spotify API, Twitch API (OAuth + badges), ChatBot APIs (Wizebot, Nightbot, StreamElements), third-party emotes (BTTV, 7TV, FFZ)
 - **UI Libraries**: lucide-react (icons), tailwind-merge, tailwindcss-animate
+- **Fonts**: widget font library in `src/lib/widget-fonts.ts` (3 system fonts + 21 Google Fonts families), loaded in the visitor's browser from `fonts.googleapis.com`
 - **Chat Integration**: tmi.js 1.8.5 (Twitch Chat client)
 - **HTTP**: Axios 1.13.5
 - **Validation / Email**: Zod 4.5.4, Resend 6.26 (declared dependencies)
@@ -28,6 +29,7 @@ _Dernière mise à jour : 09/10/2026 — alignée sur la version **3.13.0** du c
 ### Deployment
 - Deployed on Vercel (Hobby plan, region `cdg1`); no Vercel cron: `vercel.json` only pins the region
 - Health checks come from an external pinger calling `/api/cron/check-status` every minute with `Authorization: Bearer $CRON_SECRET`
+- Support alerts (tickets unanswered for 48 h+) piggy-back on that same pinger (`runSupportAlertsThrottled`, at most once per 15 min per server instance) and are also exposed on `/api/cron/support-alerts` (same `CRON_SECRET` protection)
 - Database URL and API keys stored in environment variables
 - NextAuth secret configured for session management
 
@@ -45,20 +47,24 @@ _Dernière mise à jour : 09/10/2026 — alignée sur la version **3.13.0** du c
   - **Effects**: Glow effect, rotation animation, blur background
   - **Positioning**: Configurable widget position on stream
   - **Features**: Animated equalizer, auto-hide (widget only shown a few seconds on each new track)
+  - **Animation**: entry/exit style (expand, reveal, slide, fade, pop) and speed (slow / normal / fast), soft title + cover transition on each track change, pulsing glow (`lib/widget-animation.ts`)
+  - **Fonts**: 3 system fonts or the Google Fonts library (`widgetSettings.fontFamily` = `font-sans`, `font-mono`, `font-serif` or `google:<Family>`)
 - Progress bar with current/total time display
 - Album cover art display with optional rotation effect
 - Smooth animations powered by Framer Motion
 
 ### B. **Dashboard (User Control Panel)** ✅
 - Sidebar navigation grouped by category (v3.3.0):
-  - **Accueil** (`/dashboard`): connection status, OBS source URLs (music + chat), "Régénérer les liens", quick links to ideas and changelog
-  - **Intégrations → Spotify** (`/dashboard/spotify`): Client ID/Secret, Redirect URI, OAuth link/unlink
-  - **Intégrations → Bot** (`/dashboard/bot`): Nightbot / Wizebot / StreamElements scripts, custom message, live preview
+  - **Accueil** (`/dashboard`): redesigned in v3.17.0 — header with the avatar and the state of Spotify, Twitch and widgets, then one card per widget (music, chat) with its OBS link, **Personnaliser** and **Tester** buttons, and a live status (online / offline / never loaded in OBS, see section U). Links are masked by default (eye button reveals them for 20 s, Copy always copies the full link), "Régénérer les liens" kept
+  - **Intégrations → Spotify** (`/dashboard/spotify`): 4-step walkthrough until the account is linked, then the live now-playing track shown large to check that everything works, with the settings (Client ID/Secret, Redirect URI, re-link, disconnect) below. Reminds that Spotify Premium is required (v3.17.0)
+  - **Intégrations → Bot** (`/dashboard/bot`): 3 steps since v3.17.0 — pick the platform, paste a single script (as a command or as a Timer), write the message. `{artist}`, `{title}` and `{song}` insert on click; the preview uses the real current track with a 500-character counter
   - **Widgets → Musique** (`/dashboard/design`): music widget customization
   - **Widgets → Chat** (`/dashboard/chat`): chat widget themes, presets, moderation
+  - **Widgets → Bandeau** (`/dashboard/banner`): information-banner widget (section S)
   - **Analyse → Statistiques** (`/dashboard/stats`): listening history
   - **Analyse → Twitch** (`/dashboard/twitch`): channel statistics (followers, live, videos, clips)
-  - **Compte & données** (`/dashboard/account`): export, deletion, sessions, diagnostics, resets
+  - **Compte & données** (`/dashboard/account`): export, deletion, sessions, diagnostics, resets (reached from the profile menu at the bottom of the sidebar, together with ideas, changelog, help and service status; on mobile through the "Plus" drawer of the bottom bar)
+  - **Notifications** (`/dashboard/notifications`): full notification history, reached from the bell in the sidebar header (section T)
 - Onboarding: welcome modal (4 steps) shown to new accounts, re-openable from the Help center
 - "Quoi de neuf" modal driven by `lib/changelog.ts`; onboarding and last-seen changelog version are stored on the account
 
@@ -77,6 +83,9 @@ _Dernière mise à jour : 09/10/2026 — alignée sur la version **3.13.0** du c
 - Replies display, highlight of a viewer's very first message, per-role highlight colors (moderator, subscriber, VIP, broadcaster, bot)
 - Word filter with two modes: hide the whole message or censor only the matching words (v2.0.19)
 - Ignored-users list; BTTV / 7TV / FFZ emotes and official Twitch badges
+- **Bot hiding** (v3.17.0): "Masquer Bots" hides the known bots of `lib/known-bots.ts` (Nightbot, StreamElements, Streamlabs, Moobot, WizeBot, Fossabot…) plus the streamer's own `hiddenBots` list (exact logins, `sanitizeBotList`, 200 max). The former "nickname contains bot" rule was removed because it hid real viewers and skewed chat statistics
+- **Détecter** button (`GET /api/user/chat-bots/detect`): reads the viewers currently connected to the chat on demand (scope `moderator:read:chatters`, `lib/twitch-chatters.ts`, up to 5 pages of 1 000, 15 s memory cache, never stored), returns the known bots present and suggestions (logins ending in "bot") that the streamer confirms before adding
+- Font: system fonts or Google Fonts (`chatWidgetSettings.fontFamily`)
 - Render code (themes, animations, emote splitting) shared between the real widget, the dashboard and the home preview (`lib/chat-widget-theme.ts`)
 
 ### D. **Chatbot Integrations** ✅
@@ -95,7 +104,7 @@ Features:
 
 ### E. **Support Ticketing System** ✅
 - User can create support tickets
-- Categories: Spotify, OBS, API, Account, Other
+- Categories: the same 14 keys as the FAQ (`lib/faq-categories.ts`, v3.17.0), so a request lands directly in the right place; the legacy keys (spotify, obs, api, compte, autre) still exist
 - Message threading within tickets
 - Ticket status tracking: En Attente → En Cours → Résolu → Fermé
 - Admin dashboard for ticket management
@@ -104,17 +113,22 @@ Features:
 - "Is typing" indicator for both user and staff (`/typing` route, v2.0.20)
 - Clickable links in messages, keyboard shortcuts (Enter, Shift+Enter, Enter+Space to send and resolve)
 - Paginated ticket list for users
+- **Satisfaction survey** (v3.16.0): once a ticket is resolved or closed, the requester answers "Ça a réglé ton problème ?" (yes / no + optional comment up to 500 chars) via `POST /api/support/tickets/[id]/satisfaction` (requester only, 409 while the ticket is open, can change their mind while it stays closed). A first "no" notifies the last staff member who replied (`ticket_feedback`)
+- **Stale-ticket alerts** (v3.16.0, `lib/support-alerts.ts`): a ticket waiting for a staff reply for more than 48 h notifies the assignee, or every user holding `manageTickets` when nobody claimed it; reminder at most every 24 h (`staffAlertedAt`), 20 alerts max per run
 
 ### F. **FAQ Management** ✅
 - Dynamic FAQ articles by category
 - Admin can create/edit/delete articles
-- 13 categories shared by the model, the API validation, the admin and the help page (`src/lib/faq-categories.ts`, single source: key, label, description, display order): `demarrage` (Premiers pas), `spotify`, `bot`, `obs` (OBS & overlays), `chat`, `twitch`, `stats`, `statut`, `compte`, `securite`, `api`, `communaute` (Idées & support), `autre`. Support tickets keep their own 5 categories. The help page only lists categories that contain articles (with counts and a description of the selected one); articles are grouped by category in display order
+- 14 categories shared by the model, the API validation, the admin, the help page and, since v3.17.0, support tickets (`src/lib/faq-categories.ts`, single source: key, label, description, display order): `demarrage` (Premiers pas), `spotify`, `bot`, `obs` (OBS & overlays), `chat`, `bandeau` (Widget bandeau), `twitch`, `stats`, `statut`, `compte`, `securite`, `api`, `communaute` (Idées & support), `autre`. Support tickets use the same keys (a category added there becomes a ticket category too; the legacy keys `spotify`, `obs`, `api`, `compte`, `autre` are unchanged).
+- **Reader feedback** (15/11/2026): each open article ends with "Cet article vous a-t-il aidé ?" (`components/FaqFeedback.tsx`, Oui / Non, thanks message, link to a new ticket after a "Non"). Anonymous counters `helpfulYes` / `helpfulNo` on `FaqArticle`, incremented by `POST /api/faq/[id]/feedback` (public; one count per visitor, article and day through an in-memory IP map, never stored). The choice is remembered in the browser (`localStorage`), so the reader cannot vote twice by mistake. `GET /api/faq` hides the counters; `GET /api/faq?stats=1` returns them for `manageFaq` only. The admin FAQ page shows the counters on each article and an "À revoir" filter (3 votes or more and more "non" than "oui"); editing an article's answer resets its counters (audit log mentions it)
+- The help page only lists categories that contain articles (with counts and a description of the selected one); articles are grouped by category in display order
 - Public FAQ retrieval endpoint
 - Article ordering system
 - Help center (`/help`): search, category filter chips, paginated accordion, light formatting in answers (`**bold**`, lines starting with "Note" highlighted), re-open welcome guide button, links to tickets
 
 ### G. **Admin Dashboard** ✅
-- Pages: overview (`/admin`), tickets, FAQ, ideas, users, status incidents (`/admin/status`), owner space (`/admin/owner`)
+- Pages: overview (`/admin`), tickets, FAQ, ideas, users, support statistics (`/admin/support`), announcements (`/admin/announcements`), status incidents (`/admin/status`), owner space (`/admin/owner`)
+- Sidebar groups (`AdminShell`, same `ShellNav` building blocks as the user dashboard): Support (Tickets, Statistiques, FAQ), Communauté (Idées, Annonces), Administration (Utilisateurs, Statut, Propriétaire); items and empty groups are hidden without the matching permission, pending tickets and ideas to study show as badges
 - Ticket statistics overview and recent tickets
 - FAQ article management and ideas moderation (status + official response)
 - Users list (sort by name, role, sign-up date, Spotify status), role changes, account deletion
@@ -123,6 +137,8 @@ Features:
 - **Public comments on ideas** (`IdeaComment` collection, `lib/idea-comments.ts`): readable by anyone, posting requires login; plain text only (never linkified), 500 chars, 15 s cooldown and 40/day per user, latest 100 shown; staff badge from the author's role at write time; author ids never exposed (`mine` / `canDelete` computed server-side); deletion by the author or by staff with `manageIdeas` (staff deletions go to the audit log, `idea.comment.delete`); `GET /api/ideas` adds `commentCount`. Account deletion anonymizes comments (no staff badge); the data export includes them
 - **Ticket internal notes & transfer**: `SupportTicket.internalNotes` is declared `select: false` so no public or owner-facing route ever returns it; only staff routes ask for `+internalNotes` (`GET /api/support/tickets/[id]` for staff readers, `/notes`, `/transfer`). Any staff member can add a note on any ticket (deletion: author or higher level; 50 notes, 1 000 chars). **Transfer / escalation** (`POST /api/support/tickets/[id]/transfer`, staff list in `GET /api/support/staff`): allowed to the assignee, a higher level, or on a free ticket; target must hold `manageTickets`; refused on resolved/closed tickets; concurrency-safe (409 if the ticket changed hands meanwhile); the requester only sees the system message "La conversation a été transférée à …", the reason becomes an internal note
 - Every admin page is guarded server-side (`requirePagePermission`) and redirects to `/403?from=...` without the right permission; sections are hidden in the nav when the permission is missing
+- **Support statistics** (`/admin/support`, `manageTickets`, `GET /api/admin/support/stats?days=7|30|90`, pure functions in `lib/support-stats.ts`): tickets created per day, first-response delay (average / median, share answered within 24 h), resolution rate and delay, split by category and status, oldest waiting tickets (backlog), activity of each staff member, satisfaction rate and the latest "not solved" feedback with their comments; indicators are compared with the previous period of equal length
+- **Announcements** (`/admin/announcements`, `ownerZone` so creator / co-creator only; `GET/POST /api/admin/announcements`, `lib/announcements.ts`, `lib/announcement-types.ts`, v3.16.0): sends a notification to a group — all users, new this week (derived from the ObjectId timestamp, the User model has no `createdAt`), Spotify connected / not connected, widget never detected (`widgetSeen`), staff. The recipient count is previewed before sending (`?audience=`), title 80 and message 300 chars, internal links only (`isInternalPath`), an identical send is refused for 10 min (409), the last 20 sends are kept in the `Announcement` collection (one row per send, not per recipient) and every send is audit-logged (`announcement.send`). Delivery inserts one `Notification` per recipient, in batches of 1 000
 
 ### H. **Status Monitoring & Incidents** ✅ (rebuilt in v3.13.0)
 - Public page `/status` (same visual language as the changelog/help pages): global state card tinted by situation, key figures, one card per service (Spotify API, Twitch API, Overlays Server), a separate "Émotes du chat" section for the third-party emote services (BetterTTV, 7TV, FrankerFaceZ), incidents in progress, incident history as a timeline
@@ -136,6 +152,7 @@ Features:
 - **Incidents** (`/admin/status`, permission `manageStatus`): create an incident (service, impact, status, public message with templates), publish updates, mark resolved, reopen, delete; a banner shown for a down service without an incident proposes to create one. Public side: incidents of the last 7 days (`incidents` collection, creator never exposed)
 - **Global banner link**: an incident can also be published in the site-wide banner (`lib/incident-banner.ts`, `SiteSettings.banner.incidentId`): level from the impact, removed automatically when the incident is resolved or deleted, never overwrites a manual owner announcement, detached if the owner saves a manual announcement
 - Audit log entries for incident creation, update and deletion
+- The dashboard sidebar status link ("Système en ligne" / "Service dégradé" / "Panne en cours") reads `/api/status` every 60 s and only counts the `core` services (Spotify, Twitch, server); emote services are left out (v3.17.0)
 
 ### I. **User Settings & Configuration** ✅
 - Spotify client ID/secret configuration
@@ -143,6 +160,7 @@ Features:
 - Widget design customization storage
 - Bot message settings
 - Canvas settings (1920x1080 default)
+- Information-banner widget settings (`bannerWidgetSettings`, section S)
 
 ### J. **Listening Statistics** ✅
 - Total milliseconds listened
@@ -170,7 +188,8 @@ Features:
 - Full JSON export of personal data, permanent account deletion with double confirmation (Twitch token revoked, tickets deleted, ideas anonymized)
 - Active sessions list with device and last activity; revoke one or all others
 - Live diagnostics (Twitch, Spotify, widgets enabled)
-- One-click reset of widget settings (music, chat, bot) or listening stats, independently
+- One-click reset of widget settings (music, chat, bot) or listening stats, independently (resetting listening stats asks for a confirmation since v3.17.0, because it also erases the detailed history)
+- Identity header of `/dashboard/account` shows three status badges (music, chat, banner). "Actif" means configured, not loaded in OBS: music = Spotify linked, chat = Twitch name known, banner = at least one message (`bannerMessages` in `getDataSummary`, read with `+bannerWidgetSettings` and `sanitizeInfoBanner`)
 
 ### N. **Regenerable Widget Links** ✅ (v3.2.0)
 - Widget and bot URLs use a random 128-bit `widgetToken` instead of the account `_id`
@@ -180,8 +199,10 @@ Features:
 ### O. **Public Site Shell** ✅
 - Shared `SiteHeader` (sticky navbar) on all public pages (v3.5.0), `Pagination` component, global `SiteBanner`
 - Redesigned error pages 403 / 404 / 500 and a `global-error` fallback
-- Home page with animated music + chat widget previews using demo data and the real render engine
-- Public `/changelog` (versioned, deep link `#vX.Y.Z`), `/privacy` (CGU + GDPR rights), `/mentions-legales`
+- Home page with animated music, chat and banner widget previews using demo data and the real render engine
+- Site redesign (v3.14.0): shared public frame (`components/site/PublicShell.tsx`, `PageIntro.tsx`, `SiteFooter.tsx`), redesigned error and auth pages, sober dashboard style, accessibility pass (visible keyboard focus, aria states, reduced motion); on phones the public header links open in a dropdown menu; the shared public frame uses tighter margins on small screens (`px-4`), page titles drop to `text-3xl`, and the privacy page stacks its cards and full-width call to action, with long tokens allowed to wrap
+- Pre-login consent page `/auth/connexion` (v3.17.0): explains each Twitch permission in plain language and what Twichify cannot do; the list is derived from `lib/twitch-scopes.ts`, so a new scope appears there automatically (with a generic text if nobody wrote an explanation)
+- Public `/changelog` (versioned, deep link `#vX.Y.Z`), `/privacy` (CGU + GDPR rights), `/mentions-legales`, `/a-propos` (project presentation, features, principles, contact; v3.18.0)
 
 ### R. **Terms Versioning** ✅ (v3.11.0)
 - `lib/terms.ts` is the single source: `TERMS_REVISED_AT` (date of the last *material* revision), `TERMS_REVISED_LABEL` (display), `TERMS_CHANGES` (what changed in THIS revision, shown to returning users), `hasAcceptedCurrentTerms()`
@@ -189,6 +210,7 @@ Features:
 - `/privacy` shows `TERMS_REVISED_LABEL` as its "last updated" date, so page and prompt cannot drift apart
 - **Process**: bump the date + replace `TERMS_CHANGES` only for material changes (new data, permission, processing, third party, retention), never for typo fixes
 - Acceptance is still enforced client-side by the modal (as before), not by an API guard
+- Current revision: **29/10/2026** (`TERMS_REVISED_AT`), triggered by the new read-only Twitch permission `moderator:read:chatters` used for on-demand bot detection (the viewer list is not stored; only the bot logins the streamer adds are)
 
 ### Q. **Chat Statistics** ✅ (v3.10.0, opt-in)
 - New tab **Chat** on `/dashboard/twitch` (`components/dashboard/ChatStatsTab.tsx`, self-contained: own fetching, enable/pause/delete)
@@ -217,6 +239,28 @@ Features:
 - `events.signIn` in the NextAuth config now writes the fresh token/scope on every sign-in (v4 does not update an existing linked account)
 - Accounts created before v3.6.0 get a "reconnect" banner (`force_verify`) until they re-authorize; nothing is stored beyond the token, results are cached 30 s in memory
 
+### S. **Information Banner Widget** ✅ (v3.17.0 → v3.18.0)
+- Rotating OBS overlay: up to 10 messages (140 characters, plain text, one line) such as social links, chat commands or partners. Edited in Dashboard → Widgets → Bandeau (`/dashboard/banner`, `GET/POST /api/user/banner-widget-setup`), rendered by `/widget/banner/[token]` through `components/widget/InfoBannerView.tsx` (`?test=1` shows sample messages and a "Mode test" tag)
+- **Single source of truth** `lib/info-banner.ts`: defaults, bounds (`INFO_BANNER_LIMITS`) and `sanitizeInfoBanner`, applied on every read and every write. The schema field `bannerWidgetSettings` is free-form (`Mixed`) and `select: false` because it can hold custom logos; only the banner routes, the export and the reset ask for it explicitly. A former boolean `showAccent` is migrated to `accentStyle`, and a message stored as a plain string is still accepted
+- **Per-message design**: platform logo (`lib/info-banner-icons.ts`: Discord, YouTube, TikTok, Twitch, Instagram, X, Kick…) or custom logo (5 max, PNG / JPEG / WebP data URI of at most 40 000 characters, shrunk in the browser, never SVG), own text / background / accent colors and background opacity. `messageFromBrand` applies the brand colors in one click with a readable text color
+- **Global look**: font picker (`components/dashboard/FontPicker.tsx`, dark list, each font in its own typeface, keyboard navigation), size 12–160 px, weight, uppercase, colors and opacity, accent (none / left bar / bottom bar / outline), shadow (none / soft / glow), radius, paddings, alignment, width 240–1920 px or full width, logo scale / position / style (plain or round chip), frosted-glass blur 0–40 px, optional progress bar showing the time left before the next message, animation (fade / slide / pop / expand) and speed, interval 3–60 s, shuffle without repeating the same message twice in a row
+- 6 quick styles (`INFO_BANNER_PRESETS`: Sobre, Gros titre, Pastille, Néon, Verre, Épuré) only change the look, never messages, logos, interval or animation; `recommendedSourceSize()` suggests the OBS browser-source size
+- **Config endpoint** `GET /api/widget/banner/config/[userId]` (widget token auth) is polled every 5 s by the widget with an `ETag` and `Cache-Control: no-cache`, so the answer is an empty 304 while nothing changed; the widget only re-renders when the serialized settings differ, so a running rotation is not interrupted
+- Install tracking: the banner widget reports its loads like the other two (`widgetSeen.bannerAt`, section U) and shows an online / offline state on the dashboard home and counts in the "X of 3 online" tile. Also present: animated preview on the home page (`components/home/BannerWidgetPreview.tsx`), FAQ / support category `bandeau`, inclusion in the JSON export
+
+### T. **Notification Center** ✅ (v3.15.0 → v3.16.0)
+- `Notification` model (`userId` as string, `type`, `title`, `body`, `href`, `readAt`, `dedupeKey`), TTL of 90 days on `createdAt`. `notify()` in `lib/notifications.ts` never throws, so a missed notification can never fail the main action (message sent, status changed…)
+- Types (`lib/notification-types.ts`, shared server / client): `ticket_reply`, `ticket_status`, `ticket_user_reply` (staff: the requester answered a ticket you hold), `idea_status`, `idea_response`, `idea_comment`, `announcement`, `ticket_stale` (staff), `ticket_feedback` (staff)
+- **Grouping**: when an unread notification with the same `dedupeKey` already exists it is updated and moved to the top instead of duplicated, so several replies in a row show as one
+- **UI**: `NotificationBell` in the sidebar header of the dashboard and of the admin (floating button on mobile); `useNotifications` polls every 60 s (paused while the tab is hidden, refresh when it becomes visible), applies actions optimistically then reconciles with the server; page `/dashboard/notifications` (unread filter, delete, mark all read, clear read)
+- **API** `GET /api/user/notifications?limit=&unread=1` (default 30, max 100, `no-store`, returns `unreadCount`) and `POST` with actions `read`, `readAll`, `delete`, `clearRead`, always scoped to the caller's own `userId`
+- Staff alerts and announcements are described in sections E and G
+
+### U. **Install Tracking (widget presence)** ✅ (v3.17.0)
+- `User.widgetSeen.{musicAt, chatAt, bannerAt}` stores the last real load of each widget in OBS. Widgets send `?w=1` on their data requests; test mode (`?test=1`) and dashboard previews never count (`lib/widget-seen.ts`). Writes are limited to one per minute per widget and per server instance
+- `GET /api/user/setup-status` returns only booleans and dates, never credentials: `spotifyCredentials`, `spotifyConnected`, `twitchLogin`, `musicSeenAt` (falls back to `listeningStats.lastPollAt` so accounts installed before the tracking are not sent back to "finish the installation"), `chatSeenAt`, `bannerSeenAt`. It feeds the setup assistant (`SetupWizard`, `StepRail`) and the online / offline / never-loaded state of the widget cards
+- The same field powers the "Widget jamais détecté" announcement audience (none of the three widgets ever loaded)
+
 ---
 
 ## 3. API Endpoints & Purposes
@@ -238,6 +282,7 @@ Features:
 
 ### Chat Widget
 - `GET /api/widget/chat/config/[userId]` - Retrieve chat widget settings for user
+- `GET /api/widget/banner/config/[userId]` - Information-banner settings for the OBS widget (widget token auth, `ETag` + `no-cache` so the 5 s polling gets an empty 304 while nothing changed)
 
 ### Support & Admin
 - `POST /api/support/tickets` - Create new support ticket
@@ -247,11 +292,15 @@ Features:
 - `PATCH /api/support/tickets/[id]/status` - Update ticket status (staff only)
 - `POST /api/support/tickets/[id]/claim` and `/release` - Take over / release a ticket (staff only)
 - `POST /api/support/tickets/[id]/typing` - "Is typing" ping
+- `POST /api/support/tickets/[id]/satisfaction` - Requester answers the "problem solved?" survey (yes / no + comment); ticket must be resolved or closed
+- `POST /api/support/tickets/[id]/notes`, `POST /api/support/tickets/[id]/transfer`, `GET /api/support/staff` - Internal notes, transfer / escalation and staff list (staff only)
 - `GET /api/admin/tickets` - Get all tickets (staff only)
 - `POST /api/admin/faq` - Create FAQ article (staff only)
 - `GET /api/admin/faq` - List FAQ articles (internal only)
 - `PUT /api/admin/faq/[id]` - Update FAQ article (staff only)
 - `DELETE /api/admin/faq/[id]` - Delete FAQ article (staff only)
+- `GET /api/admin/support/stats?days=7|30|90` - Support statistics: volumes, response / resolution delays, backlog, staff activity, satisfaction (`manageTickets`)
+- `GET/POST /api/admin/announcements` - Targeted announcements: history of the last 20 sends, `?audience=` recipient count preview, send (`ownerZone`)
 - `/api/admin/users`, `/api/admin/users/[id]` - User list, role change, deletion (permission-based)
 - `/api/admin/owner/overview`, `/settings`, `/audit` - Owner space: overview, global announcement, audit log (`ownerZone`)
 - `GET/POST /api/admin/incidents`, `PATCH/DELETE /api/admin/incidents/[id]` - Status incidents: list, create (optional banner), publish update / change status / toggle banner, delete (`manageStatus`)
@@ -280,6 +329,10 @@ Features:
 - `GET/POST/DELETE /api/user/chat-stats` - Chat statistics: state + sessions + selected session (`?session=`), enable/pause, delete history
 - `POST /api/widget/chat/stats/[userId]` - Ingestion of aggregated chat counters sent by the chat widget (widget token auth, 64 KB max, 3 s min interval, strict payload validation)
 - `POST /api/user/reset-widgets` - Reset music / chat / bot settings
+- `GET/POST /api/user/notifications` - Notification list with unread count (`?limit=`, `?unread=1`); actions `read`, `readAll`, `delete`, `clearRead`
+- `GET/POST /api/user/banner-widget-setup` - Read / save the information-banner settings (everything goes through `sanitizeInfoBanner`)
+- `GET /api/user/chat-bots/detect` - Detect bots among the viewers currently connected to the chat (scope `moderator:read:chatters`, nothing stored)
+- `GET /api/user/setup-status` - Install state for the dashboard (credentials present, Spotify linked, last real load of each widget in OBS)
 - `/api/user/onboarding-state` - Welcome guide and last-seen changelog version
 
 ### System
@@ -290,6 +343,7 @@ Features:
 - `GET /api/twitch/badges/[login]` - Retrieve Twitch user badges
 - `GET /api/twitch/global-badges` - Retrieve Twitch global badges
 - `GET /api/cron/check-status` - Health checks (called every minute by the external pinger; `Authorization: Bearer $CRON_SECRET`, 503 without the secret, 401 if wrong; answers `skipped: true` when the minute is already covered)
+- `GET /api/cron/support-alerts` - Stale-ticket alerts for staff (same `CRON_SECRET` protection as `check-status`, 503 without the secret; also triggered, throttled to once per 15 min per instance, by `check-status`)
 - `GET /api/emotes/[channel]` - Third-party emotes for a channel (BTTV, 7TV, FFZ)
 
 ---
@@ -318,6 +372,7 @@ Features:
   # Widget links
   widgetToken: String (unique when present, 128-bit hex)
   widgetLegacyIdDisabled: Boolean  # true once links were regenerated
+  widgetSeen: { musicAt: Date, chatAt: Date, bannerAt: Date }   # last real load of each widget in OBS (lib/widget-seen)
   
   # Widget Settings
   widgetSettings: {
@@ -339,6 +394,11 @@ Features:
     showEqualizer: Boolean
     autoHide: Boolean
     autoHideSeconds: Number (default 10)
+    animationStyle: enum["expand", "reveal", "slide", "fade", "pop"]   # default "expand"
+    animationSpeed: enum["slow", "normal", "fast"]
+    trackChangeAnimation: Boolean (default true)
+    glowPulse: Boolean
+    fontFamily: "font-sans" | "font-mono" | "font-serif" | "google:<Family>"
   }
   
   # Bot Settings
@@ -363,6 +423,7 @@ Features:
     charLimit: Number (0 = unlimited)
     messageLifetime: Number (seconds, 0 = permanent)
     ignoredUsers: [String]
+    hiddenBots: [String]   # streamer's own bots (exact logins), on top of lib/known-bots
     showReplies: Boolean
     highlightFirstMessage: Boolean
     roleHighlights: { moderator|subscriber|vip|broadcaster|bot: { enabled, color } }
@@ -376,6 +437,12 @@ Features:
     height: Number (default: 1080)
   }
   
+  # Information-banner widget (free-form, validated by sanitizeInfoBanner, select: false)
+  bannerWidgetSettings: Mixed
+
+  # Chat statistics (opt-in, disabled by default)
+  chatStats: { enabled: Boolean, enabledAt: Date }
+
   # Listening Statistics
   listeningStats: {
     totalMsListened: Number
@@ -398,7 +465,10 @@ Features:
   userId: String (required)
   userName: String
   subject: String (required)
-  category: enum["spotify", "obs", "api", "compte", "autre"]
+  category: enum from FAQ_CATEGORY_KEYS (14 keys, lib/faq-categories.ts; default "autre")
+  internalNotes: [{ text, by: { userId, name, role }, createdAt }]   # select: false, staff routes only
+  satisfaction: { rating: enum["yes", "no"], comment: String, ratedAt: Date }   # survey once resolved / closed
+  staffAlertedAt: Date                                 # last stale-ticket alert sent to staff
   status: enum["en_attente", "en_cours", "resolu", "ferme"]
   assignedTo: { userId, userName, role, assignedAt }   # claimed by one staff member
   typing: { userId, userName, role, at }               # "is typing" indicator
@@ -428,6 +498,35 @@ incidents    { title, service, impact, status, description, updates[{message,sta
 ```
 (The former `StatusLog` Mongoose model is no longer used by the checks.)
 
+### Notification Model
+```
+{
+  userId: String (required)          # account _id as a string
+  type: enum["ticket_reply", "ticket_status", "ticket_user_reply", "idea_status", "idea_response",
+             "idea_comment", "announcement", "ticket_stale", "ticket_feedback"]
+  title: String (required, 160 max)
+  body: String (300 max)
+  href: String | null                # internal link
+  readAt: Date | null
+  dedupeKey: String | null           # an unread notification with the same key is updated instead of duplicated
+  createdAt: Date (TTL: 90 days)
+}
+# indexes: { userId, createdAt: -1 }, { userId, readAt }
+```
+
+### Announcement Model (history of staff sends, one row per send)
+```
+{
+  title: String (required)
+  body: String
+  href: String | null
+  audience: String                   # all | new_week | spotify | no_spotify | no_widget | staff
+  recipientCount: Number
+  sentBy: { userId, name, role }
+  createdAt: Date
+}
+```
+
 ### FollowerTracking Model
 ```
 {
@@ -443,7 +542,7 @@ incidents    { title, service, impact, status, description, updates[{message,sta
 {
   question: String (required)
   answer: String (required)
-  category: enum from `FAQ_CATEGORY_KEYS` (lib/faq-categories.ts, 13 keys; default "autre")
+  category: enum from `FAQ_CATEGORY_KEYS` (lib/faq-categories.ts, 14 keys; default "autre")
   order: Number
   createdAt: Date
   updatedAt: Date
@@ -487,7 +586,7 @@ incidents    { title, service, impact, status, description, updates[{message,sta
 ```
 {
   actorId, actorName, actorRole: String
-  action: String (e.g. "role.change")
+  action: String (e.g. "role.change", "idea.update", "announcement.send")
   targetId, targetName, details: String
   createdAt: Date (TTL: 180 days)
 }
@@ -498,7 +597,7 @@ incidents    { title, service, impact, status, description, updates[{message,sta
 ## 5. Authentication & Authorization
 
 ### Authentication Strategy
-- **Provider**: Twitch OAuth via NextAuth (scopes: `openid user:read:email moderator:read:followers moderation:read channel:read:vips channel:read:editors channel:read:subscriptions bits:read`)
+- **Provider**: Twitch OAuth via NextAuth (scopes: `openid user:read:email moderator:read:followers moderation:read channel:read:vips channel:read:editors channel:read:subscriptions bits:read moderator:read:chatters`; the list lives in `src/lib/twitch-scopes.ts`, which also feeds the `/auth/connexion` consent explainer)
 - **Adapter**: MongoDB Adapter (stores sessions in DB)
 - **Session Strategy**: Database (not JWT)
 - **User Creation**: Auto-creates user on first login with terms acceptance timestamp and a widget token (no legacy id link)
@@ -525,6 +624,9 @@ Permissions (matrix `ROLE_PERMISSIONS`): `viewAdminPanel`, `manageTickets`, `man
 - `src/lib/admin-guard.ts` - `requirePagePermission()`: server-side guard redirecting to `/403`
 - `src/lib/widget-token.ts` - Widget token generation, lookup, rotation
 - `src/lib/crypto.ts` - AES-256-GCM encrypt / decrypt for Spotify credentials
+- `src/lib/twitch-scopes.ts` - Single source of the requested Twitch scopes and their plain-language explanations
+- `src/lib/known-bots.ts`, `src/lib/twitch-chatters.ts` - Known chat bots, `sanitizeBotList`, on-demand list of connected viewers
+- `src/lib/twitch-user.ts` also holds the identity sync: `saveTwitchIdentity` (name and avatar, written only when changed) and `syncTwitchIdentity` (re-reads the Twitch profile by the stable `providerAccountId`, at most every 6 h per instance). It runs on sign-in (`events.signIn`, from the fresh OAuth profile), when the chat widget config is read (so the widget joins the right channel after a rename) and when the Twitch stats are loaded. Before 15/11/2026 NextAuth v4 only set `users.name` at account creation, so a renamed streamer kept the old name
 
 ### Protected Routes
 - Dashboard (requires login)
@@ -551,16 +653,24 @@ Permissions (matrix `ROLE_PERMISSIONS`): `viewAdminPanel`, `manageTickets`, `man
 - **home/** - `MusicWidgetPreview`, `ChatWidgetPreview` (demo data, real render engine)
 - **ErrorScreen**, **NotFoundContent**, **ForbiddenContent** - 403 / 404 / 500 screens
 - **IdeaStatusBadge**, **LinkifiedText**, **LegalFooter**, **Logo**
+- **notifications/** - `NotificationBell`, `NotificationIcon`, `useNotifications` (60 s polling), `format.ts`
+- **shell/** - `ShellNav` (shared sidebar / mobile bar building blocks for dashboard and admin; `MobileNav` shows 4 `primary` items + a "Plus" drawer fed by the `more` prop, with `SheetLink` / `SheetLabel` helpers), `ProfileMenu` (desktop popover)
+- **site/** - `PublicShell`, `PageIntro` / `LegalSection`, `SiteFooter`, `LegalToc`, `AuthNotice`, `TwitchConnectButton`
+- **widget/** - `InfoBannerView` (banner rendering shared by the OBS widget, the dashboard preview and the home), `PresenceShell` (CSS enter / exit animations), `useWidgetFont`
+- **dashboard/** - also `SetupWizard`, `StepRail`, `FontPicker`, `WidgetUI`, `UnsavedChangesBar`, `ChatStatsTab`, `StatsUI`
+- **AdminNav.tsx** - former top-tab navigation; `AdminShell` no longer uses it (check for remaining imports before deleting)
 
 ### Main Pages
 - **Home (/)** - Landing page with feature overview, animated widget previews, roadmap, setup steps, call to action
-- **Dashboard (/dashboard)** - User control panel, sub-pages: `/spotify`, `/bot`, `/design` (Widgets → Musique), `/chat`, `/stats`, `/twitch`, `/account`
+- **Dashboard (/dashboard)** - User control panel, sub-pages: `/spotify`, `/bot`, `/design` (Widgets → Musique), `/chat`, `/banner`, `/stats`, `/twitch`, `/account`, `/notifications`
 - **Admin (/admin)** - Admin home, ticket/FAQ management
 - **Admin FAQ (/admin/faq)** - FAQ article editor
 - **Admin Ideas (/admin/ideas)** - Ideas moderation (status, official response)
 - **Admin Users (/admin/users)** - Users, roles, deletion
 - **Admin Owner (/admin/owner)** - Owner space (announcement, permissions matrix, audit log)
 - **Admin Status (/admin/status)** - Status incidents: create, publish updates, resolve, banner toggle
+- **Admin Support (/admin/support)** - Support statistics (period 7 / 30 / 90 days)
+- **Admin Announcements (/admin/announcements)** - Targeted announcements (owner space permission)
 - **Admin Tickets (/admin/tickets/[ticketId])** - Ticket thread viewer
 - **Support New (/support/new)** - Create new support ticket
 - **Support My Tickets (/support/my-tickets)** - View user tickets
@@ -571,9 +681,13 @@ Permissions (matrix `ROLE_PERMISSIONS`): `viewAdminPanel`, `manageTickets`, `man
 - **Status (/status)** - Public service status: state card, 90-min / 24-h bars, availability, real-traffic figures, incidents
 - **Privacy (/privacy)** - Privacy policy and terms (CGU)
 - **Mentions légales (/mentions-legales)** - Legal notice
+- **À propos (/a-propos)** - Project presentation: features, principles, tech and hosting summary, contact
 - **Widget Spotify (/widget/[userId])** - Embeddable music widget
 - **Widget Chat (/widget/chat/[userId])** - Embeddable chat widget
+- **Widget Banner (/widget/banner/[userId])** - Embeddable information-banner widget (`?test=1` for sample messages)
 - **Auth Cancelled (/auth/cancelled)** - Login error page
+- **Auth Connexion (/auth/connexion)** - Pre-login consent page listing every Twitch permission and why it is asked
+- **Auth Not linked (/auth/not-linked)** - Error page when the Twitch account is already associated elsewhere
 - **403 / 404 / 500 pages** - Redesigned error screens (+ `global-error` fallback)
 
 ### UI Framework
@@ -598,6 +712,7 @@ Permissions (matrix `ROLE_PERMISSIONS`): `viewAdminPanel`, `manageTickets`, `man
 - **OAuth via NextAuth** - Primary authentication
 - Badge retrieval for chat widget
 - User profile info (login, name, image)
+- On-demand list of viewers connected to the streamer's chat (`/chat/chatters`, scope `moderator:read:chatters`) for bot detection
 
 ### Chatbot Platforms
 - **Nightbot** - JSON response parsing
@@ -609,6 +724,7 @@ Permissions (matrix `ROLE_PERMISSIONS`): `viewAdminPanel`, `manageTickets`, `man
 ### Third-party Libraries
 - **tmi.js** - Twitch Chat IRC client (for chat widget)
 - **axios** - HTTP requests to external APIs
+- **Google Fonts** - font families of the widgets, fetched by the browser (`fonts.googleapis.com`), with a font picker in the dashboard
 
 ---
 
@@ -636,31 +752,35 @@ Permissions (matrix `ROLE_PERMISSIONS`): `viewAdminPanel`, `manageTickets`, `man
   - Configurable animations
   - Font size control
 - **OBS Integration**: Browser source URL: `/widget/chat/[token]`
-- **Excluded Users**: Bots and special accounts automatically filtered
+- **Excluded Users**: Known bots (`lib/known-bots.ts`) and the streamer's `hiddenBots` list when "Masquer Bots" is on
+
+### C. Information Banner Widget (`/widget/banner/[userId]`)
+- **Display**: messages (up to 10) shown one after the other, each for 3–60 s, optional shuffle and progress bar
+- **Refresh Rate**: settings re-read every 5 s with an `ETag` (empty 304 while unchanged), so edits in the dashboard appear without reloading the OBS source
+- **Customization**: per-message logo and colors plus ~25 global settings (details in section S)
+- **OBS Integration**: Browser source URL `/widget/banner/[token]`; recommended source size from `recommendedSourceSize()` (1920 px wide in full-width mode); transparent background
 
 ---
 
 ## 9. Missing Features or Incomplete Functionality
 
 ### Roadmap Items (From Home Page)
-Roadmap shown on the home page (reset on 02/10/2026, all items still to build):
+Roadmap shown on the home page (3 items as of v3.18.0, all still to build; the "latest followers widget" and "chat statistics" items were removed, chat statistics shipped in v3.10.0):
 1. **More music platforms** - Deezer, YouTube Music, Apple Music, SoundCloud (Prioritaire)
 2. **Chat song requests** - viewers propose tracks, queue shown as overlay (Planifié)
-4. **Latest followers widget** - OBS overlay (Planifié)
-5. **Chat statistics** - messages volume, top chatters (En réflexion)
-6. **Discord notifications** - go-live and now playing (En réflexion)
+3. **Discord notifications** - go-live with game, title and now playing (En réflexion)
 
 ### Potential Gaps
-1. **Notification System** - No real-time notifications for admins on new tickets
+1. **Notification System** - Delivered in v3.15.0 (bell + history page, staff alerts); it is polling every 60 s, with no push, e-mail or Discord channel
 2. **Webhook Support** - No Discord webhook integration for alerts
 3. **Advanced Analytics** - Limited stats beyond basic listening metrics
 4. **Multi-account Support** - Single Spotify account per user
 5. **Scheduled Messages** - No message scheduling for bots
-6. **Rate Limiting** - No apparent rate limiting on API endpoints
+6. **Rate Limiting** - No global rate limiting; only targeted limits exist (idea comments cooldown and daily cap, chat-stats ingestion per user, Twitch scan cooldown, announcement duplicate guard)
 7. **Error Handling** - Some API responses could be more descriptive
 8. **Widget Preview** - Live previews exist for chat and bot in the dashboard; music widget preview to be checked
 9. **Emote Display** - Delivered (BTTV / 7TV / FFZ in chat widget)
-10. **Mobile Dashboard** - Limited mobile optimization for desktop
+10. **Mobile Dashboard** - Bottom bar limited to 4 shortcuts plus a "Plus" drawer (remaining pages, account, help, ideas, changelog, service status, moderation link, logout; admin: back to dashboard) since 15/11/2026; public header links open in a dropdown on phones; a page-by-page review of the content pages is still to do
 
 ---
 
@@ -685,7 +805,7 @@ Roadmap shown on the home page (reset on 02/10/2026, all items still to build):
 - **Input Validation**: Implement Zod/Yup validation schemas for all APIs
 - **Rate Limiting**: Add rate limiting middleware (especially for chatbot endpoint)
 - **CORS**: Verify CORS configuration for widget embeds
-- **Token Storage**: Spotify client secret is stored in DB (consider encryption)
+- **Token Storage**: Spotify credentials are encrypted at rest (AES-256-GCM, `ENCRYPTION_KEY`); the Twitch user token stays in the NextAuth `accounts` collection
 - **Admin Checks**: Some admin endpoints might need additional verification
 
 ### D. User Experience
@@ -693,7 +813,7 @@ Roadmap shown on the home page (reset on 02/10/2026, all items still to build):
 - **Error Messages**: More user-friendly error explanations in UI
 - **Onboarding**: Welcome guide delivered (v3.0.0), re-openable from the Help center
 - **Dark Mode**: Already dark, but could have theme toggle
-- **Accessibility**: Add ARIA labels and keyboard navigation
+- **Accessibility**: Improved in v3.14.0 (visible keyboard focus, aria states, reduced motion); a full audit is still worthwhile
 - **Responsive Design**: Some pages need mobile optimization
 
 ### E. Feature Enhancements
@@ -703,7 +823,7 @@ Roadmap shown on the home page (reset on 02/10/2026, all items still to build):
 - **Multiple Widgets**: Support multiple widgets per user (e.g., next track preview)
 - **Spotify Playlist Support**: Display/cycle through playlists
 - **Auto-backup**: Automatic settings export/import
-- **Notification Center**: In-app notifications for admins
+- **Notification Center**: Delivered in v3.15.0 for users and staff; push / e-mail delivery still absent
 - **Advanced Filtering**: More filtering options in chat widget
 
 ### F. Monitoring & Reliability
@@ -749,6 +869,10 @@ Roadmap shown on the home page (reset on 02/10/2026, all items still to build):
 3. **Console Logs** - Debug logs left in production code
 4. **Comments in French** - Mix of English and French comments
 5. **Duplicate Code** - API route patterns repeat across endpoints
+6. **Privacy** - `lib/account-data.ts` now deletes the user's `Notification` documents with the account and the JSON export includes notifications (500 latest) and the satisfaction answer of each ticket (fixed 14/11/2026)
+7. **Leftovers** - `components/AdminNav.tsx` is no longer used by `AdminShell`; the directories `api/user/follow-widget-setup` and `api/widget/follow/[userId]` are empty (probably from a dropped "latest followers" widget, whose roadmap item was removed)
+8. **Per-instance state** - the stale-alert throttle, `widgetSeen` write limit, passive health counters and several caches live in server memory, so on serverless they are approximate (acceptable at the current scale)
+9. **`StatusLog` is not dead code** - it is the read model of the `statuslogs` collection, which `lib/status-checker.ts` writes with the native driver and `api/admin/owner/overview` reads through Mongoose (services block of the owner page). Watch out: the model declares a 24 h TTL index on `timestamp` while the checker enforces 3 h (`LOG_TTL_SECONDS`, via `collMod`), so the two definitions disagree; align the model with the checker or drop the index declaration from the model
 
 ### Low Priority
 1. **CSS Organization** - Could use CSS modules or Tailwind layers
@@ -760,15 +884,16 @@ Roadmap shown on the home page (reset on 02/10/2026, all items still to build):
 ## 12. Project Statistics
 
 ### Codebase Metrics
-- **Models**: 8 (User, SupportTicket, StatusLog, FaqArticle, Idea, TrackHistory, SiteSettings, AuditLog)
-- **API Routes**: ~50 route files
-- **Pages**: ~28 pages (public, dashboard, admin, support, widgets)
-- **Components**: ~25 (shared, dashboard, home previews)
+- **Models**: 13 files in `src/models` (User, SupportTicket, FaqArticle, Idea, IdeaComment, TrackHistory, SiteSettings, AuditLog, FollowerTracking, ChatSession, Notification, Announcement; StatusLog is the read model of the `statuslogs` collection written by the status checker)
+- **API Routes**: ~75 route files
+- **Pages**: ~39 pages (public, dashboard, admin, support, auth, widgets)
+- **Components**: ~54 files (shared, dashboard, notifications, shell, site, widget, home previews)
+- **Lib modules**: 43 files in `src/lib`
 - **External Integrations**: 4+ (Spotify, Twitch, Chatbots, BTTV / 7TV / FFZ)
-- **Database**: MongoDB with 8 collections (+ NextAuth adapter collections)
+- **Database**: MongoDB with ~18 collections (12 Mongoose + 6 native status collections, + NextAuth adapter collections)
 
 ### Key File Sizes
-- Dashboard: split into 7 pages (`/dashboard/*`); `chat/page.tsx` is now the largest
+- Dashboard: split into 9 sub-pages plus the home (`/dashboard/*`); sizes not re-measured since v3.13.0
 - Spotify widget: ~350 lines
 - Auth config: ~50 lines
 - Models: ~500 lines total
@@ -780,10 +905,12 @@ Roadmap shown on the home page (reset on 02/10/2026, all items still to build):
 ### Vercel Setup
 - **File**: `vercel.json` - pins the functions to the Paris region (`"regions": ["cdg1"]`, same area as the Atlas cluster in AWS eu-west-3); no `crons` block (Hobby only allows daily crons)
 - **Health checks**: external pinger (cron-job.org), GET `/api/cron/check-status` every minute with the header `Authorization: Bearer <CRON_SECRET>`; a lazy probe in `/api/status` covers a missed beat
+- **Support alerts**: run from the same pinger call (throttled, at most once per 15 min per instance) and callable directly on `/api/cron/support-alerts` (hourly is enough), same bearer secret
 
 ### Environment Variables Required
 ```
 DATABASE_URL=mongodb://...
+NEXTAUTH_URL=http://localhost:3000
 NEXTAUTH_SECRET=...
 NEXT_PUBLIC_BASE_URL=https://yourdomain.com
 
@@ -807,13 +934,14 @@ CRON_SECRET=...
 
 ### New User Onboarding
 1. Click "Connexion" on home page
-2. Redirect to Twitch OAuth
+2. Consent explainer page `/auth/connexion` (each permission and why), then redirect to Twitch OAuth
 3. Accept permissions and redirect back
 4. Terms modal appears
 5. Accept terms
 6. Redirect to dashboard
 
 ### Spotify Setup Workflow
+Prerequisites: Spotify Premium (needed by the owner of a Spotify app in development mode) and a free Spotify developer application
 1. Go to Dashboard → Intégrations → Spotify
 2. Enter Spotify Client ID and Client Secret
 3. Click "Associer mon compte"
@@ -828,6 +956,8 @@ CRON_SECRET=...
 3. Add as browser source in OBS
 4. Chat widget URL: `/widget/chat/[token]`
 5. Customize chat settings in Dashboard → Widgets → Chat
+6. Banner widget URL: `/widget/banner/[token]`, customized in Dashboard → Widgets → Bandeau
+7. Links are masked on the Accueil page (eye button, 20 s); the widget cards then show whether each widget has really loaded in OBS
 
 ### Support Ticket Workflow
 1. User creates ticket in Support → New
@@ -836,6 +966,8 @@ CRON_SECRET=...
 4. Admin updates status and adds messages
 5. User receives updates on ticket page
 6. Ticket marked "resolu" or "ferme" when complete
+7. Requester answers the "problem solved?" survey; a first "no" notifies the last staff member who replied
+8. A ticket left without a staff reply for 48 h triggers an alert to its assignee (or to all ticket staff if unclaimed)
 
 ---
 
@@ -849,6 +981,9 @@ CRON_SECRET=...
 ✅ Good separation of concerns with API routes
 ✅ Responsive and smooth animations
 ✅ Support infrastructure in place
+✅ Measurable support quality (statistics, satisfaction survey, stale-ticket alerts)
+✅ In-app notifications for users and staff
+✅ Defensive input handling on the recent features (`sanitizeInfoBanner`, `sanitizeBotList`, internal-link-only announcements, per-user caps)
 
 ### Primary Recommendations
 1. **Refactor Dashboard** - Split into multiple smaller components
@@ -859,13 +994,14 @@ CRON_SECRET=...
 6. **Documentation** - Add API docs and architecture guides
 7. **Performance** - Add monitoring and performance optimization
 8. **Security** - Implement rate limiting and input sanitization
+9. **Privacy hygiene** - Done for notifications and ticket satisfaction (section 11); keep the export and the deletion in step with every new collection
 
 ### Next Steps for Development
 1. Multi-platform music (Deezer first): abstract the "now playing" provider behind a common interface before adding services
 2. Add webhook support for Discord notifications
-3. Notify staff of new tickets and ideas (feature-voting system already delivered in v2.0.6)
+3. Extend notifications beyond the app (e-mail, push or Discord); in-app alerts already cover replies, stale tickets and unsolved feedback (v3.15–v3.16)
 4. Add comprehensive test coverage
 5. Optimize dashboard performance
-6. Implement real-time notifications
+6. Move notifications from 60 s polling to real time (SSE / push) if the volume justifies it
 7. Add advanced analytics
 8. Create mobile-optimized interface

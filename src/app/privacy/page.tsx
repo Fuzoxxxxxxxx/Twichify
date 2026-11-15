@@ -206,7 +206,7 @@ function Badge({ tone, children }: { tone: "purple" | "green"; children: React.R
 
 function DataCard({ row }: { row: DataRow }) {
   return (
-    <li className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 print:break-inside-avoid">
+    <li className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 sm:p-5 print:break-inside-avoid">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <h5 className="text-base font-semibold text-white">{row.data}</h5>
         {(row.optional || row.notStored) && (
@@ -662,12 +662,12 @@ const PARTS = [
         short: "Contact",
         title: "Nous contacter",
         content: (
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5">
             <div className="flex items-start gap-4">
               <div className="inline-flex shrink-0 items-center justify-center rounded-xl border border-purple-500/20 bg-purple-500/10 p-2.5 text-purple-300">
                 <Mail size={20} aria-hidden="true" />
               </div>
-              <div className="space-y-1.5 text-sm">
+              <div className="min-w-0 space-y-1.5 break-words text-sm">
                 <h4 className="text-base font-semibold text-white">Une question ou une demande ?</h4>
                 <p className="leading-relaxed text-zinc-400">
                   Écrivez-nous à{" "}
@@ -755,7 +755,7 @@ export default function PrivacyPage() {
         {/* Exercer ses droits */}
         <section
           aria-label="Exercer vos droits"
-          className="flex flex-col gap-5 rounded-2xl border border-purple-500/30 bg-purple-500/[0.06] p-6 sm:flex-row sm:items-center sm:justify-between print:hidden"
+          className="flex flex-col gap-5 rounded-2xl border border-purple-500/30 bg-purple-500/[0.06] p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6 print:hidden"
         >
           <div className="space-y-1">
             <h2 className="text-base font-semibold text-white">Exercez vos droits en un clic</h2>
@@ -767,24 +767,24 @@ export default function PrivacyPage() {
 
           <Link
             href="/dashboard/account"
-            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-purple-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-purple-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400"
+            className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-purple-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-purple-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400 sm:w-auto"
           >
             Gérer mes données
             <ArrowRight size={14} aria-hidden="true" />
           </Link>
         </section>
 
-        <div className="grid gap-10 lg:grid-cols-[230px_minmax(0,1fr)]">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[230px_minmax(0,1fr)] lg:gap-10">
           <aside>
             <LegalToc groups={TOC_GROUPS} />
           </aside>
 
-          <article className="space-y-16 text-base leading-relaxed text-zinc-300">
+          <article className="min-w-0 space-y-12 break-words text-base leading-relaxed text-zinc-300 sm:space-y-16">
             {NUMBERED_PARTS.map((part) => (
               <div key={part.id} id={part.id} className="scroll-mt-24 space-y-10">
-                <header className="rounded-2xl border border-purple-500/20 bg-purple-500/[0.05] px-6 py-5">
+                <header className="rounded-2xl border border-purple-500/20 bg-purple-500/[0.05] px-5 py-4 sm:px-6 sm:py-5">
                   <p className="text-sm font-medium text-purple-300">{part.label}</p>
-                  <h2 className="mt-1 font-display text-2xl font-extrabold tracking-tight text-white">{part.title}</h2>
+                  <h2 className="mt-1 font-display text-xl font-extrabold tracking-tight text-white sm:text-2xl">{part.title}</h2>
                   <p className="mt-1.5 text-sm text-zinc-400">{part.summary}</p>
                 </header>
 

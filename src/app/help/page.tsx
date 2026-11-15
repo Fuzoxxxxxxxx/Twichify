@@ -16,6 +16,7 @@ import PublicShell from "@/components/site/PublicShell";
 import PageIntro from "@/components/site/PageIntro";
 import WelcomeModal from "@/components/WelcomeModal";
 import FaqAnswer from "@/components/FaqAnswer";
+import FaqFeedback from "@/components/FaqFeedback";
 import Pagination, { usePagination } from "@/components/Pagination";
 import { FAQ_CATEGORIES, faqCategoryDescription, faqCategoryOrder } from "@/lib/faq-categories";
 import { faqCategoryIcon } from "@/components/faq-category-icons";
@@ -206,6 +207,7 @@ export default function HelpPage() {
                   {isOpen && (
                     <div id={panelId} className="pb-6 pl-7 pr-8 text-[15px] text-zinc-300">
                       <FaqAnswer text={article.answer} />
+                      <FaqFeedback articleId={article._id} />
                     </div>
                   )}
                 </li>

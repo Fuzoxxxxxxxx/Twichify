@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { signOut } from "next-auth/react";
-import { Activity, History, LifeBuoy, Lightbulb, LogOut, Shield, type LucideIcon } from "lucide-react";
+import { Activity, Bell, History, LifeBuoy, Lightbulb, LogOut, Shield, type LucideIcon } from "lucide-react";
 
 // Menu du compte, ouvert depuis le bas de la barre latérale du dashboard. Mêmes liens qu'avant, en texte plus lisible
 // (14 px au lieu de 12) et fermable avec Échap.
@@ -58,6 +58,13 @@ export default function ProfileMenu({ onClose }: { onClose: () => void }) {
       <div className="my-1.5 h-px bg-white/[0.08]" />
 
       <MenuLabel>Compte &amp; support</MenuLabel>
+      <MenuLink
+        href="/dashboard/notifications"
+        label="Notifications"
+        icon={Bell}
+        iconClass="text-purple-400"
+        onNavigate={onClose}
+      />
       <MenuLink
         href="/dashboard/account"
         label="Compte & données"

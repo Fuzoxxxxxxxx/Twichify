@@ -8,7 +8,9 @@ import IdeaComment from "@/models/IdeaComment";
 import TrackHistory from "@/models/TrackHistory";
 import FollowerTracking from "@/models/FollowerTracking";
 import ChatSession from "@/models/ChatSession";
+import NotificationModel from "@/models/Notification";
 import { decrypt } from "@/lib/crypto";
+import { sanitizeInfoBanner } from "@/lib/info-banner";
 
 // Export et suppression des données d'un utilisateur (RGPD : droit d'accès, de portabilité et d'effacement).
 
@@ -52,6 +54,8 @@ export async function exportUserData(user: any) {
 
   const tracking: any = await FollowerTracking.findOne({ user: userId }, "baselineAt scannedAt followers departures").lean();
   const chatSessionsStored = await ChatSession.countDocuments({ user: userId });
+  // Notifications reçues (conservées 90 jours) : incluses dans l'export, comme les autres données rattachées au compte.
+  const notifications: any[] = await NotificationModel.find({ userId }).sort({ createdAt: -1 }).limit(500).lean();
 
   // Commentaires publics sur les idées, et notes internes écrites en tant que staff (contenu de l'utilisateur)
   const [ownComments, ticketNotesTickets, ideaNotesIdeas] = await Promise.all([
@@ -119,11 +123,23 @@ export async function exportUserData(user: any) {
       sessionsStored: chatSessionsStored,
       retentionDays: 90,
     },
+    notifications: notifications.map((n: any) => ({
+      type: n.type,
+      title: n.title,
+      body: n.body || "",
+      href: n.href ?? null,
+      read: !!n.readAt,
+      createdAt: n.createdAt,
+    })),
     supportTickets: ownTickets.map((t: any) => ({
       id: t._id.toString(),
       subject: t.subject,
       category: t.category,
       status: t.status,
+      // Avis donné par le demandeur une fois le ticket clos (null s'il n'a pas répondu).
+      satisfaction: t.satisfaction?.rating
+        ? { rating: t.satisfaction.rating, comment: t.satisfaction.comment || "", ratedAt: t.satisfaction.ratedAt ?? null }
+        : null,
       createdAt: t.createdAt,
       messages: (t.messages || []).map((m: any) => ({
         author: m.authorName,
@@ -270,6 +286,9 @@ export async function deleteUserData(user: any) {
   // 3quater. Statistiques de chat : sessions enregistrées supprimées
   await ChatSession.deleteMany({ user: userId });
 
+  // 3quinquies. Notifications : supprimées avec le compte (sans attendre l'expiration automatique de 90 jours)
+  await NotificationModel.deleteMany({ userId });
+
   // 4. Données d'authentification (adapter NextAuth)
   await db.collection("sessions").deleteMany({ userId: objectId });
   await db.collection("accounts").deleteMany({ userId: objectId });
@@ -334,6 +353,10 @@ export async function getDataSummary(user: any) {
 
   const stats = user.listeningStats || {};
 
+  // Widget bandeau : « actif » = au moins un message à afficher. Le champ est exclu des lectures par défaut du modèle (logos volumineux).
+  const bannerDoc: any = await User.findById(userId).select("+bannerWidgetSettings").lean();
+  const bannerMessages = sanitizeInfoBanner(bannerDoc?.bannerWidgetSettings).messages.length;
+
   return {
     name: user.name ?? null,
     email: user.email ?? null,
@@ -345,6 +368,7 @@ export async function getDataSummary(user: any) {
     ideas,
     upvoted,
     downvoted,
+    bannerMessages,
     // Ce que l'export contient aussi : historique d'écoute détaillé (180 jours), suivi des départs et statistiques de chat.
     listeningHistory: {
       entries: historyEntries,

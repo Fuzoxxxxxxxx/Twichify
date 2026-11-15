@@ -19,7 +19,7 @@ export default function PublicShell({
 
       <div>
         <SiteHeader />
-        <div className={`mx-auto px-6 pb-24 pt-10 ${width}`}>{children}</div>
+        <div className={`mx-auto px-4 pb-20 pt-8 sm:px-6 sm:pb-24 sm:pt-10 ${width}`}>{children}</div>
       </div>
 
       <SiteFooter />

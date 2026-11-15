@@ -17,6 +17,7 @@ import {
   Link2,
   Link2Off,
   MessageSquare,
+  Megaphone,
   X,
   ExternalLink,
   LogOut,
@@ -49,6 +50,8 @@ interface Summary {
   role: string;
   acceptedTermsAt: string | null;
   spotifyConnected: boolean;
+  /** Nombre de messages du bandeau d'informations : le widget est « actif » s'il y en a au moins un. */
+  bannerMessages: number;
   tickets: number;
   ideas: number;
   upvoted: number;
@@ -492,6 +495,16 @@ export default function DashboardAccount() {
                 }`}
               >
                 <MessageSquare size={11} /> {summary.name ? "Widget chat actif" : "Widget chat inactif"}
+              </span>
+              <span
+                title={summary.bannerMessages > 0 ? undefined : "Ajoute au moins un message dans Widgets → Bandeau pour activer ce widget."}
+                className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium ${
+                  summary.bannerMessages > 0
+                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
+                    : "border-white/10 text-zinc-400"
+                }`}
+              >
+                <Megaphone size={11} /> {summary.bannerMessages > 0 ? "Widget bandeau actif" : "Widget bandeau inactif"}
               </span>
             </>
           )}

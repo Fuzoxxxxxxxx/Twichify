@@ -30,7 +30,7 @@ export default function PageIntro({
 
       <div className="mt-6 flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="font-display text-4xl font-extrabold tracking-tight text-white sm:text-5xl">{title}</h1>
+          <h1 className="break-words font-display text-3xl font-extrabold tracking-tight text-white sm:text-5xl">{title}</h1>
           {children && <p className="mt-4 max-w-2xl text-base leading-relaxed text-zinc-400">{children}</p>}
           {meta && (
             <p className="mt-4 flex items-center gap-2 text-sm text-zinc-400">

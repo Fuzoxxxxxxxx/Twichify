@@ -7,23 +7,24 @@ import {
   LayoutGrid, LifeBuoy, HelpCircle, Users, ArrowLeft, Shield, Lightbulb, Crown, Activity, BarChart3, Megaphone,
 } from "lucide-react";
 import { hasPermission, PERMISSIONS, Permission } from "@/lib/roles";
-import { SidebarBrand, SidebarNav, MobileNav, type NavGroup, type NavItem } from "@/components/shell/ShellNav";
+import { SidebarBrand, SidebarNav, MobileNav, SheetLink, type NavGroup, type NavItem } from "@/components/shell/ShellNav";
 import NotificationBell from "@/components/notifications/NotificationBell";
 
 type AdminNavItem = NavItem & { permission: Permission | null };
 type AdminNavGroup = { label: string | null; items: AdminNavItem[] };
 
 // Navigation admin regroupée par catégories (même logique que le dashboard utilisateur).
-// `short` = libellé court de la barre mobile. Une catégorie sans aucun accès visible est masquée.
+// `short` = libellé court de la barre mobile ; `primary` = item gardé dans la barre mobile (les autres passent dans « Plus »).
+// Une catégorie sans aucun accès visible est masquée.
 const navGroups: AdminNavGroup[] = [
   {
     label: null,
-    items: [{ href: "/admin", label: "Accueil", icon: LayoutGrid, exact: true, permission: null }],
+    items: [{ href: "/admin", label: "Accueil", icon: LayoutGrid, exact: true, permission: null, primary: true }],
   },
   {
     label: "Support",
     items: [
-      { href: "/admin/tickets", label: "Tickets", icon: LifeBuoy, permission: PERMISSIONS.MANAGE_TICKETS },
+      { href: "/admin/tickets", label: "Tickets", icon: LifeBuoy, permission: PERMISSIONS.MANAGE_TICKETS, primary: true },
       { href: "/admin/support", label: "Statistiques", short: "Stats", icon: BarChart3, permission: PERMISSIONS.MANAGE_TICKETS },
       { href: "/admin/faq", label: "FAQ", icon: HelpCircle, permission: PERMISSIONS.MANAGE_FAQ },
     ],
@@ -31,7 +32,7 @@ const navGroups: AdminNavGroup[] = [
   {
     label: "Communauté",
     items: [
-      { href: "/admin/ideas", label: "Idées", icon: Lightbulb, permission: PERMISSIONS.MANAGE_IDEAS },
+      { href: "/admin/ideas", label: "Idées", icon: Lightbulb, permission: PERMISSIONS.MANAGE_IDEAS, primary: true },
       { href: "/admin/announcements", label: "Annonces", icon: Megaphone, permission: PERMISSIONS.OWNER_ZONE },
     ],
   },
@@ -129,11 +130,16 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 
       {/* NAV — mobile */}
       <NotificationBell variant="floating" />
-      <MobileNav groups={visibleGroups} pathname={pathname} />
+      <MobileNav
+        groups={visibleGroups}
+        pathname={pathname}
+        more={<SheetLink href="/dashboard" label="Retour au dashboard" icon={ArrowLeft} />}
+      />
 
       {/* CONTENU */}
       <div className="min-w-0 flex-1">
-        <div className="mx-auto max-w-6xl px-5 py-8 pb-28 sm:px-8 md:py-10 md:pb-12 lg:px-10">{children}</div>
+        {/* Mobile : pt-16 dégage la cloche flottante (fixe en haut à droite). */}
+        <div className="mx-auto max-w-6xl px-5 pt-16 pb-28 sm:px-8 md:pt-10 md:pb-12 lg:px-10">{children}</div>
       </div>
     </main>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -11,29 +11,32 @@ import { LATEST_VERSION } from "@/lib/changelog";
 import ProfileMenu from "@/components/shell/ProfileMenu";
 import {
   LayoutDashboard, Music, Palette, MessageSquare, Shield, Bot,
-  BarChart3, MessageSquareText, ChevronRight, Tv, Megaphone,
+  BarChart3, MessageSquareText, ChevronRight, Tv, Megaphone, Lightbulb, History, LifeBuoy, Activity, LogOut, Bell,
 } from "lucide-react";
-import { SidebarBrand, SidebarNav, MobileNav, type NavGroup } from "@/components/shell/ShellNav";
+import {
+  SidebarBrand, SidebarNav, MobileNav, SheetLabel, SheetLink, SHEET_ITEM, type NavGroup,
+} from "@/components/shell/ShellNav";
 import NotificationBell from "@/components/notifications/NotificationBell";
 
-// Navigation du dashboard, regroupée par catégories. `short` = libellé court de la barre mobile.
+// Navigation du dashboard, regroupée par catégories. `short` = libellé court de la barre mobile ; `primary` = item gardé dans la barre
+// mobile (les autres passent dans le menu « Plus », avec les liens du compte).
 const navGroups: NavGroup[] = [
   {
     label: null,
-    items: [{ href: "/dashboard", label: "Accueil", icon: LayoutDashboard, exact: true }],
+    items: [{ href: "/dashboard", label: "Accueil", icon: LayoutDashboard, exact: true, primary: true }],
   },
   {
     label: "Intégrations",
     items: [
-      { href: "/dashboard/spotify", label: "Spotify", icon: Music },
+      { href: "/dashboard/spotify", label: "Spotify", icon: Music, primary: true },
       { href: "/dashboard/bot", label: "Bot", icon: MessageSquareText },
     ],
   },
   {
     label: "Widgets",
     items: [
-      { href: "/dashboard/design", label: "Musique", icon: Palette },
-      { href: "/dashboard/chat", label: "Chat", icon: MessageSquare },
+      { href: "/dashboard/design", label: "Musique", icon: Palette, primary: true },
+      { href: "/dashboard/chat", label: "Chat", icon: MessageSquare, primary: true },
       { href: "/dashboard/banner", label: "Bandeau", icon: Megaphone },
     ],
   },
@@ -275,11 +278,56 @@ export default function DashboardShell({ children }: { children: React.ReactNode
 
       {/* NAV — mobile */}
       <NotificationBell variant="floating" />
-      <MobileNav groups={navGroups} pathname={pathname} />
+      <MobileNav
+        groups={navGroups}
+        pathname={pathname}
+        more={
+          <>
+            <SheetLabel>Compte &amp; support</SheetLabel>
+            <SheetLink href="/dashboard/notifications" label="Notifications" icon={Bell} iconClass="text-purple-400" />
+            <SheetLink href="/dashboard/account" label="Compte & données" icon={Shield} iconClass="text-sky-400" />
+            <SheetLink href="/help" label="Aide" icon={LifeBuoy} iconClass="text-purple-400" />
+            <Link href="/status" className={SHEET_ITEM}>
+              <span aria-hidden="true" className="flex h-[18px] w-[18px] items-center justify-center">
+                <span className={`h-2 w-2 rounded-full ${SYSTEM_LINK[systemState].dot}`} />
+              </span>
+              <span className="flex-1">{SYSTEM_LINK[systemState].label}</span>
+              <Activity size={14} aria-hidden="true" className="text-zinc-500" />
+            </Link>
+
+            <SheetLabel>Communauté</SheetLabel>
+            <SheetLink href="/ideas" label="Boîte à idées" icon={Lightbulb} iconClass="text-amber-400" />
+            <SheetLink href="/changelog" label="Changelog" icon={History} iconClass="text-blue-400" />
+
+            {hasPermission(userRole, PERMISSIONS.VIEW_ADMIN_PANEL) && (
+              <>
+                <SheetLabel>Administration</SheetLabel>
+                <SheetLink href="/admin/" label="Modération" icon={Shield} iconClass="text-amber-300" />
+              </>
+            )}
+
+            <div className="mt-3 border-t border-white/10 pt-2">
+              <div className="flex items-center gap-3 px-3 py-2">
+                <img src={session.user.image || ""} className="h-8 w-8 rounded-full border border-white/10 object-cover" alt="" />
+                <p className="min-w-0 flex-1 truncate text-sm font-semibold text-white">{session.user.name}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => signOut({ callbackUrl: "/" })}
+                className={SHEET_ITEM.replace("text-zinc-200", "text-red-300").replace("hover:bg-white/[0.06]", "hover:bg-red-500/10")}
+              >
+                <LogOut size={18} aria-hidden="true" />
+                Déconnexion
+              </button>
+            </div>
+          </>
+        }
+      />
 
       {/* CONTENU */}
       <div className="flex-1 min-w-0">
-        <div className="max-w-6xl mx-auto px-5 sm:px-8 lg:px-10 py-8 md:py-10 pb-28 md:pb-12">
+        {/* Mobile : pt-16 dégage la cloche flottante (fixe en haut à droite) pour qu'elle ne recouvre pas les titres. */}
+        <div className="max-w-6xl mx-auto px-5 sm:px-8 lg:px-10 pt-16 md:pt-10 pb-28 md:pb-12">
           <div key={pathname} className="animate-in fade-in duration-200">
             {children}
           </div>

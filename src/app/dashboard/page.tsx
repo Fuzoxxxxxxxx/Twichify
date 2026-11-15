@@ -39,6 +39,7 @@ interface SetupStatus {
   twitchLogin: string | null;
   musicSeenAt: string | null;
   chatSeenAt: string | null;
+  bannerSeenAt: string | null;
 }
 
 // Même route que l'assistant d'installation : booléens et dates uniquement, jamais d'identifiants.
@@ -52,11 +53,11 @@ interface WidgetStatus {
 }
 
 // État d'un widget dans OBS, d'après le dernier chargement détecté par le serveur.
-function widgetStatus(kind: "music" | "chat", status: SetupStatus, now: number): WidgetStatus {
+function widgetStatus(kind: "music" | "chat" | "banner", status: SetupStatus, now: number): WidgetStatus {
   if (kind === "music" && !status.spotifyConnected) return { tone: "warn", label: "Spotify non relié", live: false };
   if (kind === "chat" && !status.twitchLogin) return { tone: "warn", label: "Twitch non connecté", live: false };
 
-  const seenAt = kind === "music" ? status.musicSeenAt : status.chatSeenAt;
+  const seenAt = kind === "music" ? status.musicSeenAt : kind === "chat" ? status.chatSeenAt : status.bannerSeenAt;
   if (!seenAt) return { tone: "idle", label: "Jamais chargé dans OBS", live: false };
 
   const isLive = now - new Date(seenAt).getTime() < LIVE_WINDOW_MS;
@@ -222,15 +223,19 @@ export default function DashboardOverview() {
   const avatar = session.user?.image || "";
   const music = widgetStatus("music", status, now);
   const chat = widgetStatus("chat", status, now);
-  const liveCount = Number(music.live) + Number(chat.live);
+  const banner = widgetStatus("banner", status, now);
+  // Les trois widgets comptent dans la bande d'état (le bandeau est facultatif, mais il est suivi comme les autres).
+  const liveCount = Number(music.live) + Number(chat.live) + Number(banner.live);
 
   const summary = !status.spotifyConnected
     ? "Il reste à relier Spotify pour afficher ta musique."
-    : liveCount === 2
-      ? "Tes deux widgets sont en ligne dans OBS."
-      : liveCount === 1
-        ? "Un de tes widgets est en ligne dans OBS."
-        : "Aucun widget n'est en ligne dans OBS pour l'instant.";
+    : liveCount === 3
+      ? "Tes trois widgets sont en ligne dans OBS."
+      : liveCount > 1
+        ? `${liveCount} de tes widgets sont en ligne dans OBS.`
+        : liveCount === 1
+          ? "Un de tes widgets est en ligne dans OBS."
+          : "Aucun widget n'est en ligne dans OBS pour l'instant.";
 
   // Mode test : mêmes URLs que OBS + ?test=1 (données factices, vrais réglages, aucune statistique).
   const testLink = (url: string) => ({
@@ -291,7 +296,7 @@ export default function DashboardOverview() {
               href="#widgets-title"
               icon={<Activity size={18} />}
               label="Widgets dans OBS"
-              value={`${liveCount} sur 2 en ligne`}
+              value={`${liveCount} sur 3 en ligne`}
               tone={liveCount > 0 ? "live" : "idle"}
             />
           </div>
@@ -364,13 +369,17 @@ export default function DashboardOverview() {
             }
           />
 
-          {/* Widget facultatif, sans suivi de chargement dans OBS (pas de statut) : seulement son lien et ses réglages. */}
+          {/* Widget facultatif : même suivi de chargement dans OBS que les autres, et même décompte « X sur 3 en ligne ». */}
           <WidgetRow
             gradient="from-sky-600 to-cyan-600"
             icon={<Megaphone size={22} />}
             name="Widget bandeau d'informations"
             description="Fait défiler tes messages (réseaux, commandes du chat, partenaires) dans OBS."
-            status={<span className="text-sm text-zinc-400">Facultatif</span>}
+            status={
+              <StatusPill tone={banner.tone} detail={banner.detail}>
+                {banner.label}
+              </StatusPill>
+            }
             field={<MaskedField value={bannerWidgetUrl} secret={widgetToken} label="Lien du widget bandeau" />}
             note="Source navigateur OBS : largeur du bandeau plus des marges, par exemple 800 × 160 px."
             actions={

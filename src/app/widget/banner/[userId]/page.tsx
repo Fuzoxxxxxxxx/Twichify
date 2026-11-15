@@ -29,7 +29,8 @@ export default function InfoBannerWidget() {
     const load = async () => {
       try {
         // "no-cache" : le navigateur revalide avec l'ETag de la route (réponse 304 vide tant que rien n'a changé).
-        const res = await fetch(`/api/widget/banner/config/${userId}`, { cache: "no-cache" });
+        // ?w=1 : vrai chargement dans OBS (suivi d'installation), jamais en mode test.
+        const res = await fetch(`/api/widget/banner/config/${userId}${testMode ? "" : "?w=1"}`, { cache: "no-cache" });
         if (!res.ok) return;
         const data = await res.json();
         // Rien à re-rendre si les réglages n'ont pas changé : la rotation en cours n'est pas interrompue.

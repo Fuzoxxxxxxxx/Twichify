@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Plus, Trash2, Save, X, HelpCircle, Edit2, Loader2 } from "lucide-react";
+import { Plus, Trash2, Save, X, HelpCircle, Edit2, Loader2, ThumbsUp, ThumbsDown } from "lucide-react";
 import { PageHeader } from "@/components/dashboard/DashboardUI";
 import {
   AccessDenied,
@@ -31,6 +31,18 @@ interface FaqArticle {
   answer: string;
   category: string;
   order: number;
+  // Retours des lecteurs (renvoyés par /api/faq?stats=1 pour l'équipe uniquement).
+  helpfulYes?: number;
+  helpfulNo?: number;
+}
+
+// Un article est « à revoir » quand, avec assez de votes pour que ce soit significatif, il y a plus de « non » que de « oui ».
+const REVIEW_MIN_VOTES = 3;
+
+function feedbackOf(article: FaqArticle) {
+  const yes = article.helpfulYes ?? 0;
+  const no = article.helpfulNo ?? 0;
+  return { yes, no, total: yes + no, needsReview: yes + no >= REVIEW_MIN_VOTES && no > yes };
 }
 
 // Liste partagée (lib/faq-categories.ts) : mêmes catégories et même ordre que la page d'aide.
@@ -48,6 +60,7 @@ export default function AdminFaqPage() {
   const [denied, setDenied] = useState(false);
   const [filter, setFilter] = useState("tous");
   const [search, setSearch] = useState("");
+  const [onlyReview, setOnlyReview] = useState(false);
 
   const [form, setForm] = useState(EMPTY_FORM);
 
@@ -62,7 +75,7 @@ export default function AdminFaqPage() {
   }, []);
 
   const fetchArticles = () => {
-    fetch("/api/faq")
+    fetch("/api/faq?stats=1")
       .then((r) => {
         if (r.status === 403) {
           setDenied(true);
@@ -133,13 +146,16 @@ export default function AdminFaqPage() {
 
   const filtered = useMemo(() => {
     let result = filter === "tous" ? articles : articles.filter((a) => a.category === filter);
+    if (onlyReview) result = result.filter((a) => feedbackOf(a).needsReview);
     const q = search.trim().toLowerCase();
     if (q) {
       result = result.filter((a) => a.question.toLowerCase().includes(q) || a.answer.toLowerCase().includes(q));
     }
     // Regroupé par catégorie dans l'ordre d'affichage (tri stable : l'ordre propre à chaque catégorie est conservé).
     return [...result].sort((a, b) => faqCategoryOrder(a.category) - faqCategoryOrder(b.category) || a.order - b.order);
-  }, [articles, filter, search]);
+  }, [articles, filter, search, onlyReview]);
+
+  const reviewCount = useMemo(() => articles.filter((a) => feedbackOf(a).needsReview).length, [articles]);
 
   const counts = useMemo(() => {
     const map: Record<string, number> = { tous: articles.length };
@@ -162,6 +178,7 @@ export default function AdminFaqPage() {
 
   // GET /api/faq est public (utilisée par la page d'aide) donc elle ne renvoie jamais
   // de 403 : la permission doit être vérifiée ici pour ne pas exposer l'édition de la FAQ.
+  // (Avec ?stats=1 elle renvoie 403 sans la permission, mais on garde cette vérification pour l'affichage.)
   if (!canManageFaq) {
     return <AccessDenied>Ton rôle ne dispose pas de la permission de gestion de la FAQ.</AccessDenied>;
   }
@@ -190,6 +207,22 @@ export default function AdminFaqPage() {
       />
 
       <FilterPills label="Filtrer par catégorie" options={filterOptions} value={filter} onChange={setFilter} />
+
+      {(reviewCount > 0 || onlyReview) && (
+        <button
+          type="button"
+          onClick={() => setOnlyReview((v) => !v)}
+          aria-pressed={onlyReview}
+          className={`inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${FOCUS} ${
+            onlyReview
+              ? "border-amber-500/50 bg-amber-500/15 text-amber-100"
+              : "border-white/10 text-zinc-300 hover:border-white/25 hover:text-white"
+          }`}
+        >
+          <ThumbsDown size={14} aria-hidden="true" />
+          À revoir : {reviewCount} article{reviewCount > 1 ? "s" : ""} jugé{reviewCount > 1 ? "s" : ""} peu utile{reviewCount > 1 ? "s" : ""}
+        </button>
+      )}
 
       {/* FORMULAIRE CRÉATION / ÉDITION */}
       {formOpen && (
@@ -313,6 +346,35 @@ export default function AdminFaqPage() {
                   <span className="text-xs tabular-nums text-zinc-500" title="Ordre dans la catégorie">
                     #{article.order}
                   </span>
+                  {(() => {
+                    const fb = feedbackOf(article);
+                    return (
+                      <span
+                        className={`inline-flex items-center gap-2 rounded-md border px-2 py-0.5 text-xs font-medium tabular-nums ${
+                          fb.needsReview
+                            ? "border-amber-500/40 bg-amber-500/10 text-amber-200"
+                            : fb.total === 0
+                              ? "border-white/5 text-zinc-600"
+                              : "border-white/10 text-zinc-400"
+                        }`}
+                        title={
+                          fb.needsReview
+                            ? "Plus de « non » que de « oui » : la réponse mérite d'être réécrite."
+                            : fb.total === 0
+                              ? "Aucun retour de lecteur pour l'instant"
+                              : "Retours des lecteurs"
+                        }
+                      >
+                        <span className="inline-flex items-center gap-1">
+                          <ThumbsUp size={11} aria-hidden="true" /> {fb.yes}
+                        </span>
+                        <span className="inline-flex items-center gap-1">
+                          <ThumbsDown size={11} aria-hidden="true" /> {fb.no}
+                        </span>
+                        <span className="sr-only">{fb.yes} oui, {fb.no} non</span>
+                      </span>
+                    );
+                  })()}
                 </div>
                 <p className="mb-1 text-base font-semibold text-white">{article.question}</p>
                 <p className="line-clamp-2 text-sm leading-relaxed text-zinc-400">{article.answer}</p>

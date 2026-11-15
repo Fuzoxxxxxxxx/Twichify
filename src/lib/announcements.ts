@@ -16,7 +16,7 @@ async function ensureDb() {
 /**
  * Filtre Mongo d'un groupe de destinataires.
  * - « nouveaux de la semaine » se déduit de l'identifiant du compte (un ObjectId contient sa date de création : le modèle n'a pas de champ createdAt).
- * - « widget jamais détecté » : ni le widget musique ni le widget chat n'ont jamais été chargés (champ absent ou vide).
+ * - « widget jamais détecté » : ni le widget musique, ni le widget chat, ni le widget bandeau n'ont jamais été chargés (champ absent ou vide).
  */
 export function audienceFilter(audience: AnnouncementAudience, now: number = Date.now()): Record<string, unknown> {
   switch (audience) {
@@ -27,7 +27,7 @@ export function audienceFilter(audience: AnnouncementAudience, now: number = Dat
     case "no_spotify":
       return { $or: [{ spotifyRefreshToken: null }, { spotifyRefreshToken: "" }] };
     case "no_widget":
-      return { "widgetSeen.musicAt": null, "widgetSeen.chatAt": null };
+      return { "widgetSeen.musicAt": null, "widgetSeen.chatAt": null, "widgetSeen.bannerAt": null };
     case "staff":
       return { role: { $in: ALL_ROLES.filter((r) => isStaffRole(r)) } };
     case "all":

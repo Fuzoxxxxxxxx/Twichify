@@ -28,6 +28,7 @@ export async function GET() {
 
   const musicSeenAt = user.widgetSeen?.musicAt || user.listeningStats?.lastPollAt || null;
   const chatSeenAt = user.widgetSeen?.chatAt || null;
+  const bannerSeenAt = user.widgetSeen?.bannerAt || null;
 
   return NextResponse.json({
     spotifyCredentials: !!(user.spotifyClientId && user.spotifyClientSecret),
@@ -35,5 +36,6 @@ export async function GET() {
     twitchLogin: user.name || null,
     musicSeenAt: musicSeenAt ? new Date(musicSeenAt).toISOString() : null,
     chatSeenAt: chatSeenAt ? new Date(chatSeenAt).toISOString() : null,
+    bannerSeenAt: bannerSeenAt ? new Date(bannerSeenAt).toISOString() : null,
   });
 }

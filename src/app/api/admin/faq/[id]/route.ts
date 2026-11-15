@@ -23,9 +23,13 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       await mongoose.connect(process.env.DATABASE_URL!);
     }
 
+    // Les retours des lecteurs portent sur l'ancienne réponse : si le texte change, on repart de zéro pour mesurer la nouvelle.
+    const before = await FaqArticle.findById(id).select("answer").lean<{ answer?: string }>();
+    const answerChanged = !!before && before.answer !== answer;
+
     const article = await FaqArticle.findByIdAndUpdate(
       id,
-      { question, answer, category, order, updatedAt: new Date() },
+      { question, answer, category, order, updatedAt: new Date(), ...(answerChanged ? { helpfulYes: 0, helpfulNo: 0 } : {}) },
       { new: true }
     );
 
@@ -34,7 +38,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       actor: staff,
       action: "faq.update",
       target: { id, name: String(article.question).slice(0, 120) },
-      details: `Catégorie : ${faqCategoryLabel(article.category)}`,
+      details: `Catégorie : ${faqCategoryLabel(article.category)}${answerChanged ? " · retours des lecteurs remis à zéro (réponse modifiée)" : ""}`,
     });
     return NextResponse.json({ article });
   } catch (error) {

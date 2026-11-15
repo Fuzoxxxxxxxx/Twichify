@@ -4,7 +4,7 @@ import { MongoDBAdapter } from "@auth/mongodb-adapter";
 import clientPromise from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 import { generateWidgetToken } from "@/lib/widget-token";
-import { TWITCH_LOGIN_SCOPES } from "@/lib/twitch-user";
+import { TWITCH_LOGIN_SCOPES, saveTwitchIdentity } from "@/lib/twitch-user";
 
 export const authOptions: NextAuthOptions = {
   adapter: MongoDBAdapter(clientPromise),
@@ -23,8 +23,17 @@ export const authOptions: NextAuthOptions = {
   events: {
     // NextAuth v4 ne met pas à jour le compte lié lors des connexions suivantes : sans ça, un utilisateur
     // existant qui se reconnecte garderait l'ancien jeton (sans les nouveaux scopes) et un refresh_token périmé.
-    async signIn({ account }) {
+    async signIn({ user, account, profile }) {
       if (account?.provider !== "twitch" || !account.providerAccountId) return;
+
+      // Pseudo et avatar : NextAuth v4 ne les renseigne qu'à la création du compte. Sans cette mise à jour, un streamer qui a
+      // changé de pseudo sur Twitch garderait l'ancien ici (et le widget chat rejoindrait l'ancienne chaîne).
+      try {
+        const fresh = profile as { preferred_username?: unknown; picture?: unknown } | undefined;
+        if (user?.id) await saveTwitchIdentity(String(user.id), fresh?.preferred_username, fresh?.picture);
+      } catch (error) {
+        console.error("Erreur lors de la mise à jour du pseudo Twitch :", error);
+      }
       try {
         const fields = Object.fromEntries(
           Object.entries({

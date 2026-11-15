@@ -3,6 +3,7 @@ import { NextResponse, NextRequest } from "next/server";
 import { findUserByWidgetRef } from "@/lib/widget-token";
 import User from "@/models/User";
 import { sanitizeInfoBanner } from "@/lib/info-banner";
+import { noteWidgetSeen } from "@/lib/widget-seen";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -24,6 +25,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ user
     if (!user) {
       return NextResponse.json({ error: "Utilisateur introuvable." }, { status: 404 });
     }
+
+    // Suivi d'installation : le widget annonce un vrai chargement avec ?w=1 (ni le mode test ni l'aperçu du dashboard).
+    // Fait avant la réponse 304 : un widget dont les réglages ne changent pas doit quand même être vu en ligne.
+    if (req.nextUrl.searchParams.get("w") === "1") await noteWidgetSeen(user, "banner");
 
     // Champ exclu par défaut du modèle (il peut contenir des logos) : lu uniquement par cette route.
     const doc = await User.findById(user._id).select("+bannerWidgetSettings").lean();

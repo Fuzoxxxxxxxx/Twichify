@@ -12,6 +12,24 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "3.19.0",
+    date: "15/11/2026",
+    title: "Mobile, retours sur l'aide et suivi du bandeau",
+    changes: [
+      { type: "improved", text: "Sur mobile, la barre du bas du dashboard garde 4 raccourcis (Accueil, Spotify, Musique, Chat) et un bouton Plus qui ouvre le reste : Bot, Bandeau, Statistiques, Twitch, Notifications, Compte & données, Aide, État des services, Boîte à idées, Changelog et Déconnexion. Avant, ces pages et la déconnexion n'étaient accessibles que sur ordinateur." },
+      { type: "improved", text: "Le menu du compte sur ordinateur contient maintenant aussi Notifications, comme sur mobile." },
+      { type: "improved", text: "Les liens de l'en-tête du site (Changelog, Idées, Aide) s'ouvrent dans un menu sur téléphone. La page de confidentialité et les autres pages publiques sont réaménagées pour petit écran : marges réduites, titres plus petits, cartes et boutons pleine largeur, longs textes qui passent à la ligne. La cloche de notifications ne recouvre plus les titres des pages." },
+      { type: "new", text: "Dans l'aide, chaque article se termine par « Cet article vous a-t-il aidé ? ». Un clic sur Oui ou Non suffit : c'est anonyme et ça permet à l'équipe de réécrire les réponses qui ne servent pas. Après un Non, un lien te propose d'ouvrir un ticket." },
+      { type: "new", text: "Le widget Bandeau est maintenant suivi comme la musique et le chat : le dashboard indique s'il est réellement chargé dans OBS (en ligne, hors ligne ou jamais chargé), et la carte Widgets dans OBS compte maintenant les trois widgets (X sur 3 en ligne)." },
+      { type: "new", text: "Compte & données : le résumé en haut de page affiche aussi si ton widget Bandeau est actif (au moins un message à afficher) ou inactif." },
+      { type: "fixed", text: "Si tu changes de pseudo sur Twitch, Twichify le met à jour automatiquement (à la connexion, au chargement du widget chat et sur la page Twitch). Avant, le widget chat pouvait rester branché sur l'ancien pseudo jusqu'à une intervention manuelle. Recharge ta source navigateur dans OBS pour qu'elle le prenne en compte." },
+      { type: "fixed", text: "Suppression et export de ton compte : tes notifications sont maintenant supprimées avec le compte (au lieu d'attendre leur expiration de 90 jours), et l'export en contient la copie ainsi que les réponses que tu as données aux enquêtes de satisfaction." },
+      { type: "improved", text: "La page du widget Bandeau a maintenant son propre titre d'onglet." },
+      { type: "improved", text: "Staff : la fiche d'un utilisateur affiche la date d'acceptation des CGU, avec la mention À reconfirmer quand elle est antérieure à la dernière révision (avant, elle affichait Pas encore), ainsi que l'état du widget Bandeau." },
+      { type: "new", text: "Staff : la FAQ de l'admin affiche les retours des lecteurs sur chaque article (nombre de Oui et de Non) et un filtre À revoir pour les articles jugés peu utiles. Modifier la réponse d'un article remet ses compteurs à zéro." },
+    ],
+  },
+  {
     version: "3.18.0",
     date: "08/11/2026",
     title: "Bandeau d'informations : nouveau design",

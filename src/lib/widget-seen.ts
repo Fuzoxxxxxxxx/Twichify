@@ -13,11 +13,13 @@ import User from "@/models/User";
 const WRITE_INTERVAL_MS = 60_000;
 const lastWrite = new Map<string, number>();
 
-export type WidgetKind = "music" | "chat";
+export type WidgetKind = "music" | "chat" | "banner";
+
+const FIELD: Record<WidgetKind, string> = { music: "musicAt", chat: "chatAt", banner: "bannerAt" };
 
 export async function noteWidgetSeen(user: any, kind: WidgetKind): Promise<void> {
   const key = `${user._id}:${kind}`;
-  const stored = user.widgetSeen?.[kind === "music" ? "musicAt" : "chatAt"];
+  const stored = user.widgetSeen?.[FIELD[kind]];
   const now = Date.now();
   const last = lastWrite.get(key) ?? (stored ? new Date(stored).getTime() : 0);
   if (now - last < WRITE_INTERVAL_MS) return;
@@ -26,7 +28,7 @@ export async function noteWidgetSeen(user: any, kind: WidgetKind): Promise<void>
   try {
     await User.updateOne(
       { _id: user._id },
-      { $set: { [`widgetSeen.${kind === "music" ? "musicAt" : "chatAt"}`]: new Date(now) } }
+      { $set: { [`widgetSeen.${FIELD[kind]}`]: new Date(now) } }
     );
   } catch (error) {
     // Un suivi manqué n'est pas grave : il ne doit jamais casser la réponse du widget.

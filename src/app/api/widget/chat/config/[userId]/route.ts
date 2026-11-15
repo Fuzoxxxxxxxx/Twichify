@@ -2,6 +2,7 @@ import { NextResponse, NextRequest } from "next/server";
 import mongoose from "mongoose";
 import { findUserByWidgetRef } from "@/lib/widget-token";
 import { noteWidgetSeen } from "@/lib/widget-seen";
+import { syncTwitchIdentity } from "@/lib/twitch-user";
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -63,6 +64,10 @@ export async function GET(
     // Suivi d'installation : le widget annonce un vrai chargement avec ?w=1 (ni le mode test ni l'aperçu du dashboard).
     if (req.nextUrl.searchParams.get("w") === "1") await noteWidgetSeen(user, "chat");
 
+    // Pseudo Twitch : relu sur Twitch (au plus toutes les 6 h) pour que le widget rejoigne la bonne chaîne après un
+    // renommage, sans attendre la prochaine connexion du streamer. Renvoie null si rien n'a été vérifié : `user.name` fait foi.
+    const currentName = await syncTwitchIdentity(user);
+
     const merged = {
       ...DEFAULT_CHAT_SETTINGS,
       ...(user.chatWidgetSettings || {}),
@@ -76,7 +81,7 @@ export async function GET(
 
     return NextResponse.json({
       chatWidgetSettings: merged,
-      twitchUsername: user.name, 
+      twitchUsername: currentName ?? user.name,
       // Le widget n'envoie ses compteurs que si l'utilisateur a activé les statistiques de chat.
       chatStatsEnabled: !!user.chatStats?.enabled,
     }, {
