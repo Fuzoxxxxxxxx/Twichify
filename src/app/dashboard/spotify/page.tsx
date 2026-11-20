@@ -27,7 +27,7 @@ const PROBE_POLL_MS = 8000;
 
 // Une fois le compte relié, la page ne montre plus un tutoriel mais la preuve que ça marche : ta lecture en cours,
 // sur la pochette floutée, comme le widget lui-même.
-function NowPlayingHero({ probe }: { probe: Probe }) {
+function NowPlayingHero({ probe, accountName }: { probe: Probe; accountName: string | null }) {
   const cover = probe.state === "playing" ? probe.cover : null;
   const pending = probe.state === "loading" || probe.state === "idle";
   const tone: PillTone = probe.state === "playing" ? "live" : probe.state === "error" ? "warn" : "idle";
@@ -64,9 +64,16 @@ function NowPlayingHero({ probe }: { probe: Probe }) {
             </div>
           ) : (
             <>
-              <StatusPill tone={tone}>
-                {probe.state === "playing" ? "En lecture" : probe.state === "error" ? "Connexion instable" : "Compte relié"}
-              </StatusPill>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                <StatusPill tone={tone}>
+                  {probe.state === "playing" ? "En lecture" : probe.state === "error" ? "Connexion instable" : "Compte relié"}
+                </StatusPill>
+                {accountName && (
+                  <span className="min-w-0 truncate text-sm text-zinc-300">
+                    Connecté en tant que <strong className="font-semibold text-white">{accountName}</strong>
+                  </span>
+                )}
+              </div>
               <p
                 className={`mt-2 truncate font-display text-3xl font-extrabold tracking-tight ${
                   probe.state === "playing" ? "text-white" : "text-zinc-200"
@@ -102,7 +109,7 @@ function SettingRow({
   children,
 }: {
   title: string;
-  description: string;
+  description: React.ReactNode;
   action?: React.ReactNode;
   highlight?: boolean;
   children?: React.ReactNode;
@@ -141,6 +148,8 @@ export default function DashboardSpotify() {
   const [linking, setLinking] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
   const [probe, setProbe] = useState<Probe>({ state: "idle" });
+  // Nom du compte Spotify relié (« Connecté en tant que… »), lu en direct : null tant qu'il n'est pas arrivé ou s'il est indisponible.
+  const [accountName, setAccountName] = useState<string | null>(null);
   // Les identifiants et l'état de connexion viennent du serveur : rien n'est affiché avant leur arrivée.
   const [loadState, setLoadState] = useState<"loading" | "ready" | "error">("loading");
 
@@ -203,6 +212,26 @@ export default function DashboardSpotify() {
       clearInterval(id);
     };
   }, [signedIn, isConnected, widgetToken]);
+
+  // Nom du compte Spotify relié : lu une fois la connexion confirmée. Un échec n'affiche rien (la page fonctionne sans).
+  useEffect(() => {
+    if (!signedIn || !isConnected) {
+      setAccountName(null);
+      return;
+    }
+    let cancelled = false;
+    fetch("/api/spotify/account", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!cancelled) setAccountName(typeof data?.name === "string" && data.name ? data.name : null);
+      })
+      .catch(() => {
+        if (!cancelled) setAccountName(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [signedIn, isConnected]);
 
   const credentialsSaved = savedClientId !== "";
   // Le Client Secret n'est jamais renvoyé par le serveur : dès qu'on le saisit, ou qu'on change le Client ID, le formulaire est modifié.
@@ -275,6 +304,7 @@ export default function DashboardSpotify() {
       const res = await fetch("/api/spotify/disconnect", { method: "POST" });
       if (res.ok) {
         setIsConnected(false);
+        setAccountName(null);
         setNeedsReauth(false);
         setEditing(false);
         showToast("Compte Spotify déconnecté avec succès.");
@@ -410,7 +440,7 @@ export default function DashboardSpotify() {
 
         {premiumNotice}
 
-        <NowPlayingHero probe={probe} />
+        <NowPlayingHero probe={probe} accountName={accountName} />
 
         <section aria-labelledby="spotify-app-title">
           <h2 id="spotify-app-title" className={SECTION_TITLE}>
@@ -447,9 +477,16 @@ export default function DashboardSpotify() {
             <SettingRow
               title="Compte Spotify"
               description={
-                needsReauth
-                  ? "Identifiants modifiés : réassocie ton compte pour qu'ils soient pris en compte."
-                  : "Réassocie ton compte si le widget ne reçoit plus ta musique."
+                <>
+                  {accountName && (
+                    <>
+                      Connecté en tant que <strong className="font-semibold text-zinc-200">{accountName}</strong>.{" "}
+                    </>
+                  )}
+                  {needsReauth
+                    ? "Identifiants modifiés : réassocie ton compte pour qu'ils soient pris en compte."
+                    : "Réassocie ton compte si le widget ne reçoit plus ta musique ou si ce n'est pas le bon compte."}
+                </>
               }
               highlight={needsReauth}
               action={reassociateButton}
